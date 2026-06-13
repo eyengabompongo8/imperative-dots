@@ -166,6 +166,9 @@ ARCH_PKGS=(
     "wmctrl" "power-profiles-daemon" "easyeffects" "swayosd-git" "nautilus" "lsp-plugins" "hyprpolkitagent"
     "qt5-wayland" "qt5-quickcontrols" "qt5-quickcontrols2" "qt5-graphicaleffects" "qt6-wayland"
     "qt5ct" "qt6ct" "gpu-screen-recorder" "adw-gtk-theme" "xdg-desktop-portal-wlr"
+
+    "btop"
+    "spotify" "discord"
 )
 
 PKGS=("${ARCH_PKGS[@]}")
