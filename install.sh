@@ -87,7 +87,7 @@ WEATHER_CITY_ID=""
 WEATHER_UNIT=""
 FAILED_PKGS=()
 
-TARGET_BRANCH="master"
+TARGET_BRANCH="mine"
 
 while [[ "$#" -gt 0 ]]; do
     case $1 in
@@ -919,7 +919,7 @@ prompt_optional_features_menu() {
     }
 
     if command -v jq &>/dev/null && command -v curl &>/dev/null; then
-        local UPDATES_JSON=$(curl -s "https://raw.githubusercontent.com/ilyamiro/imperative-dots/${TARGET_BRANCH}/updates.json" 2>/dev/null)
+        local UPDATES_JSON=$(curl -s "https://raw.githubusercontent.com/eyengabompongo8/imperative-dots/${TARGET_BRANCH}/updates.json" 2>/dev/null)
         if [ -n "$UPDATES_JSON" ]; then
             
             # Extract all version numbers that have force_startup_overwrite set to true
