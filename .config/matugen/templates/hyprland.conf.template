@@ -1,5 +1,5 @@
-$active_border1 = rgba({{colors.primary.default.hex_stripped}}ee)
-$active_border2 = rgba({{colors.secondary.default.hex_stripped}}ee)
-$active_border3 = rgba({{colors.tertiary.default.hex_stripped}}ee)
+$active_border1 = rgb({{colors.primary.default.hex_stripped}})
+$active_border2 = rgb({{colors.secondary.default.hex_stripped}})
+$active_border3 = rgb({{colors.tertiary.default.hex_stripped}})
 $inactive_border = rgba({{colors.on_primary_fixed_variant.default.hex_stripped}}aa)
 
