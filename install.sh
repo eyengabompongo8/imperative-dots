@@ -167,6 +167,8 @@ ARCH_PKGS=(
     "qt5-wayland" "qt5-quickcontrols" "qt5-quickcontrols2" "qt5-graphicaleffects" "qt6-wayland"
     "qt5ct" "qt6ct" "gpu-screen-recorder" "adw-gtk-theme" "xdg-desktop-portal-wlr"
 
+    "bibata-cursor-git"
+
     "btop"
     "spotify" "discord"
 
@@ -1267,7 +1269,7 @@ fi
 
 # --- 3. Repository Cloning & Wallpapers ---
 echo -e "\n${C_CYAN}[ INFO ]${RESET} Setting up Dotfiles Repository..."
-REPO_URL="https://github.com/ilyamiro/imperative-dots.git"
+REPO_URL="https://github.com/eyengabompongo8/imperative-dots.git"
 CLONE_DIR="$HOME/.hyprland-dots"
 
 OLD_COMMIT=""
@@ -1362,7 +1364,7 @@ echo -e "\n${C_CYAN}[ INFO ]${RESET} Applying Configurations & Backing Up Old On
 TARGET_CONFIG_DIR="$HOME/.config"
 BACKUP_DIR="$HOME/.config-backup-$(date +%Y%m%d_%H%M%S)"
 
-CONFIG_FOLDERS=("cava" "hypr" "kitty" "rofi" "matugen" "zsh" "swayosd")
+CONFIG_FOLDERS=("cava" "hypr" "kitty" "rofi" "matugen" "swayosd")
 if [ "$INSTALL_NVIM" = true ]; then CONFIG_FOLDERS+=("nvim"); fi
 
 mkdir -p "$TARGET_CONFIG_DIR" "$BACKUP_DIR"
@@ -1701,31 +1703,71 @@ fi
 systemctl --user enable easyeffects.service 2>/dev/null || true
 printf "  -> EasyEffects daemon service enabled %-12s ${C_GREEN}[ OK ]${RESET}\n" ""
 
+
 if [ "$INSTALL_ZSH" = true ] && command -v zsh &> /dev/null; then
-    if [ -f "$HOME/.zshrc" ]; then
-        echo -e "  -> Extracting existing aliases from ~/.zshrc..."
-        mkdir -p "$TARGET_CONFIG_DIR/zsh"
-        grep "^alias " "$HOME/.zshrc" > "$TARGET_CONFIG_DIR/zsh/user_aliases.zsh" || true
-        if [ -s "$TARGET_CONFIG_DIR/zsh/user_aliases.zsh" ]; then
-            printf "  -> Custom aliases backed up %-16s ${C_GREEN}[ OK ]${RESET}\n" ""
-        else
-            rm -f "$TARGET_CONFIG_DIR/zsh/user_aliases.zsh"
+    echo -e "\n${C_CYAN}[ INFO ]${RESET} Configuring Oh My Zsh & Powerlevel10k..."
+    
+    # 1. Install Oh My Zsh (Unattended mode prevents it from launching a new shell mid-install)
+    if [ ! -d "$HOME/.oh-my-zsh" ]; then
+        echo -e "  -> Installing Oh My Zsh..."
+        sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended > /dev/null 2>&1
+        printf "  -> Oh My Zsh installed %-20s ${C_GREEN}[ OK ]${RESET}\n" ""
+    else
+        echo -e "  -> Oh My Zsh is already installed. Skipping."
+    fi
+
+    # 2. Install Powerlevel10k theme into Oh My Zsh custom folder
+    ZSH_CUSTOM="$HOME/.oh-my-zsh/custom"
+    if [ ! -d "$ZSH_CUSTOM/themes/powerlevel10k" ]; then
+        echo -e "  -> Cloning Powerlevel10k..."
+        git clone --depth=1 https://github.com/romkatv/powerlevel10k.git "$ZSH_CUSTOM/themes/powerlevel10k" > /dev/null 2>&1
+        printf "  -> Powerlevel10k installed %-17s ${C_GREEN}[ OK ]${RESET}\n" ""
+    fi
+
+    TERMINAL_DIR="$REPO_DIR/terminal"
+
+    # 3. Copy .zshrc and .p10k.zsh from the repository root to ~/
+    for file in ".zshrc" ".p10k.zsh"; do
+        if [ -f "$TERMINAL_DIR/$file" ]; then
+            # Backup existing files
+            [ -f "$HOME/$file" ] && mv "$HOME/$file" "$BACKUP_DIR/"
+            
+            # Copy new files
+            cp "$TERMINAL_DIR/$file" "$HOME/$file"
+            printf "  -> Copied %-31s ${C_GREEN}[ OK ]${RESET}\n" "$file"
         fi
-    fi
+    done
 
-    cp "$TARGET_CONFIG_DIR/zsh/.zshrc" "$HOME/.zshrc"
+    # 4. Set Zsh as the default shell
     chsh -s $(which zsh) "$USER"
-
-    if [ -f "$TARGET_CONFIG_DIR/zsh/user_aliases.zsh" ]; then
-        sed -i '/# Load User Aliases/d' "$HOME/.zshrc"
-        sed -i "\|source $TARGET_CONFIG_DIR/zsh/user_aliases.zsh|d" "$HOME/.zshrc"
-
-        echo -e "\n# Load User Aliases" >> "$HOME/.zshrc"
-        echo "source $TARGET_CONFIG_DIR/zsh/user_aliases.zsh" >> "$HOME/.zshrc"
-    fi
-
     printf "  -> Zsh set as default shell %-14s ${C_GREEN}[ OK ]${RESET}\n" ""
 fi
+
+# if [ "$INSTALL_ZSH" = true ] && command -v zsh &> /dev/null; then
+#     if [ -f "$HOME/.zshrc" ]; then
+#         echo -e "  -> Extracting existing aliases from ~/.zshrc..."
+#         mkdir -p "$TARGET_CONFIG_DIR/zsh"
+#         grep "^alias " "$HOME/.zshrc" > "$TARGET_CONFIG_DIR/zsh/user_aliases.zsh" || true
+#         if [ -s "$TARGET_CONFIG_DIR/zsh/user_aliases.zsh" ]; then
+#             printf "  -> Custom aliases backed up %-16s ${C_GREEN}[ OK ]${RESET}\n" ""
+#         else
+#             rm -f "$TARGET_CONFIG_DIR/zsh/user_aliases.zsh"
+#         fi
+#     fi
+
+#     cp "$TARGET_CONFIG_DIR/zsh/.zshrc" "$HOME/.zshrc"
+#     chsh -s $(which zsh) "$USER"
+
+#     if [ -f "$TARGET_CONFIG_DIR/zsh/user_aliases.zsh" ]; then
+#         sed -i '/# Load User Aliases/d' "$HOME/.zshrc"
+#         sed -i "\|source $TARGET_CONFIG_DIR/zsh/user_aliases.zsh|d" "$HOME/.zshrc"
+
+#         echo -e "\n# Load User Aliases" >> "$HOME/.zshrc"
+#         echo "source $TARGET_CONFIG_DIR/zsh/user_aliases.zsh" >> "$HOME/.zshrc"
+#     fi
+
+#     printf "  -> Zsh set as default shell %-14s ${C_GREEN}[ OK ]${RESET}\n" ""
+# fi
 
 # --- 5. Fonts ---
 echo -e "\n${C_CYAN}[ INFO ]${RESET} Installing Fonts..."

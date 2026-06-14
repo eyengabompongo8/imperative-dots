@@ -110,7 +110,7 @@
     {"command": "wl-paste --type text --watch cliphist store"},
     {"command": "wl-paste --type image --watch cliphist store"},
     {"command": "~/.config/hypr/scripts/volume_listener.sh"},
-    {"command": "~/.config/hypr/scripts/update_notifier.sh"}
+    {"command": "~/.config/hypr/scripts/update_notifier.sh"},
 
     {"command": "[workspace special:monitoring silent] kitty btop"},
     {"command": "spotify"},
