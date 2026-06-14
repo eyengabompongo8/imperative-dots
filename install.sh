@@ -167,6 +167,8 @@ ARCH_PKGS=(
     "qt5-wayland" "qt5-quickcontrols" "qt5-quickcontrols2" "qt5-graphicaleffects" "qt6-wayland"
     "qt5ct" "qt6ct" "gpu-screen-recorder" "adw-gtk-theme" "xdg-desktop-portal-wlr"
 
+    "pyenv"
+
     "bibata-cursor-git"
 
     "btop"

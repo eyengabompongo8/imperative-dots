@@ -61,9 +61,9 @@
    
 
     {"type":"bind","mods":"$mainMod","key":"Super_L","dispatcher":"exec","command":"bash ~/.config/hypr/scripts/qs_manager.sh toggle applauncher"},
-    {"type":"bind","mods":"$mainMod","key":"RETURN","dispatcher":"exec","command":"kitty"},
+    {"type":"bind","mods":"$mainMod","key":"RETURN","dispatcher":"exec","command":"[float; size 800 500] kitty"},
     {"type":"bind","mods":"$mainMod","key":"Z","dispatcher":"exec","command":"zen-browser"},
-    {"type":"bind","mods":"$mainMod","key":"E","dispatcher":"exec","command":"nautilus"},
+    {"type":"bind","mods":"$mainMod","key":"E","dispatcher":"exec","command":"[float; size 900 600] nautilus"},
 
     {"type":"bind","mods":"$mainMod","key":"R","dispatcher":"exec","command":"bash ~/.config/hypr/scripts/reload.sh"},
 

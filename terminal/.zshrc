@@ -126,7 +126,5 @@ export PYENV_ROOT="$HOME/.pyenv"
 [[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"
 eval "$(pyenv init - zsh)"
 
-# OpenClaw Completion
-source "/home/eyenga/.openclaw/completions/openclaw.zsh"
 export PATH="$HOME/.local/bin:$PATH"
 alias gnome-control-center="env XDG_CURRENT_DESKTOP=GNOME gnome-control-center"

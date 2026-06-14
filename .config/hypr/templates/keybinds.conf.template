@@ -3,8 +3,18 @@
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 # ───────── Static Core Binds ─────────
-gesture = 3, horizontal, workspace
 bindm = SUPER, mouse:272, movewindow
 bindm = SUPER, mouse:273, resizewindow
 
+gesture = 3, right, dispatcher, cyclenext,
+gesture = 3, left, dispatcher, cyclenext, prev
+
+gesture = 4, horizontal, workspace
+gesture = 4, up, special, monitoring
+gesture = 4, down, special, spotify_discord
+
+gesture = 3, pinchin, float, tile
+gesture = 3, pinchout, float, float
+
+gesture = 4, pinch, fullscreen
 # ───────── Dynamic Settings Binds ─────────
