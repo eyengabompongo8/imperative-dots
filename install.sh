@@ -1688,6 +1688,15 @@ if [ -f "$REPO_DIR/utils/bin/cava" ]; then
     printf "  -> Deployed Cava wrapper %-17s ${C_GREEN}[ OK ]${RESET}\n" ""
 fi
 
+# Deploy Custom Scripts
+echo -e "\n${C_CYAN}[ INFO ]${RESET} Deploying Custom Scripts..."
+
+if [ -d "$REPO_DIR/scripts" ]; then
+    cp "$REPO_DIR/scripts/"* "$HOME/.local/bin/"
+    chmod +x "$HOME/.local/bin/"*
+    printf "  -> Deployed custom scripts to ~/.local/bin %-5s ${C_GREEN}[ OK ]${RESET}\n" ""
+fi
+
 # Enable Pipewire natively for the user environment
 sudo systemctl --global enable pipewire wireplumber pipewire-pulse 2>/dev/null || true
 systemctl --user start pipewire wireplumber pipewire-pulse 2>/dev/null || true
