@@ -161,7 +161,7 @@ Rectangle {
             Text {
                 id: timeText
                 text: Qt.formatTime(new Date(), "hh:mm")
-                font.family: "JetBrains Mono"
+                font.family: "SF Pro Display Bold"
                 font.pixelSize: 140
                 font.weight: Font.Bold
                 color: Colors.text
@@ -171,7 +171,7 @@ Rectangle {
             Text {
                 id: dateText
                 text: Qt.formatDate(new Date(), "dddd, MMMM dd")
-                font.family: "JetBrains Mono"
+                font.family: "SF Pro Display Semibold"
                 font.pixelSize: 22
                 font.weight: Font.Bold
                 color: Colors.text
@@ -289,7 +289,7 @@ Rectangle {
 
                         Text {
                             text: root.currentUserName
-                            font.family: "JetBrains Mono"
+                            font.family: "SF Pro Display"
                             font.pixelSize: 28
                             font.weight: Font.Bold
                             color: Colors.text
@@ -331,7 +331,7 @@ Rectangle {
                                 verticalAlignment: TextInput.AlignVCenter
                                 clip: true 
                                 echoMode: TextInput.Password
-                                font.family: "JetBrains Mono"
+                                font.family: "SF Mono"
                                 font.pixelSize: 24
                                 color: root.loginFailed ? Colors.red : Colors.text
 
@@ -379,7 +379,7 @@ Rectangle {
                             id: errorMessage
                             Layout.alignment: Qt.AlignHCenter
                             text: "Login failed. Please try again."
-                            font.family: "JetBrains Mono"
+                            font.family: "SF Mono"
                             font.pixelSize: 12
                             font.weight: Font.Bold
                             color: Colors.red
@@ -437,7 +437,7 @@ Rectangle {
             model: sessionModel
             textRole: "name"
             currentIndex: sessionModel.lastIndex
-            font.family: "JetBrains Mono"
+            font.family: "SF Pro Display"
             font.pixelSize: 14
             
             background: Rectangle {
