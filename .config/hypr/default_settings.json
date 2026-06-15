@@ -186,6 +186,13 @@
     {
       "type": "bind",
       "mods": "$mainMod",
+      "key": "T",
+      "dispatcher": "exec",
+      "command": "bash darkman toggle"
+    },
+    {
+      "type": "bind",
+      "mods": "$mainMod",
       "key": "1",
       "dispatcher": "exec",
       "command": "~/.config/hypr/scripts/qs_manager.sh 1"
@@ -416,7 +423,7 @@
     },
     {
       "type": "bind",
-      "mods": "$mainMod",
+      "mods": "$mainMod SHIFT_L",
       "key": "T",
       "dispatcher": "exec",
       "command": "bash ~/.config/hypr/scripts/qs_manager.sh toggle focustime"

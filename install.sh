@@ -162,10 +162,14 @@ ARCH_PKGS=(
     "pipewire" "wireplumber" "pipewire-pulse" "pipewire-alsa" "pipewire-jack" "libpulse" "python"
     "imagemagick" "wget" "file" "git" "psmisc"
     "matugen-bin" "ffmpeg" "fastfetch" "quickshell-git" "unzip" "python-websockets" "qt6-websockets"
-    "grim" "playerctl" "satty" "yq" "xdg-desktop-portal-gtk" "slurp" "mpvpaper"
+    "grim" "playerctl" "satty" "yq" "slurp" "mpvpaper"
     "wmctrl" "power-profiles-daemon" "easyeffects" "swayosd-git" "nautilus" "lsp-plugins" "hyprpolkitagent"
     "qt5-wayland" "qt5-quickcontrols" "qt5-quickcontrols2" "qt5-graphicaleffects" "qt6-wayland"
-    "qt5ct" "qt6ct" "gpu-screen-recorder" "adw-gtk-theme" "xdg-desktop-portal-wlr"
+    "qt5ct" "qt6ct" "gpu-screen-recorder" "adw-gtk-theme"
+
+    "uwsm"
+    "xdg-desktop-portal-hyprland"
+    "darkman"
 
     "pyenv"
 
@@ -174,7 +178,7 @@ ARCH_PKGS=(
     "btop"
     "spotify" "discord"
 
-    "gnome-text-editor" "baobab" "gnome-disk-utility" "simple-scan" "papers" "gnome-music" "gnome-calculator" "gnome-calendar" "gnome-clocks"
+    "gnome-control-center" "gnome-text-editor" "baobab" "gnome-disk-utility" "simple-scan" "papers" "gnome-music" "gnome-calculator" "gnome-calendar" "gnome-clocks"
 
 )
 
@@ -1695,6 +1699,22 @@ if [ -d "$REPO_DIR/scripts" ]; then
     cp "$REPO_DIR/scripts/"* "$HOME/.local/bin/"
     chmod +x "$HOME/.local/bin/"*
     printf "  -> Deployed custom scripts to ~/.local/bin %-5s ${C_GREEN}[ OK ]${RESET}\n" ""
+fi
+
+# Deploy Custom .local Tree (Recursively copy any custom additions)
+echo -e "\n${C_CYAN}[ INFO ]${RESET} Deploying Custom .local hierarchy..."
+
+if [ -d "$REPO_DIR/.local" ]; then
+    # Replicate the structure and copy files keeping permissions intact
+    cp -rP "$REPO_DIR/.local/"* "$HOME/.local/" 2>/dev/null || true
+    printf "  -> Merged custom .local directory structures %-5s ${C_GREEN}[ OK ]${RESET}\n" ""
+    
+    # Ensure any binaries inside a copied bin folder are marked executable
+    if [ -d "$HOME/.local/bin" ]; then
+        chmod +x "$HOME/.local/bin/"* 2>/dev/null || true
+    fi
+else
+    echo "  -> No custom .local directory found in repository. Skipping."
 fi
 
 # Enable Pipewire natively for the user environment

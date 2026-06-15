@@ -212,7 +212,7 @@ Rectangle {
                 Text {
                     anchors.centerIn: parent
                     text: ""
-                    font.family: "Iosevka Nerd Font"
+                    font.family: "SF Pro"
                     font.pixelSize: 24
                     color: Colors.text
                 }
@@ -406,7 +406,7 @@ Rectangle {
                 Text {
                     anchors.centerIn: parent
                     text: ""
-                    font.family: "Iosevka Nerd Font"
+                    font.family: "SF Pro"
                     font.pixelSize: 24
                     color: Colors.text
                 }
@@ -465,7 +465,7 @@ Rectangle {
                 x: sessionMenu.width - width - 16
                 y: sessionMenu.topPadding + (sessionMenu.availableHeight - height) / 2
                 text: sessionMenu.popup.visible ? "" : ""
-                font.family: "Iosevka Nerd Font"
+                font.family: "SF Pro"
                 font.pixelSize: 14
                 color: sessionMenu.hovered || sessionMenu.popup.visible ? Colors.text : Colors.subtext0
                 Behavior on color { ColorAnimation { duration: 200 } }
@@ -530,7 +530,7 @@ Rectangle {
                 Text {
                     anchors.centerIn: parent
                     text: "󰒲"
-                    font.family: "Iosevka Nerd Font"
+                    font.family: "SF Pro"
                     font.pixelSize: 20
                     color: suspendMa.containsMouse ? Colors.mauve : Colors.text
                     Behavior on color { ColorAnimation { duration: 200 } }
@@ -557,7 +557,7 @@ Rectangle {
                 Text {
                     anchors.centerIn: parent
                     text: "󰜉"
-                    font.family: "Iosevka Nerd Font"
+                    font.family: "SF Pro"
                     font.pixelSize: 20
                     color: rebootMa.containsMouse ? Colors.blue : Colors.text
                     Behavior on color { ColorAnimation { duration: 200 } }
@@ -584,7 +584,7 @@ Rectangle {
                 Text {
                     anchors.centerIn: parent
                     text: "󰐥"
-                    font.family: "Iosevka Nerd Font"
+                    font.family: "SF Pro"
                     font.pixelSize: 20
                     color: powerMa.containsMouse ? Colors.red : Colors.text
                     Behavior on color { ColorAnimation { duration: 200 } }
