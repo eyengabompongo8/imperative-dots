@@ -17,10 +17,17 @@
     },
     {
       "type": "bind",
-      "mods": "$mainMod SHIFT_L",
+      "mods": "$mainMod",
       "key": "F",
       "dispatcher": "exec",
       "command": "hyprctl dispatch togglefloating"
+    },
+    {
+      "type": "bind",
+      "mods": "$mainMod SHIFT_L",
+      "key": "F",
+      "dispatcher": "exec",
+      "command": "hyprctl dispatch fullscreen"
     },
     {
       "type": "binde",
