@@ -11,7 +11,11 @@ FS_STATE=$(hyprctl activewindow -j | jq -r '.fullscreen')
 
 if [ "$LAYOUT" = "monocle" ]; then
     # Monocle prefers the layoutmsg dispatcher for clean stack rotation
-    hyprctl dispatch layoutmsg cyclenext $ARG
+    if [ "$ARG" = "next" ]; then
+        hyprctl dispatch layoutmsg cyclenext
+    else
+        hyprctl dispatch layoutmsg cycleprev
+    fi
 else
     # Dwindle/Master use the standard cyclenext
     # The 'prev' argument for cyclenext is literally the word 'prev'
