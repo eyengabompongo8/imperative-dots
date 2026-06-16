@@ -195,7 +195,7 @@
       "mods": "$mainMod",
       "key": "T",
       "dispatcher": "exec",
-      "command": "bash darkman toggle"
+      "command": "darkman toggle"
     },
     {
       "type": "bind",

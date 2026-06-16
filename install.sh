@@ -178,7 +178,8 @@ ARCH_PKGS=(
     "btop"
     "spotify" "discord"
 
-    "gnome-control-center" "gnome-text-editor" "baobab" "gnome-disk-utility" "simple-scan" "papers" "gnome-music" "gnome-calculator" "gnome-calendar" "gnome-clocks"
+    "gnome-control-center" "gnome-text-editor" "baobab" "gnome-disk-utility" "simple-scan" "papers" 
+    "gnome-music" "gnome-calculator" "gnome-calendar" "gnome-clocks" "loupe" "showtime"
 
 )
 
