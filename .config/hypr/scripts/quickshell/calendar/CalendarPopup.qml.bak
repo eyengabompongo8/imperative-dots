@@ -680,7 +680,7 @@ Item {
                         spacing: Math.round(2 * window.sf)
                         Text {
                             text: Qt.formatTime(window.currentTime, "HH:mm")
-                            font.family: "SF Pro Text"
+                            font.family: "JetBrains Mono"
                             font.weight: Font.Black
                             font.pixelSize: Math.round(84 * window.sf)
                             color: window.text
@@ -688,7 +688,7 @@ Item {
                         }
                         Text {
                             text: Qt.formatTime(window.currentTime, ":ss")
-                            font.family: "SF Pro Rounded"
+                            font.family: "JetBrains Mono"
                             font.weight: Font.Bold
                             font.pixelSize: Math.round(32 * window.sf)
                             color: window.textAccent
@@ -703,7 +703,7 @@ Item {
                     Text {
                         Layout.alignment: Qt.AlignHCenter
                         text: Qt.formatDateTime(window.currentTime, "dddd, MMMM dd")
-                        font.family: "New York Medium"
+                        font.family: "JetBrains Mono"
                         font.weight: Font.Bold
                         font.pixelSize: Math.round(16 * window.sf)
                         color: window.subtext0
@@ -767,7 +767,7 @@ Item {
                                     Text { 
                                         Layout.alignment: Qt.AlignHCenter
                                         text: modelData.time
-                                        font.family: "SF Pro Text"; font.weight: Font.Bold; font.pixelSize: Math.round(12 * window.sf)
+                                        font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: Math.round(12 * window.sf)
                                         color: isHighlighted ? window.base : (hrMa.containsMouse ? window.text : window.overlay1)
                                     }
                                     
@@ -783,7 +783,7 @@ Item {
                                     
                                     Text { 
                                         Layout.alignment: Qt.AlignHCenter; text: modelData.temp + "°"
-                                        font.family: "SF Pro Text"; font.weight: Font.Black; font.pixelSize: Math.round(14 * window.sf)
+                                        font.family: "JetBrains Mono"; font.weight: Font.Black; font.pixelSize: Math.round(14 * window.sf)
                                         color: isHighlighted ? window.base : window.text 
                                     }
                                 }
@@ -847,7 +847,7 @@ Item {
                         Text {
                             Layout.fillWidth: true
                             text: window.targetMonthName.toUpperCase()
-                            font.family: "New York Large"
+                            font.family: "JetBrains Mono"
                             font.weight: Font.Black
                             font.pixelSize: Math.round(16 * window.sf)
                             fontSizeMode: Text.Fit
@@ -885,7 +885,7 @@ Item {
                             Text {
                                 Layout.fillWidth: true
                                 text: modelData
-                                font.family: "SF Pro Text"
+                                font.family: "JetBrains Mono"
                                 font.weight: Font.Black
                                 font.pixelSize: Math.round(14 * window.sf)
                                 color: window.overlay0
@@ -922,7 +922,7 @@ Item {
                                 Text {
                                     anchors.centerIn: parent
                                     text: dayNum
-                                    font.family: "SF Pro Text"
+                                    font.family: "JetBrains Mono"
                                     font.weight: isToday ? Font.Black : Font.Bold
                                     font.pixelSize: Math.round(14 * window.sf)
                                     color: isToday ? window.base : (isCurrentMonth ? window.text : window.surface0)
@@ -982,7 +982,7 @@ Item {
                             Layout.fillWidth: true 
                             horizontalAlignment: Text.AlignHCenter 
                             text: window.weatherData && window.weatherData.forecast[window.weatherView] ? window.weatherData.forecast[window.weatherView].day_full.toUpperCase() : "LOADING..."
-                            font.family: "SF Pro Text"
+                            font.family: "JetBrains Mono"
                             font.weight: Font.Black
                             font.pixelSize: Math.round(16 * window.sf)
                             fontSizeMode: Text.Fit
@@ -1018,7 +1018,7 @@ Item {
                         Text {
                             Layout.alignment: Qt.AlignRight 
                             text: Math.round(window.displayedTemp) + "°"
-                            font.family: "SF Pro Rounded"
+                            font.family: "JetBrains Mono"
                             font.weight: Font.Black
                             font.pixelSize: Math.round(84 * window.sf)
                             color: window.tempGlowColor
@@ -1034,7 +1034,7 @@ Item {
                             Layout.maximumWidth: Math.round(320 * window.sf)
                             horizontalAlignment: Text.AlignRight
                             text: window.weatherData && window.weatherData.forecast[window.weatherView] ? window.weatherData.forecast[window.weatherView].desc : ""
-                            font.family: "SF Pro Text"
+                            font.family: "JetBrains Mono"
                             font.weight: Font.Bold
                             font.pixelSize: Math.round(16 * window.sf)
                             wrapMode: Text.WordWrap
@@ -1145,7 +1145,7 @@ Item {
                                         Text {
                                             anchors.centerIn: parent
                                             text: gaugeWrapper.gaugeVal
-                                            font.family: "SF Pro Text"
+                                            font.family: "JetBrains Mono"
                                             font.weight: Font.Black
                                             font.pixelSize: Math.round(12 * window.sf) // Slightly reduced to guarantee fit inside circle
                                             color: window.text
@@ -1167,7 +1167,7 @@ Item {
                                         Text { 
                                             text: gaugeWrapper.gaugeLbl
                                             Layout.fillWidth: true
-                                            font.family: "SF Pro Text"
+                                            font.family: "JetBrains Mono"
                                             font.weight: Font.Bold
                                             font.pixelSize: Math.round(11 * window.sf)
                                             fontSizeMode: Text.Fit
@@ -1312,7 +1312,7 @@ Item {
                         Text { 
                             Layout.fillWidth: true // FIX: Ensures text shrinks/elides instead of expanding layout infinitely
                             text: window.scheduleData ? window.scheduleData.header : "Loading Schedule..."
-                            font.family: "SF Pro Text"
+                            font.family: "JetBrains Mono"
                             font.weight: Font.Bold
                             font.pixelSize: Math.round(16 * window.sf)
                             color: window.overlay0
@@ -1330,7 +1330,7 @@ Item {
                             RowLayout {
                                 anchors.centerIn: parent
                                 spacing: Math.round(6 * window.sf)
-                                Text { text: "Open Web"; font.family: "SF Pro Text"; font.weight: Font.Bold; font.pixelSize: Math.round(14 * window.sf); color: schLinkMa.containsMouse ? window.base : window.text }
+                                Text { text: "Open Web"; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: Math.round(14 * window.sf); color: schLinkMa.containsMouse ? window.base : window.text }
                                 Text { text: ""; font.family: "Iosevka Nerd Font"; font.pixelSize: Math.round(14 * window.sf); color: schLinkMa.containsMouse ? window.base : window.text }
                             }
                             
@@ -1347,7 +1347,7 @@ Item {
 
                         Text {
                             text: "Data stream offline. No scheduled events."
-                            font.family: "SF Pro Text"
+                            font.family: "JetBrains Mono"
                             font.italic: true
                             font.pixelSize: Math.round(14 * window.sf)
                             color: window.overlay0
@@ -1457,7 +1457,7 @@ Item {
 
                                                 Text {
                                                     text: modelData.subject || ""
-                                                    font.family: "SF Pro Display"
+                                                    font.family: "JetBrains Mono"
                                                     font.weight: Font.Black
                                                     font.pixelSize: Math.round(16 * window.sf)
                                                     color: classNode.isActive ? window.mauve : (classNode.isPast ? window.overlay0 : window.text)
@@ -1469,14 +1469,14 @@ Item {
                                                     visible: !modelData.is_compact
                                                     spacing: Math.round(8 * window.sf)
                                                     Text { text: "󰅐"; font.family: "Iosevka Nerd Font"; font.pixelSize: Math.round(14 * window.sf); color: classNode.isActive ? window.mauve : window.overlay1 }
-                                                    Text { text: modelData.time || ""; font.family: "SF Pro Text"; font.weight: Font.Bold; font.pixelSize: Math.round(14 * window.sf); color: classNode.isActive ? window.text : window.overlay1 }
+                                                    Text { text: modelData.time || ""; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: Math.round(14 * window.sf); color: classNode.isActive ? window.text : window.overlay1 }
                                                 }
 
                                                 RowLayout {
                                                     visible: !modelData.is_compact && (modelData.room || "") !== ""
                                                     spacing: Math.round(8 * window.sf)
                                                     Text { text: ""; font.family: "Iosevka Nerd Font"; font.pixelSize: Math.round(14 * window.sf); color: classNode.isPast ? window.surface2 : window.peach }
-                                                    Text { text: modelData.room || ""; font.family: "SF Pro Text"; font.weight: Font.Bold; font.pixelSize: Math.round(14 * window.sf); color: window.subtext1; elide: Text.ElideRight; Layout.fillWidth: true }
+                                                    Text { text: modelData.room || ""; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: Math.round(14 * window.sf); color: window.subtext1; elide: Text.ElideRight; Layout.fillWidth: true }
                                                 }
                                             }
 
@@ -1514,7 +1514,7 @@ Item {
                                                     id: breakText
                                                     anchors.centerIn: parent
                                                     text: modelData.desc || ""
-                                                    font.family: "SF Pro Text"
+                                                    font.family: "JetBrains Mono"
                                                     font.weight: Font.Bold
                                                     font.pixelSize: Math.round(14 * window.sf)
                                                     color: window.mauve

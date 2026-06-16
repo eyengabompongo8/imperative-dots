@@ -2,7 +2,7 @@
    GLOBAL & BASICS 
 ========================================================= */
 QWidget {
-    font-family: "SF Pro Text";
+    font-family: "JetBrains Mono";
     font-size: 11pt;
     color: {{colors.on_surface.default.hex}};
     /* REMOVED: background-color: transparent; (Fixes Qt5 transparent rendering bugs) */

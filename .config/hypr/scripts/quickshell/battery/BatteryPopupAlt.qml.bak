@@ -384,7 +384,7 @@ Item {
 
                             Text {
                                 text: "Notifications"
-                                font.family: "SF Pro Text"
+                                font.family: "JetBrains Mono"
                                 font.weight: Font.Black
                                 font.pixelSize: window.s(18)
                                 color: window.text
@@ -415,7 +415,7 @@ Item {
                                     Text {
                                         id: dndText
                                         text: window.dndEnabled ? "Silent" : "Mute"
-                                        font.family: "SF Pro Text"
+                                        font.family: "JetBrains Mono"
                                         font.weight: Font.Bold
                                         font.pixelSize: window.s(13)
                                         color: window.dndEnabled ? window.red : window.text
@@ -451,7 +451,7 @@ Item {
                             Layout.fillHeight: true
                             horizontalAlignment: Text.AlignHCenter
                             verticalAlignment: Text.AlignVCenter
-                            font.family: "SF Pro Text"
+                            font.family: "JetBrains Mono"
                             font.weight: Font.Medium
                             font.pixelSize: window.s(14)
                             color: window.overlay0
@@ -541,7 +541,7 @@ Item {
 
                                                 Text {
                                                     text: section.toUpperCase()
-                                                    font.family: "SF Pro Text"
+                                                    font.family: "JetBrains Mono"
                                                     font.weight: Font.Black
                                                     font.pixelSize: window.s(11)
                                                     color: window.text
@@ -687,7 +687,7 @@ Item {
 
                                             Text {
                                                 text: model.summary || "Notification"
-                                                font.family: "SF Pro Text"
+                                                font.family: "JetBrains Mono"
                                                 font.weight: Font.Bold
                                                 font.pixelSize: window.s(13)
                                                 color: window.text
@@ -723,7 +723,7 @@ Item {
 
                                         Text {
                                             text: model.body || ""
-                                            font.family: "SF Pro Text"
+                                            font.family: "JetBrains Mono"
                                             font.weight: Font.Medium
                                             font.pixelSize: window.s(11)
                                             color: window.subtext0
@@ -766,7 +766,7 @@ Item {
                                                     Text {
                                                         anchors.centerIn: parent
                                                         text: modelData.text || "Action"
-                                                        font.family: "SF Pro Text"
+                                                        font.family: "JetBrains Mono"
                                                         font.weight: Font.Bold
                                                         font.pixelSize: window.s(11)
                                                         color: isPrimary ? window.crust : window.text
@@ -854,13 +854,13 @@ Item {
                                 anchors.centerIn: parent
                                 Text { 
                                     text: window.upHours.toString().padStart(2, '0')
-                                    font.pixelSize: window.s(18); font.family: "SF Pro Text"; font.weight: Font.Black
+                                    font.pixelSize: window.s(18); font.family: "JetBrains Mono"; font.weight: Font.Black
                                     color: window.ambientPrimary
                                     Behavior on color { ColorAnimation { duration: 1000 } }
                                     anchors.horizontalCenter: parent.horizontalCenter 
                                 }
                                 Text { 
-                                    text: "HR"; font.pixelSize: window.s(8); font.family: "SF Pro Text"; font.weight: Font.Bold
+                                    text: "HR"; font.pixelSize: window.s(8); font.family: "JetBrains Mono"; font.weight: Font.Bold
                                     color: window.subtext0; anchors.horizontalCenter: parent.horizontalCenter 
                                 }
                             }
@@ -870,7 +870,7 @@ Item {
                         Text {
                             anchors.verticalCenter: parent.verticalCenter
                             text: ":"
-                            font.pixelSize: window.s(22); font.family: "SF Pro Text"; font.weight: Font.Black
+                            font.pixelSize: window.s(22); font.family: "JetBrains Mono"; font.weight: Font.Black
                             color: window.ambientPrimary
                             Behavior on color { ColorAnimation { duration: 1000 } }
                             
@@ -893,13 +893,13 @@ Item {
                                 anchors.centerIn: parent
                                 Text { 
                                     text: window.upMins.toString().padStart(2, '0')
-                                    font.pixelSize: window.s(18); font.family: "SF Pro Text"; font.weight: Font.Black
+                                    font.pixelSize: window.s(18); font.family: "JetBrains Mono"; font.weight: Font.Black
                                     color: window.ambientSecondary
                                     Behavior on color { ColorAnimation { duration: 1000 } }
                                     anchors.horizontalCenter: parent.horizontalCenter 
                                 }
                                 Text { 
-                                    text: "MIN"; font.pixelSize: window.s(8); font.family: "SF Pro Text"; font.weight: Font.Bold
+                                    text: "MIN"; font.pixelSize: window.s(8); font.family: "JetBrains Mono"; font.weight: Font.Bold
                                     color: window.subtext0; anchors.horizontalCenter: parent.horizontalCenter 
                                 }
                             }
@@ -934,7 +934,7 @@ Item {
                             Text {
                                 id: usernameText
                                 text: window.currentUserName
-                                font.family: "SF Pro Text"
+                                font.family: "JetBrains Mono"
                                 font.weight: Font.Bold
                                 font.pixelSize: window.s(14)
                                 color: window.text
@@ -1018,9 +1018,9 @@ Item {
                                 RowLayout {
                                     Layout.alignment: Qt.AlignHCenter; spacing: window.s(4)
                                     Text { font.family: "Iosevka Nerd Font"; font.pixelSize: window.s(18); color: window.blue; text: "" }
-                                    Text { font.family: "SF Pro Rounded"; font.weight: Font.Black; font.pixelSize: window.s(28); color: window.text; text: Math.round(cpuOrb.animVal) + "%" }
+                                    Text { font.family: "JetBrains Mono"; font.weight: Font.Black; font.pixelSize: window.s(28); color: window.text; text: Math.round(cpuOrb.animVal) + "%" }
                                 }
-                                Text { Layout.alignment: Qt.AlignHCenter; font.family: "SF Pro Text"; font.weight: Font.Bold; font.pixelSize: window.s(12); color: window.subtext0; text: "CPU LOAD" }
+                                Text { Layout.alignment: Qt.AlignHCenter; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: window.s(12); color: window.subtext0; text: "CPU LOAD" }
                             }
                             MouseArea { id: cpuMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor }
                         }
@@ -1064,9 +1064,9 @@ Item {
                                 RowLayout {
                                     Layout.alignment: Qt.AlignHCenter; spacing: window.s(4)
                                     Text { font.family: "Iosevka Nerd Font"; font.pixelSize: window.s(18); color: window.mauve; text: "󰍛" }
-                                    Text { font.family: "SF Pro Rounded"; font.weight: Font.Black; font.pixelSize: window.s(28); color: window.text; text: Math.round(ramOrb.animVal) + "%" }
+                                    Text { font.family: "JetBrains Mono"; font.weight: Font.Black; font.pixelSize: window.s(28); color: window.text; text: Math.round(ramOrb.animVal) + "%" }
                                 }
-                                Text { Layout.alignment: Qt.AlignHCenter; font.family: "SF Pro Text"; font.weight: Font.Bold; font.pixelSize: window.s(12); color: window.subtext0; text: "MEMORY" }
+                                Text { Layout.alignment: Qt.AlignHCenter; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: window.s(12); color: window.subtext0; text: "MEMORY" }
                             }
                             MouseArea { id: ramMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor }
                         }
@@ -1110,9 +1110,9 @@ Item {
                                 RowLayout {
                                     Layout.alignment: Qt.AlignHCenter; spacing: window.s(4)
                                     Text { font.family: "Iosevka Nerd Font"; font.pixelSize: window.s(18); color: window.peach; text: "󰋊" }
-                                    Text { font.family: "SF Pro Rounded"; font.weight: Font.Black; font.pixelSize: window.s(28); color: window.text; text: Math.round(diskOrb.animVal) + "%" }
+                                    Text { font.family: "JetBrains Mono"; font.weight: Font.Black; font.pixelSize: window.s(28); color: window.text; text: Math.round(diskOrb.animVal) + "%" }
                                 }
-                                Text { Layout.alignment: Qt.AlignHCenter; font.family: "SF Pro Text"; font.weight: Font.Bold; font.pixelSize: window.s(12); color: window.subtext0; text: "STORAGE" }
+                                Text { Layout.alignment: Qt.AlignHCenter; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: window.s(12); color: window.subtext0; text: "STORAGE" }
                             }
                             MouseArea { id: diskMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor }
                         }
@@ -1156,9 +1156,9 @@ Item {
                                 RowLayout {
                                     Layout.alignment: Qt.AlignHCenter; spacing: window.s(4)
                                     Text { font.family: "Iosevka Nerd Font"; font.pixelSize: window.s(18); color: window.red; text: "" }
-                                    Text { font.family: "SF Pro Rounded"; font.weight: Font.Black; font.pixelSize: window.s(28); color: window.text; text: Math.round(tempOrb.animVal) + "°" }
+                                    Text { font.family: "JetBrains Mono"; font.weight: Font.Black; font.pixelSize: window.s(28); color: window.text; text: Math.round(tempOrb.animVal) + "°" }
                                 }
-                                Text { Layout.alignment: Qt.AlignHCenter; font.family: "SF Pro Text"; font.weight: Font.Bold; font.pixelSize: window.s(12); color: window.subtext0; text: "SYSTEM TEMP" }
+                                Text { Layout.alignment: Qt.AlignHCenter; font.family: "JetBrains Mono"; font.weight: Font.Bold; font.pixelSize: window.s(12); color: window.subtext0; text: "SYSTEM TEMP" }
                             }
                             MouseArea { id: tempMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor }
                         }
@@ -1585,7 +1585,7 @@ Item {
                                                 Behavior on color { ColorAnimation { duration: 200 } }
                                             }
                                             Text {
-                                                font.family: "SF Pro Text"; font.weight: Font.Black; font.pixelSize: window.s(13)
+                                                font.family: "JetBrains Mono"; font.weight: Font.Black; font.pixelSize: window.s(13)
                                                 color: window.powerProfile === name ? window.crust : (profileMa.containsMouse ? window.text : window.subtext0)
                                                 text: label
                                                 Behavior on color { ColorAnimation { duration: 200 } }
