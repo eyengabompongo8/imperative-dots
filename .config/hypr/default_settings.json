@@ -199,6 +199,14 @@
     },
     {
       "type": "bind",
+      "mods": "$mainMod SHIFT_L",
+      "key": "B",
+      "dispatcher": "exec",
+      "command": "(pidof hyprsunset && pkill hyprsunset) || hyprsunset",
+      "isEditing": false
+    },
+    {
+      "type": "bind",
       "mods": "$mainMod",
       "key": "1",
       "dispatcher": "exec",

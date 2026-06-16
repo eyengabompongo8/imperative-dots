@@ -169,7 +169,7 @@ ARCH_PKGS=(
 
     "uwsm"
     "xdg-desktop-portal-hyprland"
-    "darkman"
+    "darkman" "hyprsunset"
 
     "pyenv"
 
