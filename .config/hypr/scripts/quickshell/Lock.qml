@@ -36,7 +36,7 @@ ShellRoot {
     // Session Settings (Changed from Settings to QtObject to fix the Qt 6.11 initialization error)
     QtObject {
         id: lockSettings
-        property bool hidePassword: false
+        property bool hidePassword: true
         property int revealDuration: 300
     }
 
