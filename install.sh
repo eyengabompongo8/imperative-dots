@@ -1398,6 +1398,36 @@ else
   fi
 fi
 
+
+# ==============================================================================
+# --- 3.5 GNOME macOS Tahoe Theme Installation ---
+# ==============================================================================
+echo -e "\n${C_CYAN}[ INFO ]${RESET} Fetching and installing GNOME macOS Tahoe Theme..."
+TAHOE_CLONE_DIR="/tmp/GNOME-macOS-Tahoe"
+
+if [ -d "$TAHOE_CLONE_DIR" ]; then
+  rm -rf "$TAHOE_CLONE_DIR"
+fi
+
+if git clone --depth=1 https://github.com/kayozxo/GNOME-macOS-Tahoe "$TAHOE_CLONE_DIR" >/dev/null 2>&1; then
+  printf "  -> Theme repository downloaded successfully %-2s ${C_GREEN}[ OK ]${RESET}\n" ""
+  
+  # Run the execution inside a subshell so 'cd' actions don't derail script execution scope
+  (
+    cd "$TAHOE_CLONE_DIR" || exit 1
+    chmod +x install.sh
+    echo -e "  -> Executing theme configuration setup..."
+    ./install.sh --install-both >/dev/null 2>&1
+  )
+  
+  # Clean up /tmp to prevent stale directory cluttering subsequent script runs
+  rm -rf "$TAHOE_CLONE_DIR"
+  printf "  -> GNOME macOS Tahoe Theme applied %-15s ${C_GREEN}[ OK ]${RESET}\n" ""
+else
+  echo -e "  -> ${C_RED}[ FAILED ] Could not reach GNOME-macOS-Tahoe upstream source.${RESET}"
+fi
+
+
 # --- 4. Copying Dotfiles & Backups ---
 echo -e "\n${C_CYAN}[ INFO ]${RESET} Applying Configurations & Backing Up Old Ones..."
 TARGET_CONFIG_DIR="$HOME/.config"
