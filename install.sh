@@ -176,7 +176,7 @@ ARCH_PKGS=(
 
   "pyenv"
 
-  "bibata-cursor-git"
+  "bibata-cursor-theme"
 
   "btop"
   "spotify" "discord"
