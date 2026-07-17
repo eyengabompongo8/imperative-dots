@@ -1417,7 +1417,19 @@ if git clone --depth=1 https://github.com/kayozxo/GNOME-macOS-Tahoe "$TAHOE_CLON
     cd "$TAHOE_CLONE_DIR" || exit 1
     chmod +x install.sh
     echo -e "  -> Executing theme configuration setup..."
-    ./install.sh --install-both >/dev/null 2>&1
+    # Provide the sequential menu answers to the installer:
+    # - 3: Selects "Install: Both" (Light and Dark GTK themes)
+    # - 7: Selects "Install libadwaita override" from the main menu
+    # - light: Selects the "Light" mode for the libadwaita override
+    # - N: Selects "No" when asked to pick a specific accent variant
+    # - 12: Selects "Exit" to cleanly close the installer loop
+    ./install.sh <<EOF
+    3
+    7
+    light
+    N
+    12
+    EOF >/dev/null 2>&1
   )
   
   # Clean up /tmp to prevent stale directory cluttering subsequent script runs
