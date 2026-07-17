@@ -78,17 +78,22 @@ ShellRoot {
 
     Process {
         id: suspendProcess
-        command: ["systemctl", "suspend"]
+        command: ["systemctl", "suspend-then-hibernate"]
     }
 
+    Process {
+        id: hibernateProcess
+        command: ["systemctl", "hibernate"]
+    }
+
+    Process {
+      id: reloadProcess
+      command: ["hyprshutdown", "-t", "Restarting...", "--post-cmd", "reboot"]
+    }
+  
     Process {
         id: poweroffProcess
-        command: ["systemctl", "poweroff"]
-    }
-
-    Process {
-        id: reloadProcess
-        command: ["systemctl", "reboot"]
+        command: ["hyprshutdown", "-t", "Shutting down...", "--post-cmd", "shutdown -P 0"]
     }
 
     WlSessionLock {
@@ -999,28 +1004,6 @@ ShellRoot {
 
                         Rectangle {
                             Layout.fillWidth: true; Layout.preferredHeight: 48 * screenRoot.sc; Layout.leftMargin: 10 * screenRoot.sc; Layout.rightMargin: 10 * screenRoot.sc; radius: 12 * screenRoot.sc
-                            color: ma1.containsMouse ? Qt.rgba(root.blue.r, root.blue.g, root.blue.b, 0.1) : "transparent"
-                            scale: ma1.pressed ? 0.95 : (ma1.containsMouse ? 1.02 : 1.0)
-                            Behavior on color { ColorAnimation { duration: 200 } }
-                            Behavior on scale { NumberAnimation { duration: 200; easing.type: Easing.OutBack } }
-                            
-                            RowLayout {
-                                anchors.fill: parent; anchors.leftMargin: 16 * screenRoot.sc; anchors.rightMargin: 16 * screenRoot.sc; spacing: 0
-                                Text { text: "󰜉"; font.family: "Iosevka Nerd Font"; font.pixelSize: 18 * screenRoot.sc; color: ma1.containsMouse ? root.blue : Qt.rgba(root.blue.r, root.blue.g, root.blue.b, 0.6); Behavior on color { ColorAnimation { duration: 200 } } }
-                                Item { Layout.fillWidth: true }
-                                Text { text: "Reboot"; font.family: "SF Pro Text"; font.pixelSize: 15 * screenRoot.sc; font.weight: Font.Medium; color: ma1.containsMouse ? root.blue : Qt.rgba(root.blue.r, root.blue.g, root.blue.b, 0.6); Behavior on color { ColorAnimation { duration: 200 } } }
-                            }
-                            MouseArea { 
-                                id: ma1; anchors.fill: parent; hoverEnabled: true;
-                                onClicked: {
-                                    screenRoot.powerMenuOpen = false;
-                                    reloadProcess.running = true;
-                                }
-                            }
-                        }
-
-                        Rectangle {
-                            Layout.fillWidth: true; Layout.preferredHeight: 48 * screenRoot.sc; Layout.leftMargin: 10 * screenRoot.sc; Layout.rightMargin: 10 * screenRoot.sc; radius: 12 * screenRoot.sc
                             color: ma2.containsMouse ? Qt.rgba(root.mauve.r, root.mauve.g, root.mauve.b, 0.1) : "transparent"
                             scale: ma2.pressed ? 0.95 : (ma2.containsMouse ? 1.02 : 1.0)
                             Behavior on color { ColorAnimation { duration: 200 } }
@@ -1041,6 +1024,50 @@ ShellRoot {
                             }
                         }
 
+                         Rectangle {
+                            Layout.fillWidth: true; Layout.preferredHeight: 48 * screenRoot.sc; Layout.leftMargin: 10 * screenRoot.sc; Layout.rightMargin: 10 * screenRoot.sc; radius: 12 * screenRoot.sc
+                            color: maHibernate.containsMouse ? Qt.rgba(root.peach.r, root.peach.g, root.peach.b, 0.1) : "transparent"
+                            scale: maHibernate.pressed ? 0.95 : (maHibernate.containsMouse ? 1.02 : 1.0)
+                            Behavior on color { ColorAnimation { duration: 200 } }
+                            Behavior on scale { NumberAnimation { duration: 200; easing.type: Easing.OutBack } }
+                            
+                            RowLayout {
+                                anchors.fill: parent; anchors.leftMargin: 16 * screenRoot.sc; anchors.rightMargin: 16 * screenRoot.sc; spacing: 0
+                                Text { text: ""; font.family: "Iosevka Nerd Font"; font.pixelSize: 18 * screenRoot.sc; color: maHibernate.containsMouse ? root.peach : Qt.rgba(root.peach.r, root.peach.g, root.peach.b, 0.6); Behavior on color { ColorAnimation { duration: 200 } } }
+                                Item { Layout.fillWidth: true }
+                                Text { text: "Hibernate"; font.family: "SF Pro Text"; font.pixelSize: 15 * screenRoot.sc; font.weight: Font.Medium; color: maHibernate.containsMouse ? root.peach : Qt.rgba(root.peach.r, root.peach.g, root.peach.b, 0.6); Behavior on color { ColorAnimation { duration: 200 } } }
+                            }
+                            MouseArea { 
+                                id: maHibernate; anchors.fill: parent; hoverEnabled: true;
+                                onClicked: {
+                                    screenRoot.powerMenuOpen = false;
+                                    hibernateProcess.running = true;
+                                }
+                            }
+                        }
+
+                        Rectangle {
+                          Layout.fillWidth: true; Layout.preferredHeight: 48 * screenRoot.sc; Layout.leftMargin: 10 * screenRoot.sc; Layout.rightMargin: 10 * screenRoot.sc; radius: 12 * screenRoot.sc
+                          color: ma1.containsMouse ? Qt.rgba(root.blue.r, root.blue.g, root.blue.b, 0.1) : "transparent"
+                          scale: ma1.pressed ? 0.95 : (ma1.containsMouse ? 1.02 : 1.0)
+                          Behavior on color { ColorAnimation { duration: 200 } }
+                          Behavior on scale { NumberAnimation { duration: 200; easing.type: Easing.OutBack } }
+
+                          RowLayout {
+                            anchors.fill: parent; anchors.leftMargin: 16 * screenRoot.sc; anchors.rightMargin: 16 * screenRoot.sc; spacing: 0
+                            Text { text: "󰜉"; font.family: "Iosevka Nerd Font"; font.pixelSize: 18 * screenRoot.sc; color: ma1.containsMouse ? root.blue : Qt.rgba(root.blue.r, root.blue.g, root.blue.b, 0.6); Behavior on color { ColorAnimation { duration: 200 } } }
+                            Item { Layout.fillWidth: true }
+                            Text { text: "Reboot"; font.family: "SF Pro Text"; font.pixelSize: 15 * screenRoot.sc; font.weight: Font.Medium; color: ma1.containsMouse ? root.blue : Qt.rgba(root.blue.r, root.blue.g, root.blue.b, 0.6); Behavior on color { ColorAnimation { duration: 200 } } }
+                          }
+                          MouseArea { 
+                            id: ma1; anchors.fill: parent; hoverEnabled: true;
+                            onClicked: {
+                              screenRoot.powerMenuOpen = false;
+                              reloadProcess.running = true;
+                            }
+                          }
+                        }
+ 
                         Rectangle {
                             Layout.fillWidth: true; Layout.preferredHeight: 48 * screenRoot.sc; Layout.leftMargin: 10 * screenRoot.sc; Layout.rightMargin: 10 * screenRoot.sc; Layout.bottomMargin: 8 * screenRoot.sc; radius: 12 * screenRoot.sc
                             color: ma3.containsMouse ? Qt.rgba(root.red.r, root.red.g, root.red.b, 0.1) : "transparent"

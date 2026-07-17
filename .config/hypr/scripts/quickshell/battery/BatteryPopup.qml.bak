@@ -1395,9 +1395,10 @@ Item {
                                 Repeater {
                                     model: ListModel {
                                         ListElement { cmd: "bash ~/.config/hypr/scripts/lock.sh"; icon: ""; baseColor: "mauve"; weight: 1.0 }
-                                        ListElement { cmd: "bash ~/.config/hypr/scripts/lock.sh & systemctl suspend"; icon: "ᶻ 𝗓 𝗓"; baseColor: "blue"; weight: 1.0 }
-                                        ListElement { cmd: "systemctl reboot"; icon: "󰑓"; baseColor: "yellow"; weight: 2.5 }
-                                        ListElement { cmd: "systemctl poweroff -i"; icon: ""; baseColor: "red"; weight: 3.5 }
+                                        ListElement { cmd: "bash ~/.config/hypr/scripts/lock.sh & systemctl suspend-then-hibernate"; icon: "ᶻ 𝗓 𝗓"; baseColor: "blue"; weight: 1.5 }
+                                        ListElement { cmd: "bash ~/.config/hypr/scripts/lock.sh & systemctl hibernate"; icon: ""; baseColor: "blue"; weight: 1.5 }
+                                        ListElement { cmd: "hyprshutdown -t 'Restarting...' --post-cmd 'reboot'"; icon: "󰑓"; baseColor: "yellow"; weight: 2.5 }
+                                        ListElement { cmd: "hyprshutdown -t 'Shutting down...' --post-cmd 'shutdown -P 0'"; icon: ""; baseColor: "red"; weight: 3.5 }
                                     }
                                     
                                     delegate: Rectangle {
