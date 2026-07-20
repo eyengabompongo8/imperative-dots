@@ -178,6 +178,8 @@ ARCH_PKGS=(
 
   "bibata-cursor-theme"
 
+  "apple-fonts" "ttf-apple-emoji"
+
   "btop"
   "spotify" "discord"
 
@@ -1864,6 +1866,15 @@ fi
 
 # --- 5. Fonts ---
 echo -e "\n${C_CYAN}[ INFO ]${RESET} Installing Fonts..."
+
+TARGET_FONTCONFIG_DIR="$HOME/.config/fontconfig"
+REPO_FONTCONFIG_DIR="$REPO_DIR/fontconfig"
+mkdir -p "$TARGET_FONTCONFIG_DIR"
+if [ -d "$REPO_FONTCONFIG_DIR" ]; then
+  cp -r "$REPO_FONTCONFIG_DIR/"* "$TARGET_FONTCONFIG_DIR/" 2>/dev/null || true
+  printf "  -> Copied fontconfig %-25s ${C_GREEN}[ OK ]${RESET}\n" ""
+fi
+
 TARGET_FONTS_DIR="$HOME/.local/share/fonts"
 REPO_FONTS_DIR="$REPO_DIR/.local/share/fonts"
 mkdir -p "$TARGET_FONTS_DIR"
@@ -1899,6 +1910,7 @@ find "$TARGET_FONTS_DIR" -type d -exec chmod 755 {} \; 2>/dev/null
 
 if command -v fc-cache &>/dev/null; then
   fc-cache -f "$TARGET_FONTS_DIR" >/dev/null 2>&1
+  fc-cache -f -v >/dev/null 2>&1
   printf "  -> Font cache updated %-21s ${C_GREEN}[ OK ]${RESET}\n" ""
 fi
 
