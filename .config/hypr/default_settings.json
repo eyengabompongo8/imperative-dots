@@ -166,15 +166,15 @@
       "type": "bind",
       "mods": " $mainMod",
       "key": "D",
-      "dispatcher": "togglespecialworkspace",
-      "command": "spotify_discord"
+      "dispatcher": "exec",
+      "command": "~/.config/hypr/scripts/special_workspaces.sh toggle spotify_discord"
     },
     {
       "type": "bind",
       "mods": " ALT",
       "key": "Space",
-      "dispatcher": "togglespecialworkspace",
-      "command": "monitoring"
+      "dispatcher": "exec",
+      "command": "~/.config/hypr/scripts/special_workspaces.sh toggle monitoring"
     },
     {
       "type": "bind",
@@ -632,6 +632,6 @@
     },
     {
       "command": "discord"
-    }
+    },
   ]
 }
