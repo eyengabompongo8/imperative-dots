@@ -1,3 +1,4 @@
+
 import QtQuick
 import QtQuick.Window
 import QtQuick.Controls
@@ -355,27 +356,27 @@ ShellRoot {
                             
                             Text {
                                 id: clockHours
-                                font.family: "SF Pro Rounded"
+                                font.family: "SF Pro Display"
                                 font.pixelSize: 140 * screenRoot.sc
                                 font.weight: Font.Bold
-                                color: root.text
+                                color: Qt.rgba(root.text.r, root.text.g, root.text.b, 0.8)
                                 Behavior on color { ColorAnimation { duration: 300 } }
                             }
                             Text {
                                 text: ":"
-                                font.family: "SF Pro Rounded"
+                                font.family: "SF Pro Display"
                                 font.pixelSize: 140 * screenRoot.sc
                                 font.weight: Font.Bold
                                 opacity: 0.5
-                                color: root.text
+                                color: Qt.rgba(root.text.r, root.text.g, root.text.b, 0.8)
                                 Behavior on color { ColorAnimation { duration: 300 } }
                             }
                             Text {
                                 id: clockMinutes
-                                font.family: "SF Pro Rounded"
+                                font.family: "SF Pro Display"
                                 font.pixelSize: 140 * screenRoot.sc
                                 font.weight: Font.Bold
-                                color: root.text
+                                color: Qt.rgba(root.text.r, root.text.g, root.text.b, 0.8)
                                 Behavior on color { ColorAnimation { duration: 300 } }
                             }
                         }
@@ -383,10 +384,10 @@ ShellRoot {
                         Text {
                             id: dateText
                             Layout.alignment: Qt.AlignHCenter
-                            font.family: "SF Pro Rounded"
+                            font.family: "SF Pro Text"
                             font.pixelSize: 22 * screenRoot.sc
                             font.weight: Font.Bold
-                            color: root.text
+                            color: Qt.rgba(root.text.r, root.text.g, root.text.b, 0.8)
                         }
 
                         Timer {
@@ -1277,3 +1278,4 @@ ShellRoot {
         }
     }
 }
+
