@@ -633,5 +633,8 @@
     {
       "command": "discord"
     },
+    {
+      "command": "hyprctl setcursor Bibata-Modern-Ice 20"
+    }
   ]
 }
