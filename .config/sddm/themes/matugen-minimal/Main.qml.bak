@@ -164,7 +164,7 @@ Rectangle {
                 font.family: "SF Pro Display"
                 font.pixelSize: 140
                 font.weight: Font.Bold
-                color: Qt.rgba(root.text.r, root.text.g, root.text.b, 0.8)
+                color: Qt.alpha(Colors.text, 0.8)
                 Layout.alignment: Qt.AlignHCenter
             }
 
@@ -174,7 +174,7 @@ Rectangle {
                 font.family: "SF Pro Display"
                 font.pixelSize: 22
                 font.weight: Font.Bold
-                color: Qt.rgba(root.text.r, root.text.g, root.text.b, 0.8)
+                color: Qt.alpha(Colors.text, 0.8)
                 Layout.alignment: Qt.AlignHCenter
             }
 
@@ -599,3 +599,4 @@ Rectangle {
         }
     }
 }
+
