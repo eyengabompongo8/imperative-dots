@@ -161,20 +161,20 @@ Rectangle {
             Text {
                 id: timeText
                 text: Qt.formatTime(new Date(), "hh:mm")
-                font.family: "SF Pro Rounded"
+                font.family: "SF Pro Display"
                 font.pixelSize: 140
                 font.weight: Font.Bold
-                color: Colors.text
+                color: Qt.alpha(Colors.text, 0.8)
                 Layout.alignment: Qt.AlignHCenter
             }
 
             Text {
                 id: dateText
                 text: Qt.formatDate(new Date(), "dddd, MMMM dd")
-                font.family: "SF Pro Rounded"
+                font.family: "SF Pro Display"
                 font.pixelSize: 22
                 font.weight: Font.Bold
-                color: Colors.text
+                color: Qt.alpha(Colors.text, 0.8)
                 Layout.alignment: Qt.AlignHCenter
             }
 
@@ -599,3 +599,4 @@ Rectangle {
         }
     }
 }
+
