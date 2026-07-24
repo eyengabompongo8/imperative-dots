@@ -1,0 +1,116 @@
+{
+    "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json",
+    "logo": {
+        "type": "auto",        // Logo type: auto, builtin, small, file, etc.
+        "source": "~/Pictures/Profile\\ Pictures/huey-round.png",
+        "height": 16,          // Height in characters
+        "padding": {
+            "top": 1,          // Top padding
+            "left": 0,         // Left padding
+            "right": 3         // Right padding
+        },
+    },
+    "display": {
+        "separator": " "
+    },
+    "modules": [
+        {
+            "type": "title",
+            "key": "╭─",
+            "format": "{user-name}",
+            "keyColor": "default"
+        },
+        {
+            "type": "title",
+            "key": "├─󰒋",
+            "format": "{host-name}",
+            "keyColor": "default"
+        },
+        {
+            "type": "os",
+            "key": "├─󰣇", // Just get your distro's logo off nerdfonts.com
+            "keyColor": "default"
+        },
+        {
+            "type": "kernel",
+            "key": "├─",
+            "keyColor": "default"
+        },
+        {
+            "type": "packages",
+            "key": "├─󰏖",
+            "keyColor": "default"
+        },
+        {
+            "type": "uptime",
+            "key": "├─󰅐",
+            "keyColor": "default"
+        },
+        {
+            "type": "media",
+            "key": "├─󰝚",
+            "keyColor": "default"
+        },
+        {
+            "type": "localip",
+            "key": "├─󰩟",
+            "compact": true,
+            "keyColor": "default"
+        },
+        {
+            "type": "publicip",
+            "key": "├─󰩠",
+            "keyColor": "default",
+            "timeout": 1000
+        },
+        {
+            "type": "wifi",
+            "key": "╰─",
+            "format": "{ssid}",
+            "keyColor": "default"
+        },
+
+        "break",
+    
+        {
+            "type": "cpu",
+            "key": "╭─󰻠",
+            "keyColor": "default"
+        },
+        {
+            "type": "gpu",
+            "key": "├─󰍛",
+            "keyColor": "default"
+        },
+        {
+            "type": "disk",
+            "key": "├─",
+            "keyColor": "default"
+        },
+        {
+            "type": "memory",
+            "key": "├─󰑭",
+            "keyColor": "default"
+        },
+        {
+            "type": "swap",
+            "key": "├─󰓡",
+            "keyColor": "default"
+        },
+        {
+            "type": "display",
+            "key": "├─󰍹",
+            "keyColor": "default"
+        },
+        {
+            "type": "battery",
+            "key": "├─",
+            "keyColor": "default"
+        },
+        {
+            "type": "sound",
+            "key": "╰─",
+            "keyColor": "default"
+        },
+    ]
+}
