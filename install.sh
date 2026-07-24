@@ -1419,7 +1419,7 @@ if git clone --depth=1 https://github.com/kayozxo/GNOME-macOS-Tahoe "$TAHOE_CLON
     cd "$TAHOE_CLONE_DIR" || exit 1
     chmod +x install.sh
     echo -e "  -> Executing theme configuration setup..."
-    ./install.sh -la --install-both >/dev/null 2>&1
+    ./install.sh -la --install-both
   )
 
   # Clean up /tmp to prevent stale directory cluttering subsequent script runs
