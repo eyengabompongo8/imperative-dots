@@ -164,7 +164,7 @@ ARCH_PKGS=(
   "bluez" "bluez-utils" "libnotify" "networkmanager" "lm_sensors" "bc"
   "pipewire" "wireplumber" "pipewire-pulse" "pipewire-alsa" "pipewire-jack" "libpulse" "python"
   "imagemagick" "wget" "file" "git" "psmisc"
-  "matugen-bin" "ffmpeg" "fastfetch" "quickshell-git" "unzip" "python-websockets" "qt6-websockets"
+  "matugen-bin" "ffmpeg" "quickshell-git" "unzip" "python-websockets" "qt6-websockets"
   "grim" "playerctl" "satty" "yq" "slurp" "mpvpaper"
   "wmctrl" "power-profiles-daemon" "easyeffects" "swayosd-git" "nautilus" "lsp-plugins" "hyprpolkitagent"
   "qt5-wayland" "qt5-quickcontrols" "qt5-quickcontrols2" "qt5-graphicaleffects" "qt6-wayland"
@@ -183,9 +183,10 @@ ARCH_PKGS=(
   "btop"
   "spotify" "discord"
 
+  "fastfetch" "cava" "cmatrix-git"
+
   "gnome-control-center" "gnome-text-editor" "baobab" "gnome-disk-utility" "simple-scan" "papers"
   "gnome-music" "gnome-calculator" "gnome-calendar" "gnome-clocks" "loupe" "showtime"
-
 )
 
 PKGS=("${ARCH_PKGS[@]}")
@@ -1418,7 +1419,7 @@ if git clone --depth=1 https://github.com/kayozxo/GNOME-macOS-Tahoe "$TAHOE_CLON
     cd "$TAHOE_CLONE_DIR" || exit 1
     chmod +x install.sh
     echo -e "  -> Executing theme configuration setup..."
-    ./install.sh -la --install-both
+    ./install.sh -la --install-both >/dev/null 2>&1
   )
 
   # Clean up /tmp to prevent stale directory cluttering subsequent script runs
@@ -1433,7 +1434,7 @@ echo -e "\n${C_CYAN}[ INFO ]${RESET} Applying Configurations & Backing Up Old On
 TARGET_CONFIG_DIR="$HOME/.config"
 BACKUP_DIR="$HOME/.config-backup-$(date +%Y%m%d_%H%M%S)"
 
-CONFIG_FOLDERS=("cava" "hypr" "kitty" "rofi" "matugen" "swayosd")
+CONFIG_FOLDERS=("btop" "cava" "fastfetch" "hypr" "kitty" "rofi" "matugen" "swayosd")
 if [ "$INSTALL_NVIM" = true ]; then CONFIG_FOLDERS+=("nvim"); fi
 
 mkdir -p "$TARGET_CONFIG_DIR" "$BACKUP_DIR"
