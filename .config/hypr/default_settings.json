@@ -637,7 +637,7 @@
       "command": "hyprctl setcursor Bibata-Modern-Ice 20"
     },
     {
-      "command": "~/.config/hypr/scripts/startup_terminal.sh"
+      "command": "~/.config/hypr/scripts/startup_terminals.sh"
     }
   ]
 }
