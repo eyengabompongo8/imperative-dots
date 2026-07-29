@@ -87,7 +87,7 @@ WEATHER_CITY_ID=""
 WEATHER_UNIT=""
 FAILED_PKGS=()
 
-TARGET_BRANCH="lua"
+TARGET_BRANCH="mine"
 
 while [[ "$#" -gt 0 ]]; do
   case $1 in
