@@ -9,9 +9,6 @@ output_path = "~/.config/hypr/scripts/quickshell/qs_colors.json"
 input_path = "~/.config/matugen/templates/kitty-colors.conf.template"
 output_path = "~/.config/kitty/kitty-matugen-colors.conf"
 
-[templates.neovim]
-input_path = "~/.config/matugen/templates/nvim-colors.lua.template"
-output_path = "~/.config/nvim/matugen_colors.lua"
 
 [templates.cava]
 input_path = "~/.config/matugen/templates/cava-colors.ini.template"

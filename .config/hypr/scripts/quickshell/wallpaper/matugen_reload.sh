@@ -42,7 +42,6 @@ except Exception as e:
 TEXT_FILES=(
     "$HOME/.config/hypr/scripts/quickshell/qs_colors.json"
     "$HOME/.config/kitty/kitty-matugen-colors.conf"
-    "$HOME/.config/nvim/matugen_colors.lua"
     "$HOME/.config/cava/colors"
     "$HOME/.config/swayosd/style.css"
     "$HOME/.config/rofi/theme.rasi"
