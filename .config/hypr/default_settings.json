@@ -393,13 +393,6 @@
     {
       "type": "bind",
       "mods": "$mainMod",
-      "key": "P",
-      "dispatcher": "exec",
-      "command": "~/.config/hypr/scripts/qs_manager.sh toggle movies"
-    },
-    {
-      "type": "bind",
-      "mods": "$mainMod",
       "key": "I",
       "dispatcher": "exec",
       "command": "bash ~/.config/hypr/scripts/qs_manager.sh toggle settings"
@@ -617,9 +610,7 @@
     {
       "command": "~/.config/hypr/scripts/volume_listener.sh"
     },
-    {
-      "command": "~/.config/hypr/scripts/update_notifier.sh"
-    },
+
     {
       "command": "[workspace special:monitoring silent] kitty btop"
     },

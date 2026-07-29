@@ -141,28 +141,7 @@ Variants {
  	         	running = true;
  	        }
 	    }	  
-            Process {
-	        id: updatePoller
-	        command: ["bash", "-c", "if [ -f " + paths.getCacheDir("updater") + "/update_pending ]; then echo '1'; else echo '0'; fi"]
-	        running: true
-	        stdout: StdioCollector {
-	            onStreamFinished: {
-	                barWindow.updateAvailable = (this.text.trim() === "1");
-	            }
-	        }
-	    }
-	    
-	    Process {
-	        id: updateWatcher
-	        running: true
-	        command: ["bash", "-c", "inotifywait -qq -e create,delete,close_write " + paths.getCacheDir("updater") + "/ 2>/dev/null || sleep 5"]
-	        onExited: {
-	            updatePoller.running = false;
-	            updatePoller.running = true;
-	            running = false;
-	            running = true;
-	        }
-	    }
+
 	                
             Process {
                 id: settingsReader
@@ -702,73 +681,7 @@ Variants {
                             }
                         }
 
-                        Rectangle {
-                            id: updateButton
-                            property bool isHovered: updateMouse.containsMouse
-                            color: isHovered ? Qt.rgba(mocha.green.r, mocha.green.g, mocha.green.b, 0.15) : "transparent"
-                            radius: barWindow.s(10)
-                            
-                            width: barWindow.isUpdateVisible ? barWindow.s(34) : 0
-                            height: parent.pillHeight
-                            
-                            visible: width > 0 || opacity > 0
-                            opacity: barWindow.isUpdateVisible ? 1.0 : 0.0
-                            clip: false 
-                            
-                            Behavior on width { NumberAnimation { duration: 400; easing.type: Easing.OutQuint } }
-                            Behavior on opacity { NumberAnimation { duration: 300 } }
-                            Behavior on color { ColorAnimation { duration: 200 } }
-                            
-                            Rectangle {
-                                anchors.centerIn: parent
-                                width: parent.width
-                                height: parent.height
-                                radius: parent.radius
-                                color: mocha.green
-                                z: -1
-                                
-                                SequentialAnimation on scale {
-                                    running: barWindow.isUpdateVisible && !updateButton.isHovered
-                                    loops: Animation.Infinite
-                                    NumberAnimation { from: 1.0; to: 1.3; duration: 2000; easing.type: Easing.OutCubic }
-                                }
-                                SequentialAnimation on opacity {
-                                    running: barWindow.isUpdateVisible && !updateButton.isHovered
-                                    loops: Animation.Infinite
-                                    NumberAnimation { from: 0.15; to: 0.0; duration: 2000; easing.type: Easing.OutCubic }
-                                }
-                            }
-                            
-                            Text {
-                                anchors.centerIn: parent
-                                text: "󰚰"
-                                font.family: "Iosevka Nerd Font"; font.pixelSize: barWindow.s(22)
-                                color: parent.isHovered ? mocha.text : mocha.green
-                                Behavior on color { ColorAnimation { duration: 200 } }
-                                
-                                rotation: parent.isHovered ? 360 : 0
-                                Behavior on rotation {
-                                    NumberAnimation { 
-                                        duration: 600
-                                        easing.type: Easing.OutBack
-                                    }
-                                }
 
-                                scale: parent.isHovered ? 1.15 : 1.0
-                                Behavior on scale { NumberAnimation { duration: 250; easing.type: Easing.OutExpo } }
-                            }
-
-                            MouseArea {
-                                id: updateMouse
-                                anchors.fill: parent
-                                hoverEnabled: true
-                                onClicked: {
-                                    barWindow.updateAvailable = false;
-                                    barWindow.forceUpdateShow = false;
-                                    Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/qs_manager.sh toggle updater"]);
-                                }
-                            }
-                        }
                     }
                 }
                 
