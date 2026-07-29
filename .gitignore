@@ -1,11 +1,13 @@
 # Ignore Auto-Generated Hyprland Configs
-.config/hypr/config/env.conf
-.config/hypr/config/settings.conf
-.config/hypr/config/autostart.conf
-.config/hypr/config/keybindings.conf
-.config/hypr/config/monitors.conf
+.config/hypr/config/env.lua
+.config/hypr/config/settings.lua
+.config/hypr/config/autostart.lua
+.config/hypr/config/keybindings.lua
+.config/hypr/config/monitors.lua
 
 # IDEs
 .idea
 commit.txt
 .vscode
+
+*.conf

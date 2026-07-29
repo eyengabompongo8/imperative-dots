@@ -12,29 +12,25 @@
       "type": "bind",
       "mods": "$mainMod",
       "key": "W",
-      "dispatcher": "exec",
-      "command": "hyprctl dispatch killactive"
+      "dispatcher": "killactive"
     },
     {
       "type": "bind",
       "mods": "$mainMod",
       "key": "F",
-      "dispatcher": "exec",
-      "command": "hyprctl dispatch togglefloating"
+      "dispatcher": "togglefloating"
     },
     {
       "type": "bind",
       "mods": "$mainMod",
       "key": "A",
-      "dispatcher": "exec",
-      "command": "hyprctl dispatch togglesplit"
+      "dispatcher": "togglesplit"
     },
     {
       "type": "bind",
       "mods": "$mainMod SHIFT_L",
       "key": "F",
-      "dispatcher": "exec",
-      "command": "hyprctl dispatch fullscreen"
+      "dispatcher": "fullscreen"
     },
     {
       "type": "binde",
@@ -180,22 +176,22 @@
       "type": "bind",
       "mods": " $mainMod SHIFT",
       "key": "D",
-      "dispatcher": "exec",
-      "command": "hyprctl keyword workspace \"$(hyprctl activeworkspace -j | jq -r '.id'), layout:dwindle\""
+      "dispatcher": "lua",
+      "command": "hl.config({ general = { layout = \"dwindle\" } })"
     },
     {
       "type": "bind",
       "mods": " $mainMod SHIFT",
       "key": "S",
-      "dispatcher": "exec",
-      "command": "hyprctl keyword workspace \"$(hyprctl activeworkspace -j | jq -r '.id'), layout:scrolling\""
+      "dispatcher": "lua",
+      "command": "hl.config({ general = { layout = \"scrolling\" } })"
     },
     {
       "type": "bind",
       "mods": " $mainMod SHIFT",
       "key": "M",
-      "dispatcher": "exec",
-      "command": "hyprctl keyword workspace \"$(hyprctl activeworkspace -j | jq -r '.id'), layout:monocle\""
+      "dispatcher": "lua",
+      "command": "hl.config({ general = { layout = \"monocle\" } })"
     },
     {
       "type": "bind",

@@ -7,7 +7,7 @@ hyprctl dispatch workspace 8
 
 # 2. Dynamically set the layout to dwindle
 sleep 0.3
-hyprctl keyword workspace 8, layout:dwindle
+hyprctl keyword general:layout "dwindle"
 
 # 3. Launch the 3 terminals with their respective commands on that workspace
 sleep 0.3

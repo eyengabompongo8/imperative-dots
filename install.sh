@@ -87,7 +87,7 @@ WEATHER_CITY_ID=""
 WEATHER_UNIT=""
 FAILED_PKGS=()
 
-TARGET_BRANCH="mine"
+TARGET_BRANCH="lua"
 
 while [[ "$#" -gt 0 ]]; do
   case $1 in
@@ -1557,24 +1557,30 @@ else
     echo "  -> No target config files were changed upstream. Local files kept intact."
   fi
 
+  # Ensure all Hyprland template files are present and up-to-date
+  if [ -d "$REPO_DIR/.config/hypr/templates" ]; then
+    mkdir -p "$TARGET_CONFIG_DIR/hypr/templates"
+    cp -r "$REPO_DIR/.config/hypr/templates/"* "$TARGET_CONFIG_DIR/hypr/templates/" 2>/dev/null || true
+  fi
+
 fi
 
 # --- 4.5 Bake Hardware Variables into Template ---
 # By doing this now, we eliminate the need for the hacky hardware_env.conf file
 echo "  -> Baking hardware environment variables into template..."
 if [ "$GPU_VENDOR" == "NVIDIA" ]; then
-  NVIDIA_VARS="env = ELECTRON_OZONE_PLATFORM_HINT,auto\n\
-env = __NV_PRIME_RENDER_OFFLOAD,1\n\
-env = __NV_PRIME_RENDER_OFFLOAD_PROVIDER,NVIDIA-G0\n\
-env = __GL_GSYNC_ALLOWED,0\n\
-env = __GL_VRR_ALLOWED,0\n\
-env = __GL_SHADER_DISK_CACHE,1\n\
-env = __GL_SHADER_DISK_CACHE_PATH,$HOME/.cache/nvidia\n\
-env = __GLX_VENDOR_LIBRARY_NAME,nvidia\n\
-env = LIBVA_DRIVER_NAME,nvidia"
-  sed -i "s|{{HARDWARE_ENV}}|$NVIDIA_VARS|g" "$TARGET_CONFIG_DIR/hypr/templates/env.conf.template"
+  NVIDIA_VARS="\"ELECTRON_OZONE_PLATFORM_HINT,auto\",\\n\\
+\"__NV_PRIME_RENDER_OFFLOAD,1\",\\n\\
+\"__NV_PRIME_RENDER_OFFLOAD_PROVIDER,NVIDIA-G0\",\\n\\
+\"__GL_GSYNC_ALLOWED,0\",\\n\\
+\"__GL_VRR_ALLOWED,0\",\\n\\
+\"__GL_SHADER_DISK_CACHE,1\",\\n\\
+\"__GL_SHADER_DISK_CACHE_PATH,$HOME/.cache/nvidia\",\\n\\
+\"__GLX_VENDOR_LIBRARY_NAME,nvidia\",\\n\\
+\"LIBVA_DRIVER_NAME,nvidia\","
+  sed -i "s|{{HARDWARE_ENV}}|$NVIDIA_VARS|g" "$TARGET_CONFIG_DIR/hypr/templates/env.lua.template"
 else
-  sed -i "s|{{HARDWARE_ENV}}||g" "$TARGET_CONFIG_DIR/hypr/templates/env.conf.template"
+  sed -i "s|{{HARDWARE_ENV}}||g" "$TARGET_CONFIG_DIR/hypr/templates/env.lua.template"
 fi
 
 # ==============================================================================
@@ -1984,7 +1990,7 @@ EOF
 fi
 
 # Trigger Template Compilation
-echo -e "\n${C_CYAN}[ INFO ]${RESET} Compiling .conf files from Templates..."
+echo -e "\n${C_CYAN}[ INFO ]${RESET} Compiling .lua files from Templates..."
 
 # Always use the newly cloned upstream file to guarantee the --compile flag exists
 # This prevents errors for users updating from an older version that lacked this logic.

@@ -9,11 +9,11 @@ if [[ $ACTION_TYPE == "toggle" ]]; then
 
   if [[ $ACTION == "spotify_discord" ]]; then
 
-    hyprctl dispatch togglespecialworkspace spotify_discord
+    hyprctl dispatch "hl.dispatch(hl.dsp.workspace.toggle_special('spotify_discord'))"
 
   elif [[ $ACTION == "monitoring" ]]; then
 
-    hyprctl dispatch togglespecialworkspace monitoring
+    hyprctl dispatch "hl.dispatch(hl.dsp.workspace.toggle_special('monitoring'))"
 
   else
 
@@ -27,11 +27,11 @@ elif [[ $ACTION_TYPE == "move" ]]; then
 
     if [[ $CURRENT_WORKSPACE == "special:spotify_discord" ]]; then
 
-      hyprctl dispatch togglespecialworkspace spotify_discord
+      hyprctl dispatch "hl.dispatch(hl.dsp.workspace.toggle_special('spotify_discord'))"
 
     elif [[ $CURRENT_WORKSPACE == "not_special" ]]; then
 
-      hyprctl dispatch workspace special:monitoring
+      hyprctl dispatch "hl.dispatch(hl.dsp.workspace.toggle_special('monitoring'))"
 
     elif [[ $CURRENT_WORKSPACE == "special:monitoring" ]]; then
 
@@ -47,11 +47,11 @@ elif [[ $ACTION_TYPE == "move" ]]; then
 
     if [[ $CURRENT_WORKSPACE == "special:monitoring" ]]; then
 
-      hyprctl dispatch togglespecialworkspace monitoring
+      hyprctl dispatch "hl.dispatch(hl.dsp.workspace.toggle_special('monitoring'))"
 
     elif [[ $CURRENT_WORKSPACE == "not_special" ]]; then
 
-      hyprctl dispatch workspace special:spotify_discord
+      hyprctl dispatch "hl.dispatch(hl.dsp.workspace.toggle_special('spotify_discord'))"
 
     elif [[ $CURRENT_WORKSPACE == "special:spotify_discord" ]]; then
 

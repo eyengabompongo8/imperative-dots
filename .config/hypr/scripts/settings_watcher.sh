@@ -8,11 +8,11 @@ ENV_FILE="$HOME/.config/hypr/scripts/quickshell/calendar/.env"
 # Target configuration files
 CONF_DIR="$HOME/.config/hypr/config"
 TMPL_DIR="$HOME/.config/hypr/templates"
-SETTINGS_CONF="$CONF_DIR/settings.conf"
-AUTOSTART_CONF="$CONF_DIR/autostart.conf"
-ENV_CONF="$CONF_DIR/env.conf"
-KEYBINDS_CONF="$CONF_DIR/keybindings.conf"
-MONITORS_CONF="$CONF_DIR/monitors.conf"
+SETTINGS_CONF="$CONF_DIR/settings.lua"
+AUTOSTART_CONF="$CONF_DIR/autostart.lua"
+ENV_CONF="$CONF_DIR/env.lua"
+KEYBINDS_CONF="$CONF_DIR/keybindings.lua"
+MONITORS_CONF="$CONF_DIR/monitors.lua"
 ZSH_RC="$HOME/.zshrc"
 
 # Ensure the required files and directories exist
@@ -44,14 +44,15 @@ compile_settings() {
     # Read the hardware variables injected by install.sh directly out of the JSON
     HW_ENV=$(jq -r '.hardwareEnvs[]? // empty' "$SETTINGS_FILE")
 
-    # 1. Regenerate env.conf using the template
-    echo "Regenerating env.conf..."
+    # 1. Regenerate env.lua using the template
+    echo "Regenerating env.lua..."
     sed -e "s|{{XDG_PICTURES_DIR}}|$PIC_DIR|g" \
         -e "s|{{XDG_VIDEOS_DIR}}|$VID_DIR|g" \
         -e "s|{{WALLPAPER_DIR}}|$WP_DIR|g" \
         -e "s|{{SCRIPT_DIR}}|$HOME/.config/hypr/scripts|g" \
-        "$TMPL_DIR/env.conf.template" > "${ENV_CONF}.tmp"
+        "$TMPL_DIR/env.lua.template" > "${ENV_CONF}.tmp"
 
+    HW_ENV=$(jq -r '.hardwareEnvs[]? | "hl.env(\"\(. | split(",")[0])\", \"\(. | split(",")[1])\")" // empty' "$SETTINGS_FILE")
     # Use awk to safely substitute the multi-line HW_ENV array without breaking escapes
     awk -v hw="$HW_ENV" '{
         if (index($0, "{{HARDWARE_ENV}}")) {
@@ -67,37 +68,37 @@ compile_settings() {
         sed -i "s|^export WALLPAPER_DIR=.*|export WALLPAPER_DIR=\"$WP_DIR\"|" "$ZSH_RC"
     fi
 
-    # 2. Regenerate settings.conf using template
-    echo "Regenerating settings.conf..."
+    # 2. Regenerate settings.lua using template
+    echo "Regenerating settings.lua..."
     sed -e "s|{{KB_LAYOUT}}|$LANG|g" \
         -e "s|{{KB_OPTIONS}}|$KB_OPT|g" \
-        "$TMPL_DIR/settings.conf.template" > "$SETTINGS_CONF"
+        "$TMPL_DIR/settings.lua.template" > "$SETTINGS_CONF"
 
-    # 3. Regenerate autostart.conf
-    echo "Regenerating autostart.conf..."
-    cp "$TMPL_DIR/autostart.conf.template" "$AUTOSTART_CONF"
+    # 3. Regenerate autostart.lua
+    echo "Regenerating autostart.lua..."
+    cp "$TMPL_DIR/autostart.lua.template" "$AUTOSTART_CONF"
 
-    # Dump normal startup entries
-    jq -r '.startup[]? | "exec-once = \(.command)"' "$SETTINGS_FILE" >> "$AUTOSTART_CONF"
+    jq -r '.startup[]? | "    hl.exec_cmd(" + (.command | tojson) + ")"' "$SETTINGS_FILE" >> "$AUTOSTART_CONF"
 
     # Evaluate the guide boolean natively in jq and output the line ONLY if it resolves to true
     if [[ $(jq -r 'if (if type == "object" and has("openGuideAtStartup") then .openGuideAtStartup else true end) then "yes" else "no" end' "$SETTINGS_FILE") == "yes" ]]; then
-        echo "exec-once = bash -c 'sleep 1 && ~/.config/hypr/scripts/qs_manager.sh toggle guide'" >> "$AUTOSTART_CONF"
+        echo "    hl.exec_cmd(\"bash -c 'sleep 1 && ~/.config/hypr/scripts/qs_manager.sh toggle guide'\")" >> "$AUTOSTART_CONF"
     fi
+    echo "end)" >> "$AUTOSTART_CONF"
 
-    # 4. Regenerate keybindings.conf
-    echo "Regenerating keybindings.conf..."
-    cp "$TMPL_DIR/keybinds.conf.template" "$KEYBINDS_CONF"
-    jq -r '.keybinds[]? | "\(.type // "bind") = \(.mods // ""), \(.key // ""), \(.dispatcher // "exec")\(if .command and .command != "" then ", \(.command)" else "" end)"' "$SETTINGS_FILE" >> "$KEYBINDS_CONF"
+    # 4. Regenerate keybindings.lua
+    echo "Regenerating keybindings.lua..."
+    cp "$TMPL_DIR/keybinds.lua.template" "$KEYBINDS_CONF"
+    jq -r '.keybinds[]? | "hl.bind(\"\(if (.mods // "") != "" and (.mods | gsub("^\\s+|\\s+$"; "")) != "" then (((.mods | gsub("\\$mainMod"; "SUPER") | gsub("^\\s+|\\s+$"; "") | gsub("\\s+"; " + ")) + " + ")) else "" end)\(.key // "")\", \(if .dispatcher == "lua" then "function() " + .command + " end" elif .dispatcher == "exec" then "hl.dsp.exec_cmd(" + (.command | tojson) + ")" elif .dispatcher == "workspace" then "hl.dsp.focus({ workspace = " + (.command | tojson) + " })" elif .dispatcher == "movetoworkspace" then "hl.dsp.window.move({ workspace = " + (.command | tojson) + " })" elif .dispatcher == "movefocus" then "hl.dsp.focus({ direction = " + (.command | tojson) + " })" elif .dispatcher == "movewindow" then "hl.dsp.window.move({ direction = " + (.command | tojson) + " })" elif .dispatcher == "resizeactive" then "hl.dsp.window.resize({ x = " + (.command | split(" ")[0]) + ", y = " + (.command | split(" ")[1]) + ", relative = true })" elif .dispatcher == "killactive" then "hl.dsp.window.close()" elif .dispatcher == "togglefloating" then "hl.dsp.window.float({ action = \"toggle\" })" elif .dispatcher == "togglesplit" then "hl.dsp.layout(\"togglesplit\")" elif .dispatcher == "fullscreen" then "hl.dsp.window.fullscreen()" else "hl.dsp." + .dispatcher + "(" + (.command | tojson) + ")" end)\(if .type == "binde" then ", { repeating = true }" elif .type == "bindl" then ", { locked = true }" elif .type == "bindel" then ", { repeating = true, locked = true }" else "" end))"' "$SETTINGS_FILE" >> "$KEYBINDS_CONF"
 
-    # 5. Regenerate monitors.conf
-    echo "Regenerating monitors.conf..."
-    cp "$TMPL_DIR/monitors.conf.template" "$MONITORS_CONF"
+    # 5. Regenerate monitors.lua
+    echo "Regenerating monitors.lua..."
+    cp "$TMPL_DIR/monitors.lua.template" "$MONITORS_CONF"
     MONITOR_COUNT=$(jq '.monitors | length' "$SETTINGS_FILE" 2>/dev/null)
     if [[ "$MONITOR_COUNT" -gt 0 ]]; then
-        jq -r '.monitors[]? | "monitor = \(.name), \(.resW)x\(.resH)@\(.rate), \(.x)x\(.y), \(.scale)\(if .transform and .transform != 0 then ", transform, \(.transform)" else "" end)"' "$SETTINGS_FILE" >> "$MONITORS_CONF"
+        jq -r '.monitors[]? | "hl.monitor({ output = \"\(.name)\", mode = \"\(.resW)x\(.resH)@\(.rate)\", position = \"\(.x)x\(.y)\", scale = \(.scale)\(if .transform and .transform != 0 then ", transform = \(.transform)" else "" end) })"' "$SETTINGS_FILE" >> "$MONITORS_CONF"
     else
-        echo "monitor = , preferred, auto, 1" >> "$MONITORS_CONF"
+        echo 'hl.monitor({ output = "", mode = "preferred", position = "auto", scale = 1 })' >> "$MONITORS_CONF"
     fi
 
     # Hash after changes

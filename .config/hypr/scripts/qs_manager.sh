@@ -3,24 +3,21 @@
 # -----------------------------------------------------------------------------
 # GLOBAL VARS
 # -----------------------------------------------------------------------------
+echo "qs_manager called with args: $@" >> /tmp/hypr_qs_debug.log
 SCRIPTS_DIR="$HOME/.config/hypr/scripts/quickshell"
 SHELL_QML_PATH="$SCRIPTS_DIR/Shell.qml"
 
-# -----------------------------------------------------------------------------
-# FAST PATH: WORKSPACE SWITCHING
-# Must be first — before any sourcing, caching, or pgrep.
-# -----------------------------------------------------------------------------
-ACTION="$1"
-TARGET="$2"
-SUBTARGET="$3"
+ACTION=$1
+TARGET=$2
 
+# Check if ACTION is a number 1-10
 if [[ "$ACTION" =~ ^[0-9]+$ ]]; then
     # Send IPC command directly to Main.qml via Quickshell's native IPC handler
     quickshell -p "$SHELL_QML_PATH" ipc call main handleCommand "close" "" "" >/dev/null 2>&1
 
-    CMD="workspace $ACTION"
-    [[ "$TARGET" == "move" ]] && CMD="movetoworkspace $ACTION"
-    hyprctl --batch "dispatch $CMD" >/dev/null 2>&1
+    CMD="hl.dsp.focus({ workspace = $ACTION })"
+    [[ "$TARGET" == "move" ]] && CMD="hl.dsp.window.move({ workspace = $ACTION })"
+    hyprctl dispatch "$CMD" >/dev/null 2>&1
     exit 0
 fi
 
@@ -178,8 +175,8 @@ if [[ "$ACTION" == "open" || "$ACTION" == "toggle" ]]; then
         CURRENT_SRC=""
         if pgrep -a "mpvpaper" > /dev/null; then
             CURRENT_SRC=$(pgrep -a mpvpaper | grep -o "$SRC_DIR/[^' ]*" | head -n1)
-        elif command -v swww >/dev/null; then
-            CURRENT_SRC=$(swww query 2>/dev/null | grep -o "$SRC_DIR/[^ ]*" | head -n1)
+        elif command -v awww >/dev/null; then
+            CURRENT_SRC=$(awww query 2>/dev/null | grep -o "$SRC_DIR/[^ ]*" | head -n1)
         fi
 
         TARGET_THUMB=""
