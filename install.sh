@@ -147,7 +147,7 @@ else
 fi
 
 ARCH_PKGS=(
-  "hyprland" "hypridle" "hyprshutdown" "kitty" "zbar" "pavucontrol" "alsa-utils" "awww" "networkmanager-dmenu-git"
+  "hyprland" "kitty" "zbar" "pavucontrol" "alsa-utils" "awww" "networkmanager-dmenu-git"
   "wl-clipboard" "fd" "qt6-multimedia" "qt6-5compat" "ripgrep"
   "cliphist" "jq" "socat" "inotify-tools" "pamixer" "brightnessctl" "acpi" "iw"
   "bluez" "bluez-utils" "libnotify" "networkmanager" "lm_sensors" "bc"
@@ -161,7 +161,9 @@ ARCH_PKGS=(
 
   "uwsm"
   "xdg-desktop-portal-hyprland"
-  "darkman" "hyprsunset"
+
+  "darkman"
+  "hyprshutdown" "hypridle" "hyprsunset" "hyprcaffeine"
 
   "pyenv"
 
@@ -253,8 +255,6 @@ if [ -f "$EXISTING_SETTINGS" ] && command -v jq &>/dev/null; then
     USER_PICTURES_DIR="$(dirname "$_sj_wpdir")"
   fi
 fi
-
-
 
 draw_header() {
   clear
@@ -744,8 +744,6 @@ set_weather_api() {
     break
   done
 }
-
-
 
 prompt_optional_features_menu() {
   DM_SERVICES=("gdm" "gdm3" "lightdm" "sddm" "lxdm" "lxdm-gtk3" "ly")

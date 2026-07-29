@@ -102,6 +102,11 @@ Item {
     property bool sysMuted: false
     property real sysBrightness: 0
     
+    property string caffeineIdle: "off"
+    property bool caffeineMonitor: false
+    property bool caffeineLid: false
+    property bool sunsetActive: false
+
     property string currentUserName: ""
     
     property bool dndEnabled: false
@@ -191,7 +196,9 @@ Item {
             "powerprofilesctl get 2>/dev/null || echo 'balanced'; " +
             "awk '{print int($1/3600)\"h \"int(($1%3600)/60)\"m\"}' /proc/uptime 2>/dev/null || echo '0h 0m'; " +
             "wpctl get-volume @DEFAULT_AUDIO_SINK@ 2>/dev/null | awk '{print int($2*100), ($3==\"[MUTED]\"?\"off\":\"on\")}' || echo '0 on'; " +
-            "brightnessctl -m 2>/dev/null | awk -F, '{print substr($4, 1, length($4)-1)}' || echo '0'"
+            "brightnessctl -m 2>/dev/null | awk -F, '{print substr($4, 1, length($4)-1)}' || echo '0'; " +
+            "caff=$(hyprcaffeine status 2>/dev/null); echo \"$caff\" | python3 -c \"import sys,re; line=sys.stdin.read(); m=re.search(r'Idle: (.+?) \\\\S+ Monitor:', line); idle=m.group(1).strip() if m else 'off'; idle=re.sub(r'[^\\\\x00-\\\\x7F\\\\s]','',idle).strip() or 'off'; mm=re.search(r'Monitor: (\\\\S+)',line); lm=re.search(r'Lid: (\\\\S+)',line); print(idle); print((mm.group(1) if mm else 'off').lower()); print((lm.group(1) if lm else 'off').lower())\"; " +
+            "pidof hyprsunset >/dev/null && echo 'on' || echo 'off'"
         ]
         running: true
         stdout: StdioCollector {
@@ -219,6 +226,12 @@ Item {
                     
                     if (!window.isDraggingBri) {
                         window.sysBrightness = parseInt(lines[5]) || 0;
+                    }
+                    if (lines.length >= 9) {
+                        window.caffeineIdle = (lines[6] || "off").trim();
+                        window.caffeineMonitor = ((lines[7] || "off").trim() === "on");
+                        window.caffeineLid = ((lines[8] || "off").trim() === "on");
+                        window.sunsetActive = ((lines[9] || "off").trim().toLowerCase() === "on");
                     }
                 }
             }
@@ -803,15 +816,15 @@ Item {
                             model: 3
                             Rectangle {
                                 anchors.centerIn: parent
-                                anchors.verticalCenterOffset: window.s(-70)
-                                width: window.s(320) + (index * window.s(170))
+                                anchors.verticalCenterOffset: window.s(-100)
+                                width: window.s(230) + (index * window.s(130))
                                 height: width
                                 radius: width / 2
                                 color: "transparent"
-                                border.color: window.ambientSecondary
+                                border.color: window.surface1
                                 border.width: 1
                                 Behavior on border.color { ColorAnimation { duration: 1000 } }
-                                opacity: 0.06 - (index * 0.02)
+                                opacity: 0.15 - (index * 0.04)
                             }
                         }
                     }
@@ -1189,8 +1202,8 @@ Item {
                             anchors.bottom: parent.bottom
                             anchors.left: parent.left
                             anchors.right: parent.right
-                            anchors.margins: window.s(25)
-                            spacing: window.s(15)
+                            anchors.margins: window.s(20)
+                            spacing: window.s(10)
 
                             // 1. HARDWARE CONTROLS DOCK (Sliders)
                             Rectangle {
@@ -1386,11 +1399,164 @@ Item {
                                 }
                             }
 
+                            // 1.5. DISPLAY & CAFFEINE ACTIONS DOCK
+                            RowLayout {
+                                Layout.fillWidth: true
+                                Layout.preferredHeight: window.s(55)
+                                spacing: window.s(10)
+                                
+                                opacity: introActions
+                                transform: Translate { y: window.s(30) * (1.0 - introActions) }
+
+                                // SUNSET PANEL
+                                Rectangle {
+                                    id: sunsetBtn
+                                    Layout.preferredWidth: window.s(60)
+                                    Layout.fillHeight: true
+                                    radius: window.s(12)
+                                    color: window.sunsetActive ? window.blue : (sunsetMa.containsMouse ? window.surface1 : window.surface0)
+                                    border.color: window.sunsetActive ? window.blue : (sunsetMa.containsMouse ? window.blue : window.surface2)
+                                    border.width: sunsetMa.containsMouse || window.sunsetActive ? 2 : 1
+                                    Behavior on color { ColorAnimation { duration: 200 } }
+                                    Behavior on border.color { ColorAnimation { duration: 200 } }
+
+                                    Text {
+                                        anchors.centerIn: parent
+                                        font.family: "Iosevka Nerd Font"
+                                        font.pixelSize: window.s(22)
+                                        color: window.sunsetActive ? window.crust : window.text
+                                        text: "󰈈"
+                                    }
+                                    MouseArea {
+                                        id: sunsetMa
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: {
+                                            Quickshell.execDetached(["sh", "-c", "(pidof hyprsunset && pkill hyprsunset) || hyprsunset"]);
+                                            sysPoller.running = true;
+                                        }
+                                    }
+                                }
+                                
+                                // CAFFEINE PANEL
+                                Rectangle {
+                                    Layout.fillWidth: true
+                                    Layout.fillHeight: true
+                                    radius: window.s(12)
+                                    color: window.surface0
+                                    border.color: window.surface1
+                                    border.width: 1
+
+                                    RowLayout {
+                                        anchors.fill: parent
+                                        anchors.margins: window.s(8)
+                                        spacing: window.s(8)
+
+                                        // Lid Toggle
+                                        Rectangle {
+                                            Layout.preferredWidth: window.s(60)
+                                            Layout.fillHeight: true
+                                            radius: window.s(8)
+                                            color: window.caffeineLid ? window.mauve : (lidMa.containsMouse ? window.surface1 : "transparent")
+                                            Text { anchors.centerIn: parent; font.family: "Iosevka Nerd Font"; font.pixelSize: window.s(16); color: window.caffeineLid ? window.crust : window.text; text: "󰌢" }
+                                            MouseArea { id: lidMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: { Quickshell.execDetached(["hyprcaffeine", "lid", "toggle"]); sysPoller.running = true; } }
+                                        }
+                                        
+                                        // Monitor Toggle
+                                        Rectangle {
+                                            Layout.preferredWidth: window.s(60)
+                                            Layout.fillHeight: true
+                                            radius: window.s(8)
+                                            color: window.caffeineMonitor ? window.mauve : (monMa.containsMouse ? window.surface1 : "transparent")
+                                            Text { anchors.centerIn: parent; font.family: "Iosevka Nerd Font"; font.pixelSize: window.s(16); color: window.caffeineMonitor ? window.crust : window.text; text: "󰍹" }
+                                            MouseArea { id: monMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: { Quickshell.execDetached(["hyprcaffeine", "monitor", "toggle"]); sysPoller.running = true; } }
+                                        }
+
+                                        // Idle Toggle (fixed size, icon only)
+                                        Rectangle {
+                                            Layout.preferredWidth: window.s(60)
+                                            Layout.fillHeight: true
+                                            radius: window.s(8)
+                                            color: window.caffeineIdle !== "off" ? window.mauve : (idleMa.containsMouse ? window.surface1 : "transparent")
+                                            Text { anchors.centerIn: parent; font.family: "Iosevka Nerd Font"; font.pixelSize: window.s(16); color: window.caffeineIdle !== "off" ? window.crust : window.text; text: "󰛊" }
+                                            MouseArea { id: idleMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: { Quickshell.execDetached(["hyprcaffeine", "toggle"]); sysPoller.running = true; } }
+                                        }
+
+                                        // Time Remaining Label
+                                        Text {
+                                            visible: window.caffeineIdle !== "off"
+                                            font.family: "SF Pro Text"
+                                            font.weight: Font.Bold
+                                            font.pixelSize: window.s(11)
+                                            color: window.subtext0
+                                            Layout.alignment: Qt.AlignVCenter
+                                            text: {
+                                                let raw = window.caffeineIdle;
+                                                if (raw === "off") return "";
+                                                if (raw === "infinite") return "∞";
+                                                return raw;
+                                            }
+                                        }
+
+                                        // Timer Input Container
+                                        Rectangle {
+                                            Layout.preferredWidth: window.s(40)
+                                            Layout.fillHeight: true
+                                            radius: window.s(8)
+                                            color: window.surface1
+                                            border.color: window.surface2
+                                            border.width: 1
+                                            TextInput {
+                                                id: timerValInput
+                                                anchors.fill: parent
+                                                anchors.leftMargin: window.s(4)
+                                                anchors.rightMargin: window.s(4)
+                                                horizontalAlignment: TextInput.AlignHCenter
+                                                verticalAlignment: TextInput.AlignVCenter
+                                                font.family: "SF Pro Text"; font.pixelSize: window.s(12); color: window.text
+                                                text: "30"
+                                                validator: IntValidator { bottom: 1; top: 999 }
+                                            }
+                                        }
+                                        
+                                        // Unit Toggle
+                                        Rectangle {
+                                            Layout.preferredWidth: window.s(22)
+                                            Layout.fillHeight: true
+                                            radius: window.s(8)
+                                            color: unitMa.containsMouse ? window.surface1 : "transparent"
+                                            Text { id: timerUnitTxt; anchors.centerIn: parent; font.family: "SF Pro Text"; font.weight: Font.Bold; font.pixelSize: window.s(12); color: window.subtext0; text: "m" }
+                                            MouseArea { id: unitMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: { timerUnitTxt.text = timerUnitTxt.text === "m" ? "h" : "m"; } }
+                                        }
+                                        
+                                        // Apply Button
+                                        Rectangle {
+                                            Layout.preferredWidth: window.s(32)
+                                            Layout.fillHeight: true
+                                            radius: window.s(8)
+                                            color: applyMa.containsMouse ? window.surface2 : window.surface1
+                                            Text { anchors.centerIn: parent; font.family: "Iosevka Nerd Font"; font.pixelSize: window.s(16); color: window.text; text: "󰄬" }
+                                            MouseArea {
+                                                id: applyMa
+                                                anchors.fill: parent
+                                                hoverEnabled: true
+                                                cursorShape: Qt.PointingHandCursor
+                                                onClicked: {
+                                                    Quickshell.execDetached(["hyprcaffeine", "on", timerValInput.text + timerUnitTxt.text]);
+                                                    sysPoller.running = true;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
                             // 2. SYSTEM ACTIONS DOCK
                             RowLayout {
                                 Layout.fillWidth: true
-                                Layout.preferredHeight: window.s(75)
-                                spacing: window.s(12)
+                                Layout.preferredHeight: window.s(65)
+                                spacing: window.s(10)
                                 
                                 Repeater {
                                     model: ListModel {
@@ -1405,10 +1571,10 @@ Item {
                                         id: actionCapsule
                                         Layout.fillWidth: true
                                         Layout.fillHeight: true
-                                        radius: window.s(14)
+                                        radius: window.s(12)
 
                                         opacity: introActions
-                                        transform: Translate { y: window.s(30) * (1.0 - introActions) + (index * window.s(12) * (1.0 - introActions)) }
+                                        transform: Translate { y: window.s(30) * (1.0 - introActions) + (index * window.s(10) * (1.0 - introActions)) }
                                         
                                         property color c1: window[baseColor] || window.surface1
                                         property color c2: Qt.lighter(c1, 1.2)

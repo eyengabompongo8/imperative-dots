@@ -129,6 +129,11 @@ Item {
         property real sysVolume: 0
         property bool sysMuted: false
         property real sysBrightness: 0
+        
+        property string caffeineIdle: "off"
+        property bool caffeineMonitor: false
+        property bool caffeineLid: false
+        property bool sunsetActive: false
         property string currentUserName: "User"
     }
 
@@ -154,6 +159,10 @@ Item {
     property bool sysMuted: widgetCache.sysMuted
     property real sysBrightness: widgetCache.sysBrightness
     
+    property bool caffeineIdle: widgetCache.caffeineIdle
+    property bool caffeineMonitor: widgetCache.caffeineMonitor
+    property bool caffeineLid: widgetCache.caffeineLid
+    property bool sunsetActive: widgetCache.sunsetActive
     property string currentUserName: widgetCache.currentUserName
 
     property bool dndEnabled: false
@@ -181,7 +190,7 @@ Item {
     Process {
         id: dndInit
         running: true
-    command: ["bash", "-c", "cat " + paths.getCacheDir("dnd") + "/state 2>/dev/null || echo '0'"]
+        command: ["bash", "-c", "cat " + paths.getCacheDir("dnd") + "/state 2>/dev/null || echo '0'"]
         stdout: StdioCollector {
             onStreamFinished: {
                 window.dndEnabled = (this.text.trim() === "1");
@@ -205,24 +214,34 @@ Item {
         id: sysPoller
         // Stripped down to only the properties not provided by SysData.qml
         command: ["bash", "-c", 
-            "df -h / | awk 'NR==2 {print $5}' | tr -d '%' || echo '0'; " +
+            "cat /sys/class/power_supply/BAT*/capacity 2>/dev/null | head -n1 || echo '0'; " +
+            "cat /sys/class/power_supply/BAT*/status 2>/dev/null | head -n1 || echo 'Unknown'; " +
             "powerprofilesctl get 2>/dev/null || echo 'balanced'; " +
             "awk '{print int($1/3600)\"h \"int(($1%3600)/60)\"m\"}' /proc/uptime 2>/dev/null || echo '0h 0m'; " +
             "wpctl get-volume @DEFAULT_AUDIO_SINK@ 2>/dev/null | awk '{print int($2*100), ($3==\"[MUTED]\"?\"off\":\"on\")}' || echo '0 on'; " +
-            "brightnessctl -m 2>/dev/null | awk -F, '{print substr($4, 1, length($4)-1)}' || echo '0'"
+            "brightnessctl -m 2>/dev/null | awk -F, '{print substr($4, 1, length($4)-1)}' || echo '0'; " +
+            "top -bn1 | grep 'Cpu(s)' | awk '{print $2 + $4}' || echo '0'; " +
+            "free -m | awk '/Mem:/ {printf \"%d\\n\", $3/$2 * 100.0}' || echo '0'; " +
+            "df -h / | awk 'NR==2 {print $5}' | sed 's/%//' || echo '0'; " +
+            "sensors | awk '/Core 0/ {print $3}' | sed 's/+//; s/°C//' || echo '0'; " +
+            "caff=$(hyprcaffeine status 2>/dev/null); echo \"$caff\" | python3 -c \"import sys,re; line=sys.stdin.read(); m=re.search(r'Idle: (.+?) \\\\S+ Monitor:', line); idle=m.group(1).strip() if m else 'off'; idle=re.sub(r'[^\\\\x00-\\\\x7F\\\\s]','',idle).strip() or 'off'; mm=re.search(r'Monitor: (\\\\S+)',line); lm=re.search(r'Lid: (\\\\S+)',line); print(idle); print((mm.group(1) if mm else 'off').lower()); print((lm.group(1) if lm else 'off').lower())\"; " +
+            "pidof hyprsunset >/dev/null && echo 'on' || echo 'off'"
         ]
         running: true
         stdout: StdioCollector {
             onStreamFinished: {
                 let lines = this.text.trim().split("\n");
-                if (lines.length >= 5) {
-                    window.diskUsage = parseInt(lines[0]) || 0;
+                if (lines.length >= 10) {
+                    window.cpuUsage = parseFloat(lines[6]) || 0;
+                    window.ramUsage = parseFloat(lines[7]) || 0;
+                    window.diskUsage = parseFloat(lines[8]) || 0;
+                    window.sysTemp = parseFloat(lines[9]) || 0;
                     widgetCache.diskUsage = window.diskUsage;
                     
-                    window.powerProfile = lines[1];
+                    window.powerProfile = lines[2];
                     widgetCache.powerProfile = window.powerProfile;
                     
-                    let upParts = lines[2].split("h ");
+                    let upParts = lines[3].split("h ");
                     if (upParts.length === 2) {
                         window.upHours = parseInt(upParts[0]) || 0;
                         widgetCache.upHours = window.upHours;
@@ -230,8 +249,15 @@ Item {
                         widgetCache.upMins = window.upMins;
                     }
 
+                    if (lines.length >= 13) {
+                        window.caffeineIdle = (lines[10] || "off").trim();
+                        window.caffeineMonitor = ((lines[11] || "off").trim() === "on");
+                        window.caffeineLid = ((lines[12] || "off").trim() === "on");
+                        window.sunsetActive = ((lines[13] || "off").trim().toLowerCase() === "on");
+                    }
+
                     if (!window.isDraggingVol) {
-                        let volParts = (lines[3] || "0 on").trim().split(" ");
+                        let volParts = (lines[4] || "0 on").trim().split(" ");
                         window.sysVolume = parseInt(volParts[0]) || 0;
                         widgetCache.sysVolume = window.sysVolume;
                         window.sysMuted = (volParts[1] === "off");
@@ -970,9 +996,9 @@ Item {
                     Grid {
                         id: sysGrid
                         columns: 2
-                        spacing: window.s(25)
+                        spacing: window.s(15)
                         anchors.centerIn: parent
-                        anchors.verticalCenterOffset: window.s(-85) 
+                        anchors.verticalCenterOffset: window.s(-105) 
                         z: 1
 
                         opacity: introCore
@@ -981,7 +1007,7 @@ Item {
 
                         // 1. CPU Orb
                         Item {
-                            id: cpuOrb; width: window.s(145); height: window.s(145)
+                            id: cpuOrb; width: window.s(125); height: window.s(125)
                             property real animVal: window.cpuUsage
                             Behavior on animVal { NumberAnimation { duration: 1200; easing.type: Easing.OutQuint } }
                             onAnimValChanged: cpuCanvas.requestPaint()
@@ -1027,7 +1053,7 @@ Item {
 
                         // 2. RAM Orb
                         Item {
-                            id: ramOrb; width: window.s(145); height: window.s(145)
+                            id: ramOrb; width: window.s(125); height: window.s(125)
                             property real animVal: window.ramUsage
                             Behavior on animVal { NumberAnimation { duration: 1200; easing.type: Easing.OutQuint } }
                             onAnimValChanged: ramCanvas.requestPaint()
@@ -1073,7 +1099,7 @@ Item {
 
                         // 3. DISK Orb
                         Item {
-                            id: diskOrb; width: window.s(145); height: window.s(145)
+                            id: diskOrb; width: window.s(125); height: window.s(125)
                             property real animVal: window.diskUsage
                             Behavior on animVal { NumberAnimation { duration: 1200; easing.type: Easing.OutQuint } }
                             onAnimValChanged: diskCanvas.requestPaint()
@@ -1119,7 +1145,7 @@ Item {
 
                         // 4. TEMP Orb
                         Item {
-                            id: tempOrb; width: window.s(145); height: window.s(145)
+                            id: tempOrb; width: window.s(125); height: window.s(125)
                             property real animVal: window.sysTemp
                             Behavior on animVal { NumberAnimation { duration: 1200; easing.type: Easing.OutQuint } }
                             onAnimValChanged: tempCanvas.requestPaint()
@@ -1172,13 +1198,13 @@ Item {
                         anchors.bottom: parent.bottom
                         anchors.left: parent.left
                         anchors.right: parent.right
-                        anchors.margins: window.s(25)
-                        spacing: window.s(15)
+                        anchors.margins: window.s(20)
+                        spacing: window.s(10)
 
                         // 1. HARDWARE CONTROLS DOCK (Sliders)
-                        Rectangle {
-                            Layout.fillWidth: true
-                            Layout.preferredHeight: window.s(96)
+                            Rectangle {
+                                Layout.fillWidth: true
+                                Layout.preferredHeight: window.s(96)
                             radius: window.s(14)
                             color: window.surface0
                             border.color: window.surface1
@@ -1368,12 +1394,171 @@ Item {
                                 }
                             }
                         }
+                            
+                            
+                            // 1.5. DISPLAY & CAFFEINE ACTIONS DOCK
+                            RowLayout {
+                                Layout.fillWidth: true
+                                Layout.preferredHeight: window.s(55)
+                                spacing: window.s(10)
+                                
+                                opacity: introActions
+                                transform: Translate { y: window.s(30) * (1.0 - introActions) }
 
-                        // 2. SYSTEM ACTIONS DOCK
+                                // SUNSET PANEL
+                                Rectangle {
+                                    id: sunsetBtn
+                                    Layout.preferredWidth: window.s(60)
+                                    Layout.fillHeight: true
+                                    radius: window.s(12)
+                                    color: window.sunsetActive ? window.blue : (sunsetMa.containsMouse ? window.surface1 : window.surface0)
+                                    border.color: window.sunsetActive ? window.blue : (sunsetMa.containsMouse ? window.blue : window.surface2)
+                                    border.width: sunsetMa.containsMouse || window.sunsetActive ? 2 : 1
+                                    Behavior on color { ColorAnimation { duration: 200 } }
+                                    Behavior on border.color { ColorAnimation { duration: 200 } }
+
+                                    Text {
+                                        anchors.centerIn: parent
+                                        font.family: "Iosevka Nerd Font"
+                                        font.pixelSize: window.s(22)
+                                        color: window.sunsetActive ? window.crust : window.text
+                                        text: "󰈈"
+                                    }
+                                    MouseArea {
+                                        id: sunsetMa
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: {
+                                            Quickshell.execDetached(["sh", "-c", "(pidof hyprsunset && pkill hyprsunset) || hyprsunset"]);
+                                            sysPoller.running = true;
+                                        }
+                                    }
+                                }
+                                
+                                // CAFFEINE PANEL
+                                Rectangle {
+                                    Layout.fillWidth: true
+                                    Layout.fillHeight: true
+                                    radius: window.s(12)
+                                    color: window.surface0
+                                    border.color: window.surface1
+                                    border.width: 1
+
+                                    RowLayout {
+                                        anchors.fill: parent
+                                        anchors.margins: window.s(8)
+                                        spacing: window.s(8)
+
+                                        // Lid Toggle
+                                        Rectangle {
+                                            Layout.preferredWidth: window.s(60)
+                                            Layout.fillHeight: true
+                                            radius: window.s(8)
+                                            color: window.caffeineLid ? window.mauve : (lidMa.containsMouse ? window.surface1 : "transparent")
+                                            Text { anchors.centerIn: parent; font.family: "Iosevka Nerd Font"; font.pixelSize: window.s(16); color: window.caffeineLid ? window.crust : window.text; text: "󰌢" }
+                                            MouseArea { id: lidMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: { Quickshell.execDetached(["hyprcaffeine", "lid", "toggle"]); sysPoller.running = true; } }
+                                        }
+                                        
+                                        // Monitor Toggle
+                                        Rectangle {
+                                            Layout.preferredWidth: window.s(60)
+                                            Layout.fillHeight: true
+                                            radius: window.s(8)
+                                            color: window.caffeineMonitor ? window.mauve : (monMa.containsMouse ? window.surface1 : "transparent")
+                                            Text { anchors.centerIn: parent; font.family: "Iosevka Nerd Font"; font.pixelSize: window.s(16); color: window.caffeineMonitor ? window.crust : window.text; text: "󰍹" }
+                                            MouseArea { id: monMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: { Quickshell.execDetached(["hyprcaffeine", "monitor", "toggle"]); sysPoller.running = true; } }
+                                        }
+
+                                        // Idle Toggle (fixed size, icon only)
+                                        Rectangle {
+                                            Layout.preferredWidth: window.s(60)
+                                            Layout.fillHeight: true
+                                            radius: window.s(8)
+                                            color: window.caffeineIdle !== "off" ? window.mauve : (idleMa.containsMouse ? window.surface1 : "transparent")
+                                            Text { anchors.centerIn: parent; font.family: "Iosevka Nerd Font"; font.pixelSize: window.s(16); color: window.caffeineIdle !== "off" ? window.crust : window.text; text: "󰛊" }
+                                            MouseArea { id: idleMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: { Quickshell.execDetached(["hyprcaffeine", "toggle"]); sysPoller.running = true; } }
+                                        }
+
+                                        // Time Remaining Label
+                                        Text {
+                                            visible: window.caffeineIdle !== "off"
+                                            font.family: "SF Pro Text"
+                                            font.weight: Font.Bold
+                                            font.pixelSize: window.s(11)
+                                            color: window.subtext0
+                                            Layout.alignment: Qt.AlignVCenter
+                                            text: {
+                                                let raw = window.caffeineIdle;
+                                                if (raw === "off" || raw === "infinite") return raw;
+                                                let totalSecs = 0;
+                                                let hMatch = raw.match(/(\d+)h/);
+                                                let mMatch = raw.match(/(\d+)m/);
+                                                let sMatch = raw.match(/(\d+)s/);
+                                                if (raw === "off") return "";
+                                                if (raw === "infinite") return "∞";
+                                                return raw;
+                                            }
+                                        }
+
+                                        // Timer Input Container
+                                        Rectangle {
+                                            Layout.preferredWidth: window.s(40)
+                                            Layout.fillHeight: true
+                                            radius: window.s(8)
+                                            color: window.surface1
+                                            border.color: window.surface2
+                                            border.width: 1
+                                            TextInput {
+                                                id: timerValInput
+                                                anchors.fill: parent
+                                                anchors.leftMargin: window.s(4)
+                                                anchors.rightMargin: window.s(4)
+                                                horizontalAlignment: TextInput.AlignHCenter
+                                                verticalAlignment: TextInput.AlignVCenter
+                                                font.family: "SF Pro Text"; font.pixelSize: window.s(12); color: window.text
+                                                text: "30"
+                                                validator: IntValidator { bottom: 1; top: 999 }
+                                            }
+                                        }
+                                        
+                                        // Unit Toggle
+                                        Rectangle {
+                                            Layout.preferredWidth: window.s(22)
+                                            Layout.fillHeight: true
+                                            radius: window.s(8)
+                                            color: unitMa.containsMouse ? window.surface1 : "transparent"
+                                            Text { id: timerUnitTxt; anchors.centerIn: parent; font.family: "SF Pro Text"; font.weight: Font.Bold; font.pixelSize: window.s(12); color: window.subtext0; text: "m" }
+                                            MouseArea { id: unitMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: { timerUnitTxt.text = timerUnitTxt.text === "m" ? "h" : "m"; } }
+                                        }
+                                        
+                                        // Apply Button
+                                        Rectangle {
+                                            Layout.preferredWidth: window.s(32)
+                                            Layout.fillHeight: true
+                                            radius: window.s(8)
+                                            color: applyMa.containsMouse ? window.surface2 : window.surface1
+                                            Text { anchors.centerIn: parent; font.family: "Iosevka Nerd Font"; font.pixelSize: window.s(16); color: window.text; text: "󰄬" }
+                                            MouseArea {
+                                                id: applyMa
+                                                anchors.fill: parent
+                                                hoverEnabled: true
+                                                cursorShape: Qt.PointingHandCursor
+                                                onClicked: {
+                                                    Quickshell.execDetached(["hyprcaffeine", "on", timerValInput.text + timerUnitTxt.text]);
+                                                    sysPoller.running = true;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            // 2. SYSTEM ACTIONS DOCK
                         RowLayout {
                             Layout.fillWidth: true
-                            Layout.preferredHeight: window.s(75)
-                            spacing: window.s(12)
+                            Layout.preferredHeight: window.s(65)
+                            spacing: window.s(10)
                             
                             Repeater {
                                 model: ListModel {
@@ -1388,10 +1573,10 @@ Item {
                                     id: actionCapsule
                                     Layout.fillWidth: true
                                     Layout.fillHeight: true
-                                    radius: window.s(14)
+                                    radius: window.s(12)
 
                                     opacity: introActions
-                                    transform: Translate { y: window.s(30) * (1.0 - introActions) + (index * window.s(12) * (1.0 - introActions)) }
+                                    transform: Translate { y: window.s(30) * (1.0 - introActions) + (index * window.s(10) * (1.0 - introActions)) }
                                     
                                     property color c1: window[baseColor] || window.surface1
                                     property color c2: Qt.lighter(c1, 1.2)
@@ -1602,9 +1787,9 @@ Item {
                                 }
                             }
                         }
+                        }
                     }
                 }
             }
         }
     }
-}
