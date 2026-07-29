@@ -28,34 +28,34 @@
     },
     {
       "type": "bind",
-      "mods": "$mainMod SHIFT_L",
+      "mods": "$mainMod SHIFT",
       "key": "F",
       "dispatcher": "fullscreen"
     },
     {
       "type": "binde",
-      "mods": "$mainMod SHIFT_L",
+      "mods": "$mainMod SHIFT",
       "key": "left",
       "dispatcher": "resizeactive",
       "command": "-50 0"
     },
     {
       "type": "binde",
-      "mods": "$mainMod SHIFT_L",
+      "mods": "$mainMod SHIFT",
       "key": "right",
       "dispatcher": "resizeactive",
       "command": "50 0"
     },
     {
       "type": "binde",
-      "mods": "$mainMod SHIFT_L",
+      "mods": "$mainMod SHIFT",
       "key": "up",
       "dispatcher": "resizeactive",
       "command": "0 -50"
     },
     {
       "type": "binde",
-      "mods": "$mainMod SHIFT_L",
+      "mods": "$mainMod SHIFT",
       "key": "down",
       "dispatcher": "resizeactive",
       "command": "0 50"
@@ -202,7 +202,7 @@
     },
     {
       "type": "bind",
-      "mods": "$mainMod SHIFT_L",
+      "mods": "$mainMod SHIFT",
       "key": "B",
       "dispatcher": "exec",
       "command": "(pidof hyprsunset && pkill hyprsunset) || hyprsunset",
@@ -420,7 +420,7 @@
     },
     {
       "type": "bind",
-      "mods": "$mainMod SHIFT_L",
+      "mods": "$mainMod SHIFT",
       "key": "W",
       "dispatcher": "exec",
       "command": "bash ~/.config/hypr/scripts/qs_manager.sh toggle wallpaper"
@@ -441,14 +441,14 @@
     },
     {
       "type": "bind",
-      "mods": "$mainMod SHIFT_L",
+      "mods": "$mainMod SHIFT",
       "key": "T",
       "dispatcher": "exec",
       "command": "bash ~/.config/hypr/scripts/qs_manager.sh toggle focustime"
     },
     {
       "type": "bind",
-      "mods": "$mainMod SHIFT_L",
+      "mods": "$mainMod SHIFT",
       "key": "V",
       "dispatcher": "exec",
       "command": "bash ~/.config/hypr/scripts/qs_manager.sh toggle volume"
@@ -469,7 +469,7 @@
     },
     {
       "type": "bindl",
-      "mods": "SHIFT_L",
+      "mods": "SHIFT",
       "key": "Print",
       "dispatcher": "exec",
       "command": "~/.config/hypr/scripts/screenshot.sh --edit"
@@ -483,7 +483,7 @@
     },
     {
       "type": "bindl",
-      "mods": "$mainMod SHIFT_L",
+      "mods": "$mainMod SHIFT",
       "key": "Print",
       "dispatcher": "exec",
       "command": "~/.config/hypr/scripts/screenshot.sh --full --edit"
