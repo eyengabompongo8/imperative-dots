@@ -123,16 +123,14 @@ HAS_NVIDIA_PROPRIETARY=false
 LAST_COMMIT=""
 KEEP_OLD_ENV=true
 
-ENABLE_TELEMETRY=true
-
 VISITED_PKGS=false
 VISITED_OVERVIEW=false
 VISITED_WEATHER=false
 VISITED_DRIVERS=false
 VISITED_KEYBOARD=false
 
-KB_LAYOUTS="us"
-KB_LAYOUTS_DISPLAY="English (US)"
+KB_LAYOUTS=""
+KB_LAYOUTS_DISPLAY=""
 KB_OPTIONS="grp:alt_shift_toggle"
 
 mkdir -p "$(dirname "$VERSION_FILE")"
@@ -146,15 +144,6 @@ if [ -f "$VERSION_FILE" ] && [ -s "$VERSION_FILE" ]; then
   fi
 else
   LOCAL_VERSION="Not Installed"
-fi
-
-if [ -z "$TELEMETRY_ID" ]; then
-  if command -v uuidgen &>/dev/null; then
-    TELEMETRY_ID=$(uuidgen)
-  else
-    TELEMETRY_ID=$(cat /proc/sys/kernel/random/uuid 2>/dev/null || head -c 16 /dev/urandom | od -An -t x | tr -d ' ')
-  fi
-  echo "TELEMETRY_ID=\"$TELEMETRY_ID\"" >>"$VERSION_FILE"
 fi
 
 ARCH_PKGS=(
@@ -265,114 +254,11 @@ if [ -f "$EXISTING_SETTINGS" ] && command -v jq &>/dev/null; then
   fi
 fi
 
-WORKER_URL="https://dots-telemetry.ilyamiro-work.workers.dev"
 
-send_telemetry() {
-  local mode=$1
-  if [[ "$OS_NAME" =~ "Fedora" ]] || [[ "$DETECTED_OS" == "fedora" ]]; then
-    return 0
-  fi
-
-  if [[ -n "$WORKER_URL" && "$WORKER_URL" != *"YOUR_USERNAME"* ]]; then
-    if [[ "$mode" == "init" ]]; then
-      local payload=$(
-        cat <<EOF
-{
-  "type": "init",
-  "version": "${DOTS_VERSION}",
-  "id": "${TELEMETRY_ID}",
-  "os": "${OS_NAME//\"/\\\"}"
-}
-EOF
-      )
-      curl -X POST -H "Content-Type: application/json" -d "$payload" "$WORKER_URL" -s -o /dev/null &
-
-    elif [[ "$mode" == "full" ]]; then
-      local payload=$(
-        cat <<EOF
-{
-  "type": "full",
-  "version": "${DOTS_VERSION}",
-  "id": "${TELEMETRY_ID}",
-  "os": "${OS_NAME//\"/\\\"}"
-}
-EOF
-      )
-      curl -X POST -H "Content-Type: application/json" -d "$payload" "$WORKER_URL" -s -o /dev/null &
-
-    elif [[ "$mode" == "done" ]]; then
-      local payload=""
-      local failed_str=""
-
-      if [[ "$ENABLE_TELEMETRY" == true ]]; then
-        if [[ ${#FAILED_PKGS[@]} -gt 0 ]]; then
-          failed_str="${FAILED_PKGS[*]}"
-        fi
-
-        local ram=$(awk '/MemTotal/ {printf "%.1f GB", $2/1024/1024}' /proc/meminfo 2>/dev/null || echo "Unknown")
-        local kernel=$(uname -r 2>/dev/null || echo "Unknown")
-        local current_de=${XDG_CURRENT_DESKTOP:-"TTY / Unknown"}
-
-        payload=$(
-          cat <<EOF
-{
-  "type": "done",
-  "version": "${DOTS_VERSION}",
-  "id": "${TELEMETRY_ID}",
-  "telemetry_enabled": true,
-  "failed_packages": "${failed_str//\"/\\\"}",
-  "os": "${OS_NAME//\"/\\\"}",
-  "kernel": "${kernel//\"/\\\"}",
-  "ram": "${ram//\"/\\\"}",
-  "de": "${current_de//\"/\\\"}",
-  "cpu": "${CPU_INFO//\"/\\\"}",
-  "gpu": "${GPU_INFO//\"/\\\"}"
-}
-EOF
-        )
-      else
-        payload=$(
-          cat <<EOF
-{
-  "type": "done",
-  "version": "${DOTS_VERSION}",
-  "id": "${TELEMETRY_ID}",
-  "telemetry_enabled": false,
-  "os": "${OS_NAME//\"/\\\"}"
-}
-EOF
-        )
-      fi
-      curl -X POST -H "Content-Type: application/json" -d "$payload" "$WORKER_URL" -s -o /dev/null &
-    fi
-  fi
-}
-
-send_telemetry "init"
 
 draw_header() {
   clear
-  printf "${BOLD}${C_CYAN}"
-  cat <<"EOF"
- ██╗██╗     ██╗   ██╗ █████╗ ███╗   ███╗██╗██████╗  ██████╗ 
- ██║██║     ╚██╗ ██╔╝██╔══██╗████╗ ████║██║██╔══██╗██╔═══██╗
- ██║██║      ╚████╔╝ ███████║██╔████╔██║██║██████╔╝██║   ██║
- ██║██║       ╚██╔╝  ██╔══██║██║╚██╔╝██║██║██╔══██╗██║   ██║
- ██║███████╗   ██║   ██║  ██║██║ ╚═╝ ██║██║██║  ██║╚██████╔╝
- ╚═╝╚══════╝   ╚═╝   ╚═╝  ╚═╝╚═╝     ╚═╝╚═╝╚═╝  ╚═╝ ╚═════╝ 
-EOF
-  printf "${RESET}\n"
 
-  local OSC8_GH="\e]8;;https://github.com/ilyamiro/imperative-dots.git\a"
-  local OSC8_TW="\e]8;;https://twitter.com/ilyamirox\a"
-  local OSC8_RD="\e]8;;https://reddit.com/u/ilyamiro1\a"
-  local OSC8_KF="\e]8;;https://ko-fi.com/ilyamiro\a"
-  local OSC8_END="\e]8;;\a"
-
-  printf "\033[K${C_BLUE} -----------------------------------------------------------------${RESET}\n"
-  printf "\033[K${BOLD}${C_GREEN} GitHub:${RESET}  ${OSC8_GH}https://github.com/ilyamiro/imperative-dots.git${OSC8_END}\n"
-  printf "\033[K${BOLD}${C_CYAN} Twitter:${RESET} ${OSC8_TW}@ilyamirox${OSC8_END}  |  ${BOLD}${C_RED}Reddit:${RESET} ${OSC8_RD}u/ilyamiro1${OSC8_END}\n"
-  printf "\033[K${BOLD}${C_MAGENTA} Donate:${RESET}  ${OSC8_KF}Donate on Ko-fi (Help the project!)${OSC8_END}\n"
   printf "\033[K${C_BLUE} -----------------------------------------------------------------${RESET}\n"
   printf "\033[K${BOLD} User:           ${RESET} %s\n" "$USER_NAME"
   printf "\033[K${BOLD} OS:             ${RESET} %s\n" "$OS_NAME"
@@ -599,7 +485,7 @@ manage_keyboard() {
       selected_codes+=("$(echo "$code" | xargs)")
     done
   else
-    selected_codes=("us")
+    selected_codes=()
   fi
 
   if [[ -n "$KB_LAYOUTS_DISPLAY" ]]; then
@@ -608,7 +494,7 @@ manage_keyboard() {
       selected_names+=("$(echo "$name" | xargs)")
     done
   else
-    selected_names=("English (US)")
+    selected_names=()
   fi
 
   while true; do
@@ -616,14 +502,14 @@ manage_keyboard() {
     echo -e "${BOLD}${C_CYAN}=== Keyboard Layout Configuration ===${RESET}\n"
 
     if [ ${#selected_codes[@]} -gt 0 ]; then
-      echo -e "Currently added (US is mandatory): ${C_GREEN}$(
+      echo -e "Currently added: ${C_GREEN}$(
         IFS=', '
         echo "${selected_names[*]}"
       )${RESET}\n"
     fi
 
     local choice
-    choice=$(printf "%s\n" "Done (Finish Selection)" "Reset (Clear All Except US)" "${available_layouts[@]}" | sed '/^[[:space:]]*$/d' | fzf \
+    choice=$(printf "%s\n" "Done (Finish Selection)" "Reset (Clear All)" "${available_layouts[@]}" | sed '/^[[:space:]]*$/d' | fzf \
       --layout=reverse \
       --border=rounded \
       --margin=1,2 \
@@ -637,8 +523,8 @@ manage_keyboard() {
     fi
 
     if [[ "$choice" == *"Reset"* ]]; then
-      selected_codes=("us")
-      selected_names=("English (US)")
+      selected_codes=()
+      selected_names=()
       continue
     fi
 
@@ -859,67 +745,7 @@ set_weather_api() {
   done
 }
 
-manage_telemetry() {
-  while true; do
-    draw_header
-    echo -e "${BOLD}${C_CYAN}=== Telemetry Configuration ===${RESET}\n"
-    echo -e "To help improve this dotfile environment, this script can send"
-    echo -e "anonymous hardware statistics when you start the installation.\n"
 
-    echo -e "${BOLD}What is sent if enabled:${RESET}"
-    echo -e "  - Script Version (${DOTS_VERSION})"
-    echo -e "  - OS Name (${OS_NAME})"
-    echo -e "  - Kernel Version"
-    echo -e "  - Total RAM"
-    echo -e "  - Previous Desktop Environment"
-    echo -e "  - CPU Model"
-    echo -e "  - GPU Model\n"
-
-    echo -e "${BOLD}${C_YELLOW}Absolutely NO personal data, IP addresses, or usernames are collected.${RESET}\n"
-
-    local current_status="${DIM}OFF${RESET}"
-    if [[ "$ENABLE_TELEMETRY" == true ]]; then
-      current_status="${C_GREEN}ON${RESET}"
-    fi
-
-    echo -e "Current Status: ${BOLD}$current_status${RESET}\n"
-
-    local action
-    action=$(echo -e "1. Enable Telemetry\n2. Disable Telemetry\n3. Back to Main Menu" | fzf \
-      --layout=reverse \
-      --border=rounded \
-      --margin=1,2 \
-      --height=12 \
-      --prompt=" Telemetry > " \
-      --pointer=">" \
-      --header=" Use ARROW KEYS and ENTER ")
-
-    case "$action" in
-    *"1"*)
-      ENABLE_TELEMETRY=true
-      echo -e "${C_GREEN}Telemetry Enabled. Thank you!${RESET}"
-      sleep 1
-      break
-      ;;
-    *"2"*)
-      if [[ "$ENABLE_TELEMETRY" == true ]]; then
-        echo -n -e "\nAre you sure you want to disable telemetry? (y/n)\n${DIM}This hardware info really helps me understand compatibility and fix bugs.${RESET} "
-        read -r confirm
-        if [[ "$confirm" =~ ^[Yy]$ ]]; then
-          ENABLE_TELEMETRY=false
-          echo -e "${C_YELLOW}Telemetry Disabled.${RESET}"
-          sleep 1.2
-          break
-        fi
-      else
-        break
-      fi
-      ;;
-    *"3"*) break ;;
-    *) break ;;
-    esac
-  done
-}
 
 prompt_optional_features_menu() {
   DM_SERVICES=("gdm" "gdm3" "lightdm" "sddm" "lxdm" "lxdm-gtk3" "ly")
@@ -1151,9 +977,8 @@ while true; do
   MENU_ITEMS+="3. $S_WTH ${C_YELLOW}Set Weather API Key${RESET} [${API_DISPLAY}, Optional]\n"
   MENU_ITEMS+="4. $S_DRV ${C_RED}[ DRIVERS ] Setup${RESET} [${DRIVER_CHOICE}, Optional]\n"
   MENU_ITEMS+="5. $S_KBD ${C_BLUE}Keyboard Layout Setup${RESET} [${KB_LAYOUTS_DISPLAY:-$KB_LAYOUTS}]\n"
-  MENU_ITEMS+="6. $S_TEL ${C_CYAN}Telemetry Settings${RESET}\n"
-  MENU_ITEMS+="7. ${BOLD}${C_MAGENTA}${INSTALL_LABEL}${RESET}\n"
-  MENU_ITEMS+="8. ${DIM}Exit${RESET}"
+  MENU_ITEMS+="6. ${BOLD}${C_MAGENTA}${INSTALL_LABEL}${RESET}\n"
+  MENU_ITEMS+="7. ${DIM}Exit${RESET}"
 
   MENU_OPTION=$(echo -e "$MENU_ITEMS" | fzf \
     --ansi \
@@ -1171,8 +996,7 @@ while true; do
   *"3."*) set_weather_api ;;
   *"4."*) manage_drivers ;;
   *"5."*) manage_keyboard ;;
-  *"6."*) manage_telemetry ;;
-  *"7."*)
+  *"6."*)
     if [ "$VISITED_KEYBOARD" = false ]; then
       echo -e "\n${C_RED}[!] You must configure your Keyboard Layouts in the submenu before starting.${RESET}"
       sleep 2.5
@@ -1184,7 +1008,7 @@ while true; do
       continue
     fi
     ;;
-  *"8."*)
+  *"7."*)
     clear
     exit 0
     ;;
@@ -1198,8 +1022,6 @@ done
 clear
 draw_header
 echo -e "${BOLD}${C_BLUE}::${RESET} ${BOLD}Starting Installation Process...${RESET}\n"
-
-send_telemetry "full"
 
 echo -e "${C_CYAN}[ INFO ]${RESET} Requesting sudo privileges for installation..."
 sudo -v
@@ -2052,5 +1874,3 @@ fi
 
 echo -e "Old configurations backed up to: ${C_CYAN}$BACKUP_DIR${RESET}"
 echo -e "Please log out and log back in, or restart Hyprland to apply all changes."
-
-send_telemetry "done"
