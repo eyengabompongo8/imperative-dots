@@ -1,7 +1,9 @@
+
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Window
 import QtQuick.Controls
+import QtCore
 import Quickshell
 import Quickshell.Io
 import "../"
@@ -14,6 +16,30 @@ Item {
     // --- RECEIVE THE DBUS LIST FROM MAIN.QML ---
     property var notifModel
     property var liveNotifs
+
+    Component.onCompleted: SysData.subscribe()
+    Component.onDestruction: SysData.unsubscribe()
+    property int cpuUsage: SysData.cpu
+    property int ramUsage: SysData.ramPercent
+    property int sysTemp: SysData.temp
+    property int diskUsage: widgetCache.diskUsage
+
+    Settings {
+        id: widgetCache
+        category: "SystemMonitorCache"
+        property int diskUsage: 0
+        property string powerProfile: "balanced"
+        property int upHours: 0
+        property int upMins: 0
+        property real sysVolume: 0
+        property bool sysMuted: false
+        property real sysBrightness: 0
+        property string caffeineIdle: "off"
+        property bool caffeineMonitor: false
+        property bool caffeineLid: false
+        property bool sunsetActive: false
+        property string currentUserName: "User"
+    }
 
     // Ensure actionable notifications are continually bubbled to the top
     onNotifModelChanged: Qt.callLater(window.enforceNotificationSort)
@@ -198,7 +224,8 @@ Item {
             "wpctl get-volume @DEFAULT_AUDIO_SINK@ 2>/dev/null | awk '{print int($2*100), ($3==\"[MUTED]\"?\"off\":\"on\")}' || echo '0 on'; " +
             "brightnessctl -m 2>/dev/null | awk -F, '{print substr($4, 1, length($4)-1)}' || echo '0'; " +
             "caff=$(hyprcaffeine status 2>/dev/null); echo \"$caff\" | python3 -c \"import sys,re; line=sys.stdin.read(); m=re.search(r'Idle: (.+?) \\\\S+ Monitor:', line); idle=m.group(1).strip() if m else 'off'; idle=re.sub(r'[^\\\\x00-\\\\x7F\\\\s]','',idle).strip() or 'off'; mm=re.search(r'Monitor: (\\\\S+)',line); lm=re.search(r'Lid: (\\\\S+)',line); print(idle); print((mm.group(1) if mm else 'off').lower()); print((lm.group(1) if lm else 'off').lower())\"; " +
-            "pidof hyprsunset >/dev/null && echo 'on' || echo 'off'"
+            "pidof hyprsunset >/dev/null && echo 'on' || echo 'off'; " +
+            "df -h / | awk 'NR==2 {print $5}' | tr -d '%' || echo '0'"
         ]
         running: true
         stdout: StdioCollector {
@@ -232,6 +259,9 @@ Item {
                         window.caffeineMonitor = ((lines[7] || "off").trim() === "on");
                         window.caffeineLid = ((lines[8] || "off").trim() === "on");
                         window.sunsetActive = ((lines[9] || "off").trim().toLowerCase() === "on");
+                    }
+                    if (lines.length >= 11) {
+                        widgetCache.diskUsage = parseInt(lines[10]) || 0;
                     }
                 }
             }
@@ -816,7 +846,7 @@ Item {
                             model: 3
                             Rectangle {
                                 anchors.centerIn: parent
-                                anchors.verticalCenterOffset: window.s(-100)
+                                anchors.verticalCenterOffset: window.s(-150)
                                 width: window.s(230) + (index * window.s(130))
                                 height: width
                                 radius: width / 2
@@ -985,10 +1015,10 @@ Item {
 
                         Rectangle {
                             id: centralCore
-                            width: window.s(260)
+                            width: window.s(340)
                             height: width
                             anchors.centerIn: parent
-                            anchors.verticalCenterOffset: window.s(-70)
+                            anchors.verticalCenterOffset: window.s(-150)
                             radius: width / 2
                             z: 1
                             
@@ -1070,12 +1100,12 @@ Item {
                                         
                                         var centerX = width / 2;
                                         var centerY = height / 2;
-                                        var radius = (width / 2) - window.s(18); 
+                                        var radius = (width / 2) - window.s(4); 
                                         var endAngle = (window.animCapacity / 100) * 2 * Math.PI;
                                         
                                         ctx.lineCap = "round";
                                         
-                                        ctx.lineWidth = window.s(8);
+                                        ctx.lineWidth = window.s(4);
                                         ctx.beginPath();
                                         ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
                                         ctx.strokeStyle = window.surface1;
@@ -1086,7 +1116,7 @@ Item {
                                         fillGrad.addColorStop(1, window.batColorEnd.toString());
 
                                         ctx.globalAlpha = 1.0;
-                                        ctx.lineWidth = window.s(14);
+                                        ctx.lineWidth = window.s(8);
                                         ctx.beginPath();
                                         ctx.arc(centerX, centerY, radius, 0, endAngle);
                                         ctx.strokeStyle = fillGrad;
@@ -1100,7 +1130,7 @@ Item {
                                                     var sEnd = Math.min(endAngle, surgeAngle + 0.4);
                                                     ctx.beginPath();
                                                     ctx.arc(centerX, centerY, radius, sStart, sEnd);
-                                                    ctx.lineWidth = window.s(22);
+                                                    ctx.lineWidth = window.s(12);
                                                     ctx.strokeStyle = window.batColorStart.toString();
                                                     ctx.globalAlpha = 0.5 * Math.sin(parent.pumpPhase * Math.PI);
                                                     ctx.stroke();
@@ -1109,7 +1139,7 @@ Item {
                                                     sEnd = Math.min(endAngle, surgeAngle + 0.2);
                                                     ctx.beginPath();
                                                     ctx.arc(centerX, centerY, radius, sStart, sEnd);
-                                                    ctx.lineWidth = window.s(28);
+                                                    ctx.lineWidth = window.s(16);
                                                     ctx.strokeStyle = window.batColorEnd.toString();
                                                     ctx.globalAlpha = 0.8 * Math.sin(parent.pumpPhase * Math.PI);
                                                     ctx.stroke();
@@ -1135,7 +1165,7 @@ Item {
                                                     if (dStart < dEnd) {
                                                         ctx.beginPath();
                                                         ctx.arc(centerX, centerY, radius, dStart, dEnd);
-                                                        ctx.lineWidth = window.s(14) + (1 - d) * window.s(2);
+                                                        ctx.lineWidth = window.s(8) + (1 - d) * window.s(2);
                                                         ctx.strokeStyle = window.batColorEnd.toString();
                                                         ctx.globalAlpha = 0.2 * Math.sin(parent.dischargePhase * Math.PI);
                                                         ctx.stroke();
@@ -1146,55 +1176,226 @@ Item {
                                     }
                                 }
 
-                                ColumnLayout {
-                                    anchors.centerIn: parent
-                                    spacing: window.s(-2)
-                                    
-                                    RowLayout {
-                                        Layout.alignment: Qt.AlignHCenter
-                                        spacing: window.s(8)
-                                        
-                                        Text {
-                                            font.family: "Iosevka Nerd Font"
-                                            font.pixelSize: window.s(28)
-                                            color: window.batColorStart
-                                            text: window.isCharging ? "󰂄" : (window.batCapacity > 20 ? "󰁹" : "󰂃")
-                                            Behavior on color { ColorAnimation { duration: 400 } }
-                                        }
-                                        
-                                        Text {
-                                            font.family: "SF Pro Rounded"
-                                            font.weight: Font.Black
-                                            font.pixelSize: window.s(54)
-                                            color: window.text
-                                            text: Math.round(window.animCapacity) + "%" 
-                                        }
+                                MouseArea {
+                                    id: heroMa
+                                    anchors.fill: parent 
+                                    hoverEnabled: true
+                                    onEntered: batCanvas.requestPaint()
+                                    onExited: batCanvas.requestPaint()
+                                }
+
+                                  Grid {
+                                      id: sysRow
+                                      columns: 2
+                                      spacing: window.s(20)
+                                      anchors.centerIn: parent
+                                      z: 1
+
+                                  opacity: introCore
+                                  transform: Translate { y: window.s(25) * (1 - introCore) }
+                                  scale: 0.9 + (0.1 * introCore)
+
+                                  // 1. CPU Orb
+                                  Item {
+                                    id: cpuOrb; width: window.s(105); height: window.s(105)
+                                    property real animVal: window.cpuUsage
+                                    Behavior on animVal { NumberAnimation { duration: 1200; easing.type: Easing.OutQuint } }
+                                    onAnimValChanged: cpuCanvas.requestPaint()
+
+                                    scale: cpuMa.containsMouse ? 1.05 : 1.0
+                                    Behavior on scale { NumberAnimation { duration: 400; easing.type: Easing.OutExpo } }
+
+                                    // Individual Aura - Fixed Overlap
+                                    Rectangle {
+                                      anchors.centerIn: parent
+                                      width: parent.width + (cpuMa.containsMouse ? window.s(16) : window.s(4)) 
+                                      height: width; radius: width / 2
+                                      color: window.blue
+                                      opacity: cpuMa.containsMouse ? 0.25 : 0.08
+                                      Behavior on width { NumberAnimation { duration: 400; easing.type: Easing.OutExpo } }
+                                      Behavior on opacity { NumberAnimation { duration: 300 } }
                                     }
 
-                                    Text {
-                                        Layout.alignment: Qt.AlignHCenter
-                                        font.family: "SF Pro Text"
-                                        font.weight: Font.Bold
-                                        font.pixelSize: window.s(13)
-                                        
-                                        color: window.isCharging 
-                                                ? Qt.tint(window.green, Qt.rgba(1, 1, 1, parent.textPulse * 0.4)) 
-                                                : (centralCore.isDangerState ? Qt.tint(window.red, Qt.rgba(1, 1, 1, parent.textPulse * 0.3)) : window.subtext0)
-                                        
-                                        text: window.batStatus.toUpperCase()
-                                        Behavior on color { ColorAnimation { duration: 300 } }
+                                    Canvas {
+                                      id: cpuCanvas; anchors.fill: parent; rotation: 180
+                                      Connections { target: window; function onBaseChanged() { cpuCanvas.requestPaint() } }
+                                      onPaint: {
+                                        var ctx = getContext("2d"); ctx.clearRect(0, 0, width, height);
+                                        var cX = width/2; var cY = height/2; var rad = (width/2)-window.s(6);
+                                        var eA = (Math.min(100, Math.max(0, parent.animVal)) / 100) * 2 * Math.PI;
+                                        ctx.lineCap = "round"; ctx.lineWidth = window.s(4); ctx.beginPath(); ctx.arc(cX, cY, rad, 0, 2*Math.PI); 
+                                        ctx.strokeStyle = window.surface0.toString(); ctx.stroke();
+                                        var grad = ctx.createLinearGradient(0, height, width, 0); grad.addColorStop(0, window.blue.toString()); grad.addColorStop(1, window.sapphire.toString());
+                                        ctx.lineWidth = window.s(8); ctx.beginPath(); ctx.arc(cX, cY, rad, 0, eA); ctx.strokeStyle = grad; ctx.stroke();
+                                      }
                                     }
+                                    ColumnLayout {
+                                      anchors.centerIn: parent; spacing: 0
+                                      RowLayout {
+                                        Layout.alignment: Qt.AlignHCenter; spacing: window.s(4)
+                                        Text { font.family: "Iosevka Nerd Font"; font.pixelSize: window.s(18); color: window.blue; text: "" }
+                                        Text { font.family: "SF Pro Compact"; font.weight: Font.Black; font.pixelSize: window.s(22); color: window.text; text: Math.round(cpuOrb.animVal) + "%" }
+                                      }
+                                      Text { Layout.alignment: Qt.AlignHCenter; font.family: "SF Pro Text"; font.weight: Font.Bold; font.pixelSize: window.s(10); color: window.subtext0; text: "CPU LOAD" }
+                                    }
+                                    MouseArea { id: cpuMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor }
+                                  }
+
+                                  // 2. RAM Orb
+                                  Item {
+                                    id: ramOrb; width: window.s(105); height: window.s(105)
+                                    property real animVal: window.ramUsage
+                                    Behavior on animVal { NumberAnimation { duration: 1200; easing.type: Easing.OutQuint } }
+                                    onAnimValChanged: ramCanvas.requestPaint()
+
+                                    scale: ramMa.containsMouse ? 1.05 : 1.0
+                                    Behavior on scale { NumberAnimation { duration: 400; easing.type: Easing.OutExpo } }
+
+                                    // Individual Aura - Fixed Overlap
+                                    Rectangle {
+                                      anchors.centerIn: parent
+                                      width: parent.width + (ramMa.containsMouse ? window.s(16) : window.s(4))
+                                      height: width; radius: width / 2
+                                      color: window.mauve
+                                      opacity: ramMa.containsMouse ? 0.25 : 0.08
+                                      Behavior on width { NumberAnimation { duration: 400; easing.type: Easing.OutExpo } }
+                                      Behavior on opacity { NumberAnimation { duration: 300 } }
+                                    }
+
+                                    Canvas {
+                                      id: ramCanvas; anchors.fill: parent; rotation: 180
+                                      Connections { target: window; function onBaseChanged() { ramCanvas.requestPaint() } }
+                                      onPaint: {
+                                        var ctx = getContext("2d"); ctx.clearRect(0, 0, width, height);
+                                        var cX = width/2; var cY = height/2; var rad = (width/2)-window.s(6);
+                                        var eA = (Math.min(100, Math.max(0, parent.animVal)) / 100) * 2 * Math.PI;
+                                        ctx.lineCap = "round"; ctx.lineWidth = window.s(4); ctx.beginPath(); ctx.arc(cX, cY, rad, 0, 2*Math.PI); 
+                                        ctx.strokeStyle = window.surface0.toString(); ctx.stroke();
+                                        var grad = ctx.createLinearGradient(0, height, width, 0); grad.addColorStop(0, window.mauve.toString()); grad.addColorStop(1, window.pink.toString());
+                                        ctx.lineWidth = window.s(8); ctx.beginPath(); ctx.arc(cX, cY, rad, 0, eA); ctx.strokeStyle = grad; ctx.stroke();
+                                      }
+                                    }
+                                    ColumnLayout {
+                                      anchors.centerIn: parent; spacing: 0
+                                      RowLayout {
+                                        Layout.alignment: Qt.AlignHCenter; spacing: window.s(4)
+                                        Text { font.family: "Iosevka Nerd Font"; font.pixelSize: window.s(18); color: window.mauve; text: "󰍛" }
+                                        Text { font.family: "SF Pro Compact"; font.weight: Font.Black; font.pixelSize: window.s(22); color: window.text; text: Math.round(ramOrb.animVal) + "%" }
+                                      }
+                                      Text { Layout.alignment: Qt.AlignHCenter; font.family: "SF Pro Text"; font.weight: Font.Bold; font.pixelSize: window.s(10); color: window.subtext0; text: "MEMORY" }
+                                    }
+                                    MouseArea { id: ramMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor }
+                                  }
+
+                                  // 3. DISK Orb
+                                  Item {
+                                    id: diskOrb; width: window.s(105); height: window.s(105)
+                                    property real animVal: window.diskUsage
+                                    Behavior on animVal { NumberAnimation { duration: 1200; easing.type: Easing.OutQuint } }
+                                    onAnimValChanged: diskCanvas.requestPaint()
+
+                                    scale: diskMa.containsMouse ? 1.05 : 1.0
+                                    Behavior on scale { NumberAnimation { duration: 400; easing.type: Easing.OutExpo } }
+
+                                    // Individual Aura - Fixed Overlap
+                                    Rectangle {
+                                      anchors.centerIn: parent
+                                      width: parent.width + (diskMa.containsMouse ? window.s(16) : window.s(4))
+                                      height: width; radius: width / 2
+                                      color: window.peach
+                                      opacity: diskMa.containsMouse ? 0.25 : 0.08
+                                      Behavior on width { NumberAnimation { duration: 400; easing.type: Easing.OutExpo } }
+                                      Behavior on opacity { NumberAnimation { duration: 300 } }
+                                    }
+
+                                    Canvas {
+                                      id: diskCanvas; anchors.fill: parent; rotation: 180
+                                      Connections { target: window; function onBaseChanged() { diskCanvas.requestPaint() } }
+                                      onPaint: {
+                                        var ctx = getContext("2d"); ctx.clearRect(0, 0, width, height);
+                                        var cX = width/2; var cY = height/2; var rad = (width/2)-window.s(6);
+                                        var eA = (Math.min(100, Math.max(0, parent.animVal)) / 100) * 2 * Math.PI;
+                                        ctx.lineCap = "round"; ctx.lineWidth = window.s(4); ctx.beginPath(); ctx.arc(cX, cY, rad, 0, 2*Math.PI); 
+                                        ctx.strokeStyle = window.surface0.toString(); ctx.stroke();
+                                        var grad = ctx.createLinearGradient(0, height, width, 0); grad.addColorStop(0, window.peach.toString()); grad.addColorStop(1, window.yellow.toString());
+                                        ctx.lineWidth = window.s(8); ctx.beginPath(); ctx.arc(cX, cY, rad, 0, eA); ctx.strokeStyle = grad; ctx.stroke();
+                                      }
+                                    }
+                                    ColumnLayout {
+                                      anchors.centerIn: parent; spacing: 0
+                                      RowLayout {
+                                        Layout.alignment: Qt.AlignHCenter; spacing: window.s(4)
+                                        Text { font.family: "Iosevka Nerd Font"; font.pixelSize: window.s(18); color: window.peach; text: "󰋊" }
+                                        Text { font.family: "SF Pro Compact"; font.weight: Font.Black; font.pixelSize: window.s(22); color: window.text; text: Math.round(diskOrb.animVal) + "%" }
+                                      }
+                                      Text { Layout.alignment: Qt.AlignHCenter; font.family: "SF Pro Text"; font.weight: Font.Bold; font.pixelSize: window.s(10); color: window.subtext0; text: "STORAGE" }
+                                    }
+                                    MouseArea { id: diskMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor }
+                                  }
+
+                                  // 4. TEMP Orb
+                                  Item {
+                                    id: tempOrb; width: window.s(105); height: window.s(105)
+                                    property real animVal: window.sysTemp
+                                    Behavior on animVal { NumberAnimation { duration: 1200; easing.type: Easing.OutQuint } }
+                                    onAnimValChanged: tempCanvas.requestPaint()
+
+                                    scale: tempMa.containsMouse ? 1.05 : 1.0
+                                    Behavior on scale { NumberAnimation { duration: 400; easing.type: Easing.OutExpo } }
+
+                                    // Individual Aura - Fixed Overlap
+                                    Rectangle {
+                                      anchors.centerIn: parent
+                                      width: parent.width + (tempMa.containsMouse ? window.s(16) : window.s(4))
+                                      height: width; radius: width / 2
+                                      color: window.red
+                                      opacity: tempMa.containsMouse ? 0.25 : 0.08
+                                      Behavior on width { NumberAnimation { duration: 400; easing.type: Easing.OutExpo } }
+                                      Behavior on opacity { NumberAnimation { duration: 300 } }
+                                    }
+
+                                    Canvas {
+                                      id: tempCanvas; anchors.fill: parent; rotation: 180
+                                      Connections { target: window; function onBaseChanged() { tempCanvas.requestPaint() } }
+                                      onPaint: {
+                                        var ctx = getContext("2d"); ctx.clearRect(0, 0, width, height);
+                                        var cX = width/2; var cY = height/2; var rad = (width/2)-window.s(6);
+                                        var eA = (Math.min(100, Math.max(0, parent.animVal)) / 100) * 2 * Math.PI;
+                                        ctx.lineCap = "round"; ctx.lineWidth = window.s(4); ctx.beginPath(); ctx.arc(cX, cY, rad, 0, 2*Math.PI); 
+                                        ctx.strokeStyle = window.surface0.toString(); ctx.stroke();
+                                        var grad = ctx.createLinearGradient(0, height, width, 0); grad.addColorStop(0, window.red.toString()); grad.addColorStop(1, window.maroon.toString());
+                                        ctx.lineWidth = window.s(8); ctx.beginPath(); ctx.arc(cX, cY, rad, 0, eA); ctx.strokeStyle = grad; ctx.stroke();
+                                      }
+                                    }
+                                    ColumnLayout {
+                                      anchors.centerIn: parent; spacing: 0
+                                      RowLayout {
+                                        Layout.alignment: Qt.AlignHCenter; spacing: window.s(4)
+                                        Text { font.family: "Iosevka Nerd Font"; font.pixelSize: window.s(18); color: window.red; text: "" }
+                                        Text { font.family: "SF Pro Compact"; font.weight: Font.Black; font.pixelSize: window.s(22); color: window.text; text: Math.round(tempOrb.animVal) + "°" }
+                                      }
+                                      Text { Layout.alignment: Qt.AlignHCenter; font.family: "SF Pro Text"; font.weight: Font.Bold; font.pixelSize: window.s(10); color: window.subtext0; text: "SYSTEM TEMP" }
+                                    }
+                                    MouseArea { id: tempMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor }
+                                  }
                                 }
                             }
+                        }
 
-                            MouseArea {
-                                id: heroMa
-                                anchors.fill: centralCore 
-                                hoverEnabled: true
-                                cursorShape: Qt.PointingHandCursor
-                                onEntered: batCanvas.requestPaint()
-                                onExited: batCanvas.requestPaint()
+                        ColumnLayout {
+                            visible: window.batCapacity > 0
+                            anchors.right: parent.right
+                            anchors.rightMargin: window.s(20)
+                            anchors.bottom: centralCore.bottom
+                            anchors.bottomMargin: window.s(-10)
+                            spacing: 0
+                            
+                            RowLayout {
+                                Layout.alignment: Qt.AlignHCenter; spacing: window.s(4)
+                                Text { font.family: "Iosevka Nerd Font"; font.pixelSize: window.s(18); color: window.isCharging ? window.green : window.ambientPrimary; text: window.isCharging ? "󰂄" : "󰁹"; Behavior on color { ColorAnimation { duration: 400 } } }
+                                Text { font.family: "SF Pro Compact"; font.weight: Font.Black; font.pixelSize: window.s(22); color: window.text; text: Math.round(window.animCapacity) + "%" }
                             }
+                            Text { Layout.alignment: Qt.AlignHCenter; font.family: "SF Pro Text"; font.weight: Font.Bold; font.pixelSize: window.s(10); color: window.subtext0; text: "BATTERY" }
                         }
 
                         // BOTTOM DOCKS

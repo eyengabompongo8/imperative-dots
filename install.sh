@@ -1742,17 +1742,9 @@ fi
 # -> Desktop/Laptop Battery Adaptability <-
 QS_BAT_DIR="$TARGET_CONFIG_DIR/hypr/scripts/quickshell/battery"
 REPO_BAT_DIR="$REPO_DIR/.config/hypr/scripts/quickshell/battery"
-echo -e "\n${C_CYAN}[ INFO ]${RESET} Checking chassis for battery presence..."
-if ls /sys/class/power_supply/BAT* 1>/dev/null 2>&1; then
-  echo -e "  -> ${C_GREEN}Battery detected.${RESET} Keeping Laptop Battery widget."
-  if [ -f "$REPO_BAT_DIR/BatteryPopup.qml" ]; then
-    cp -f "$REPO_BAT_DIR/BatteryPopup.qml" "$QS_BAT_DIR/BatteryPopup.qml" 2>/dev/null || true
-  fi
-else
-  echo -e "  -> ${C_YELLOW}No battery detected (Desktop system).${RESET} Swapping to System Monitor widget."
-  if [ -f "$REPO_BAT_DIR/BatteryPopupAlt.qml" ]; then
-    cp -f "$REPO_BAT_DIR/BatteryPopupAlt.qml" "$QS_BAT_DIR/BatteryPopup.qml" 2>/dev/null || true
-  fi
+echo -e "\n${C_CYAN}[ INFO ]${RESET} Installing Unified System/Battery Widget..."
+if [ -f "$REPO_BAT_DIR/BatteryPopup.qml" ]; then
+  cp -f "$REPO_BAT_DIR/BatteryPopup.qml" "$QS_BAT_DIR/BatteryPopup.qml" 2>/dev/null || true
 fi
 
 echo -e "\n${C_CYAN}[ INFO ]${RESET} Enabling Core System Services..."
