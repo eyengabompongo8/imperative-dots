@@ -512,7 +512,7 @@ Item {
         Rectangle {
             anchors.fill: parent
             radius: window.s(20)
-            color: window.crust
+            color: window.base
             border.color: Qt.alpha(window.surface1, 0.2)
             border.width: 1
             clip: true
@@ -568,7 +568,7 @@ Item {
                                 Behavior on opacity { NumberAnimation { duration: 350; easing.type: Easing.OutQuint } }
                                 Behavior on color { ColorAnimation { duration: 150 } }
                                 
-                                Text { anchors.centerIn: parent; font.family: "Iosevka Nerd Font"; text: "󰁍"; color: window.text; font.pixelSize: window.s(18) }
+                                Text { anchors.centerIn: parent; font.family: "SF Pro "; text: "󰁍"; color: window.text; font.pixelSize: window.s(18) }
                                 MouseArea { 
                                     id: backMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; 
                                     onClicked: { 
@@ -594,7 +594,7 @@ Item {
                                 Behavior on opacity { NumberAnimation { duration: 350; easing.type: Easing.OutQuint } }
                                 Behavior on color { ColorAnimation { duration: 150 } }
                                 
-                                Text { anchors.centerIn: parent; font.family: "Iosevka Nerd Font"; text: "󰃭"; color: window.text; font.pixelSize: window.s(18) }
+                                Text { anchors.centerIn: parent; font.family: "SF Pro "; text: "󰃭"; color: window.text; font.pixelSize: window.s(18) }
                                 MouseArea { 
                                     id: weekMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; 
                                     onClicked: window.isWeekView = true 
@@ -609,7 +609,7 @@ Item {
                             radius: window.s(20)
                             color: prevWeekMa.containsMouse ? window.surface0 : "transparent"
                             Behavior on color { ColorAnimation { duration: 150 } }
-                            Text { anchors.centerIn: parent; font.family: "Iosevka Nerd Font"; text: "󰅁"; color: window.text; font.pixelSize: window.s(18) }
+                            Text { anchors.centerIn: parent; font.family: "SF Pro "; text: "󰅁"; color: window.text; font.pixelSize: window.s(18) }
                             MouseArea { id: prevWeekMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: changeDay(window.isWeekView ? -7 : -1) }
                         }
                     }                   
@@ -658,7 +658,7 @@ Item {
                         radius: window.s(20)
                         color: nextWeekMa.containsMouse ? window.surface0 : "transparent"
                         Behavior on color { ColorAnimation { duration: 150 } }
-                        Text { anchors.centerIn: parent; font.family: "Iosevka Nerd Font"; text: "󰅂"; color: window.text; font.pixelSize: window.s(18) }
+                        Text { anchors.centerIn: parent; font.family: "SF Pro "; text: "󰅂"; color: window.text; font.pixelSize: window.s(18) }
                         MouseArea { id: nextWeekMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: changeDay(window.isWeekView ? 7 : 1) }
                     }
                 }

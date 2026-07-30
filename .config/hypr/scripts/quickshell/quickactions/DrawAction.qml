@@ -577,7 +577,7 @@ Item {
             width: s(260)
             height: s(64)
             radius: s(14)
-            color: (typeof mochaColors !== "undefined" && mochaColors && mochaColors.base) ? Qt.rgba(mochaColors.base.r, mochaColors.base.g, mochaColors.base.b, 0.98) : root.solidBgColor
+            color: (typeof mochaColors !== "undefined" && mochaColors && mochaColors.base) ? mochaColors.base : root.solidBgColor
             border.width: 1
             border.color: root.panelBorderColor
             
@@ -685,7 +685,7 @@ Item {
             width: s(320)
             height: s(340)
             radius: s(14)
-            color: (typeof mochaColors !== "undefined" && mochaColors && mochaColors.base) ? Qt.rgba(mochaColors.base.r, mochaColors.base.g, mochaColors.base.b, 0.98) : root.solidBgColor
+            color: (typeof mochaColors !== "undefined" && mochaColors && mochaColors.base) ? mochaColors.base : root.solidBgColor
             border.width: 1
             border.color: root.panelBorderColor
             

@@ -5,16 +5,18 @@ import Quickshell.Io
 Item {
     id: root
 
+    property real glassAlpha: 0.70
+
     // Explicitly typed as 'color' for strict QML binding
-    property color base: "#1e1e2e"
+    property color base: Qt.alpha("#1e1e2e", glassAlpha)
     property color mantle: "#181825"
     property color crust: "#11111b"
     property color text: "#cdd6f4"
     property color subtext0: "#a6adc8"
     property color subtext1: "#bac2de"
-    property color surface0: "#313244"
-    property color surface1: "#45475a"
-    property color surface2: "#585b70"
+    property color surface0: Qt.alpha("#313244", 0.25)
+    property color surface1: Qt.alpha("#45475a", 0.35)
+    property color surface2: Qt.alpha("#585b70", 0.45)
     property color overlay0: "#6c7086"
     property color overlay1: "#7f849c"
     property color overlay2: "#9399b2"
@@ -41,15 +43,15 @@ Item {
                     root.rawJson = txt;
                     try {
                         let c = JSON.parse(txt);
-                        if (c.base) root.base = c.base;
+                        if (c.base) root.base = Qt.alpha(c.base, root.glassAlpha);
                         if (c.mantle) root.mantle = c.mantle;
                         if (c.crust) root.crust = c.crust;
                         if (c.text) root.text = c.text;
                         if (c.subtext0) root.subtext0 = c.subtext0;
                         if (c.subtext1) root.subtext1 = c.subtext1;
-                        if (c.surface0) root.surface0 = c.surface0;
-                        if (c.surface1) root.surface1 = c.surface1;
-                        if (c.surface2) root.surface2 = c.surface2;
+                        if (c.surface0) root.surface0 = Qt.alpha(c.surface0, 0.25);
+                        if (c.surface1) root.surface1 = Qt.alpha(c.surface1, 0.35);
+                        if (c.surface2) root.surface2 = Qt.alpha(c.surface2, 0.45);
                         if (c.overlay0) root.overlay0 = c.overlay0;
                         if (c.overlay1) root.overlay1 = c.overlay1;
                         if (c.overlay2) root.overlay2 = c.overlay2;

@@ -1334,7 +1334,7 @@ Variants {
                                         anchors.verticalCenter: parent.verticalCenter; 
                                         text: barWindow.showEthernet ? "󰈀" : barWindow.wifiIcon;
                                         font.family: "SF Pro "; font.pixelSize: barWindow.s(16);
-                                        color: barWindow.showEthernet ? (barWindow.ethStatus === "Connected" ? mocha.base : mocha.subtext0) : (barWindow.isWifiOn ? mocha.base : mocha.subtext0)
+                                        color: barWindow.showEthernet ? (barWindow.ethStatus === "Connected" ? mocha.crust : mocha.subtext0) : (barWindow.isWifiOn ? mocha.crust : mocha.subtext0)
                                     }
                                     Text { 
                                         id: wifiText
@@ -1342,7 +1342,7 @@ Variants {
                                         text: barWindow.showEthernet ? barWindow.ethStatus : ((barWindow.isWifiOn ? (barWindow.wifiSsid !== "" ? barWindow.wifiSsid : "On") : "Off"))
                                         visible: text !== ""
                                         font.family: "SF Pro Text"; font.pixelSize: barWindow.s(13); font.weight: Font.Black;
-                                        color: barWindow.showEthernet ? (barWindow.ethStatus === "Connected" ? mocha.base : mocha.text) : (barWindow.isWifiOn ? mocha.base : mocha.text);
+                                        color: barWindow.showEthernet ? (barWindow.ethStatus === "Connected" ? mocha.crust : mocha.text) : (barWindow.isWifiOn ? mocha.crust : mocha.text);
                                         width: Math.min(implicitWidth, barWindow.s(100)); elide: Text.ElideRight 
                                     }
                                 }
@@ -1389,14 +1389,14 @@ Variants {
                                     anchors.left: parent.left
                                     anchors.leftMargin: barWindow.s(12)
                                     spacing: barWindow.s(8)
-                                    Text { anchors.verticalCenter: parent.verticalCenter; text: barWindow.btIcon; font.family: "SF Pro "; font.pixelSize: barWindow.s(16); color: barWindow.isBtOn ? mocha.base : mocha.subtext0 }
+                                    Text { anchors.verticalCenter: parent.verticalCenter; text: barWindow.btIcon; font.family: "SF Pro "; font.pixelSize: barWindow.s(16); color: barWindow.isBtOn ? mocha.crust : mocha.subtext0 }
                                     Text { 
                                         id: btText
                                         anchors.verticalCenter: parent.verticalCenter
                                         text: barWindow.btDevice
                                         visible: text !== ""; 
                                         font.family: "SF Pro Text"; font.pixelSize: barWindow.s(13); font.weight: Font.Black; 
-                                        color: barWindow.isBtOn ? mocha.base : mocha.text; 
+                                        color: barWindow.isBtOn ? mocha.crust : mocha.text; 
                                         width: Math.min(implicitWidth, barWindow.s(100)); elide: Text.ElideRight 
                                     }
                                 }
@@ -1444,13 +1444,13 @@ Variants {
                                     Text { 
                                         anchors.verticalCenter: parent.verticalCenter
                                         text: barWindow.volIcon; font.family: "SF Pro "; font.pixelSize: barWindow.s(16); 
-                                        color: barWindow.isSoundActive ? mocha.base : mocha.subtext0 
+                                        color: barWindow.isSoundActive ? mocha.crust : mocha.subtext0 
                                     }
                                     Text { 
                                         anchors.verticalCenter: parent.verticalCenter
                                         text: barWindow.volPercent; 
                                         font.family: "SF Pro Text"; font.pixelSize: barWindow.s(13); font.weight: Font.Black; 
-                                        color: barWindow.isSoundActive ? mocha.base : mocha.text; 
+                                        color: barWindow.isSoundActive ? mocha.crust : mocha.text; 
                                     }
                                 }
                                 MouseArea { id: volMouse; hoverEnabled: true; anchors.fill: parent; onClicked: Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/qs_manager.sh toggle volume"]) }
@@ -1530,14 +1530,14 @@ Variants {
                                         anchors.verticalCenter: parent.verticalCenter
                                         text: barWindow.isDesktop ? "" : barWindow.batIcon; 
                                         font.family: "SF Pro "; font.pixelSize: barWindow.isDesktop ? barWindow.s(18) : barWindow.s(16); 
-                                        color: mocha.base 
+                                        color: mocha.crust 
                                         Behavior on color { ColorAnimation { duration: 300 } }
                                     }
                                     Text { 
                                         anchors.verticalCenter: parent.verticalCenter
                                         visible: !barWindow.isDesktop
                                         text: barWindow.batPercent; font.family: "SF Pro Text"; font.pixelSize: barWindow.s(13); font.weight: Font.Black; 
-                                        color: mocha.base 
+                                        color: mocha.crust 
                                         Behavior on color { ColorAnimation { duration: 300 } }
                                     }
                                 }

@@ -221,7 +221,7 @@ Item {
         anchors.horizontalCenter: parent.horizontalCenter
 
         radius: window.s(16)
-        color: Qt.rgba(window.base.r, window.base.g, window.base.b, 1.0)
+        color: window.base
         border.color: window.surface1
         border.width: 1
         clip: true
@@ -267,7 +267,7 @@ Item {
 
                     Text {
                         text: ""
-                        font.family: "Iosevka Nerd Font"
+                        font.family: "SF Pro "
                         font.pixelSize: window.s(18)
                         color: searchInput.activeFocus ? window.mauve : window.subtext0
                         Behavior on color { ColorAnimation { duration: 150 } }
