@@ -141,7 +141,28 @@ Variants {
  	         	running = true;
  	        }
 	    }	  
-
+            Process {
+	        id: updatePoller
+	        command: ["bash", "-c", "if [ -f " + paths.getCacheDir("updater") + "/update_pending ]; then echo '1'; else echo '0'; fi"]
+	        running: true
+	        stdout: StdioCollector {
+	            onStreamFinished: {
+	                barWindow.updateAvailable = (this.text.trim() === "1");
+	            }
+	        }
+	    }
+	    
+	    Process {
+	        id: updateWatcher
+	        running: true
+	        command: ["bash", "-c", "inotifywait -qq -e create,delete,close_write " + paths.getCacheDir("updater") + "/ 2>/dev/null || sleep 5"]
+	        onExited: {
+	            updatePoller.running = false;
+	            updatePoller.running = true;
+	            running = false;
+	            running = true;
+	        }
+	    }
 	                
             Process {
                 id: settingsReader
@@ -617,7 +638,7 @@ Variants {
                             Text {
                                 anchors.centerIn: parent
                                 text: "󰋗"
-                                font.family: "Iosevka Nerd Font"; font.pixelSize: barWindow.s(22)
+                                font.family: "SF Pro "; font.pixelSize: barWindow.s(22)
                                 color: parent.isHovered ? mocha.teal : mocha.text
                                 Behavior on color { ColorAnimation { duration: 200 } }
                                 scale: parent.isHovered ? 1.15 : 1.0
@@ -642,7 +663,7 @@ Variants {
                             Text {
                                 anchors.centerIn: parent
                                 text: "󰍉"
-                                font.family: "Iosevka Nerd Font"; font.pixelSize: barWindow.s(22)
+                                font.family: "SF Pro "; font.pixelSize: barWindow.s(22)
                                 color: parent.isHovered ? mocha.blue : mocha.text
                                 Behavior on color { ColorAnimation { duration: 200 } }
                                 scale: parent.isHovered ? 1.15 : 1.0
@@ -667,7 +688,7 @@ Variants {
                             Text {
                                 anchors.centerIn: parent
                                 text: ""
-                                font.family: "Iosevka Nerd Font"; font.pixelSize: barWindow.s(22)
+                                font.family: "SF Pro "; font.pixelSize: barWindow.s(22)
                                 color: parent.isHovered ? mocha.blue : mocha.text
                                 Behavior on color { ColorAnimation { duration: 200 } }
                                 scale: parent.isHovered ? 1.15 : 1.0
@@ -681,7 +702,73 @@ Variants {
                             }
                         }
 
+                        Rectangle {
+                            id: updateButton
+                            property bool isHovered: updateMouse.containsMouse
+                            color: isHovered ? Qt.rgba(mocha.green.r, mocha.green.g, mocha.green.b, 0.15) : "transparent"
+                            radius: barWindow.s(10)
+                            
+                            width: barWindow.isUpdateVisible ? barWindow.s(34) : 0
+                            height: parent.pillHeight
+                            
+                            visible: width > 0 || opacity > 0
+                            opacity: barWindow.isUpdateVisible ? 1.0 : 0.0
+                            clip: false 
+                            
+                            Behavior on width { NumberAnimation { duration: 400; easing.type: Easing.OutQuint } }
+                            Behavior on opacity { NumberAnimation { duration: 300 } }
+                            Behavior on color { ColorAnimation { duration: 200 } }
+                            
+                            Rectangle {
+                                anchors.centerIn: parent
+                                width: parent.width
+                                height: parent.height
+                                radius: parent.radius
+                                color: mocha.green
+                                z: -1
+                                
+                                SequentialAnimation on scale {
+                                    running: barWindow.isUpdateVisible && !updateButton.isHovered
+                                    loops: Animation.Infinite
+                                    NumberAnimation { from: 1.0; to: 1.3; duration: 2000; easing.type: Easing.OutCubic }
+                                }
+                                SequentialAnimation on opacity {
+                                    running: barWindow.isUpdateVisible && !updateButton.isHovered
+                                    loops: Animation.Infinite
+                                    NumberAnimation { from: 0.15; to: 0.0; duration: 2000; easing.type: Easing.OutCubic }
+                                }
+                            }
+                            
+                            Text {
+                                anchors.centerIn: parent
+                                text: "󰚰"
+                                font.family: "SF Pro "; font.pixelSize: barWindow.s(22)
+                                color: parent.isHovered ? mocha.text : mocha.green
+                                Behavior on color { ColorAnimation { duration: 200 } }
+                                
+                                rotation: parent.isHovered ? 360 : 0
+                                Behavior on rotation {
+                                    NumberAnimation { 
+                                        duration: 600
+                                        easing.type: Easing.OutBack
+                                    }
+                                }
 
+                                scale: parent.isHovered ? 1.15 : 1.0
+                                Behavior on scale { NumberAnimation { duration: 250; easing.type: Easing.OutExpo } }
+                            }
+
+                            MouseArea {
+                                id: updateMouse
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                onClicked: {
+                                    barWindow.updateAvailable = false;
+                                    barWindow.forceUpdateShow = false;
+                                    Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/qs_manager.sh toggle updater"]);
+                                }
+                            }
+                        }
                     }
                 }
                 
@@ -925,7 +1012,7 @@ Variants {
                                     width: barWindow.s(24); height: barWindow.s(24); 
                                     anchors.verticalCenter: parent.verticalCenter
                                     Text { 
-                                        anchors.centerIn: parent; text: "󰒮"; font.family: "Iosevka Nerd Font"; font.pixelSize: barWindow.s(26); 
+                                        anchors.centerIn: parent; text: "󰒮"; font.family: "SF Pro "; font.pixelSize: barWindow.s(26); 
                                         color: prevMouse.containsMouse ? mocha.text : mocha.overlay2; 
                                         Behavior on color { ColorAnimation { duration: 150 } }
                                         scale: prevMouse.containsMouse ? 1.1 : 1.0
@@ -937,7 +1024,7 @@ Variants {
                                     width: barWindow.s(28); height: barWindow.s(28); 
                                     anchors.verticalCenter: parent.verticalCenter
                                     Text { 
-                                        anchors.centerIn: parent; text: barWindow.musicData.status === "Playing" ? "󰏤" : "󰐊"; font.family: "Iosevka Nerd Font"; font.pixelSize: barWindow.s(30); 
+                                        anchors.centerIn: parent; text: barWindow.musicData.status === "Playing" ? "󰏤" : "󰐊"; font.family: "SF Pro "; font.pixelSize: barWindow.s(30); 
                                         color: playMouse.containsMouse ? mocha.green : mocha.text; 
                                         Behavior on color { ColorAnimation { duration: 150 } }
                                         scale: playMouse.containsMouse ? 1.15 : 1.0
@@ -949,7 +1036,7 @@ Variants {
                                     width: barWindow.s(24); height: barWindow.s(24); 
                                     anchors.verticalCenter: parent.verticalCenter
                                     Text { 
-                                        anchors.centerIn: parent; text: "󰒭"; font.family: "Iosevka Nerd Font"; font.pixelSize: barWindow.s(26); 
+                                        anchors.centerIn: parent; text: "󰒭"; font.family: "SF Pro "; font.pixelSize: barWindow.s(26); 
                                         color: nextMouse.containsMouse ? mocha.text : mocha.overlay2; 
                                         Behavior on color { ColorAnimation { duration: 150 } }
                                         scale: nextMouse.containsMouse ? 1.1 : 1.0
@@ -1023,7 +1110,7 @@ Variants {
                             Text { 
                                 text: barWindow.weatherIcon; 
                                 Layout.alignment: Qt.AlignVCenter;
-                                font.family: "Iosevka Nerd Font"; 
+                                font.family: "SF Pro "; 
                                 font.pixelSize: barWindow.s(24); 
                                 color: Qt.tint(barWindow.weatherHex, Qt.rgba(mocha.mauve.r, mocha.mauve.g, mocha.mauve.b, 0.4)) 
                             }
@@ -1198,7 +1285,7 @@ Variants {
                                     anchors.left: parent.left
                                     anchors.leftMargin: barWindow.s(12)
                                     spacing: barWindow.s(8)
-                                    Text { anchors.verticalCenter: parent.verticalCenter; text: "󰌌"; font.family: "Iosevka Nerd Font"; font.pixelSize: barWindow.s(16); color: parent.parent.isHovered ? mocha.text : mocha.overlay2 }
+                                    Text { anchors.verticalCenter: parent.verticalCenter; text: "󰌌"; font.family: "SF Pro "; font.pixelSize: barWindow.s(16); color: parent.parent.isHovered ? mocha.text : mocha.overlay2 }
                                     Text { anchors.verticalCenter: parent.verticalCenter; text: barWindow.kbLayout; font.family: "SF Pro Text"; font.pixelSize: barWindow.s(13); font.weight: Font.Black; color: mocha.text }
                                 }
                                 MouseArea { id: kbMouse; anchors.fill: parent; hoverEnabled: true; onClicked: Quickshell.execDetached(["hyprctl", "switchxkblayout", "main", "next"]) }
@@ -1246,7 +1333,7 @@ Variants {
                                     Text { 
                                         anchors.verticalCenter: parent.verticalCenter; 
                                         text: barWindow.showEthernet ? "󰈀" : barWindow.wifiIcon;
-                                        font.family: "Iosevka Nerd Font"; font.pixelSize: barWindow.s(16);
+                                        font.family: "SF Pro "; font.pixelSize: barWindow.s(16);
                                         color: barWindow.showEthernet ? (barWindow.ethStatus === "Connected" ? mocha.base : mocha.subtext0) : (barWindow.isWifiOn ? mocha.base : mocha.subtext0)
                                     }
                                     Text { 
@@ -1302,7 +1389,7 @@ Variants {
                                     anchors.left: parent.left
                                     anchors.leftMargin: barWindow.s(12)
                                     spacing: barWindow.s(8)
-                                    Text { anchors.verticalCenter: parent.verticalCenter; text: barWindow.btIcon; font.family: "Iosevka Nerd Font"; font.pixelSize: barWindow.s(16); color: barWindow.isBtOn ? mocha.base : mocha.subtext0 }
+                                    Text { anchors.verticalCenter: parent.verticalCenter; text: barWindow.btIcon; font.family: "SF Pro "; font.pixelSize: barWindow.s(16); color: barWindow.isBtOn ? mocha.base : mocha.subtext0 }
                                     Text { 
                                         id: btText
                                         anchors.verticalCenter: parent.verticalCenter
@@ -1356,7 +1443,7 @@ Variants {
                                     spacing: barWindow.s(8)
                                     Text { 
                                         anchors.verticalCenter: parent.verticalCenter
-                                        text: barWindow.volIcon; font.family: "Iosevka Nerd Font"; font.pixelSize: barWindow.s(16); 
+                                        text: barWindow.volIcon; font.family: "SF Pro "; font.pixelSize: barWindow.s(16); 
                                         color: barWindow.isSoundActive ? mocha.base : mocha.subtext0 
                                     }
                                     Text { 
@@ -1367,6 +1454,40 @@ Variants {
                                     }
                                 }
                                 MouseArea { id: volMouse; hoverEnabled: true; anchors.fill: parent; onClicked: Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/qs_manager.sh toggle volume"]) }
+                            }
+
+                            Rectangle {
+                                property bool isHovered: monMouse.containsMouse
+                                color: isHovered ? Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, 0.6) : Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.4)
+                                radius: barWindow.s(10); height: sysLayout.pillHeight;
+                                clip: true
+                                
+                                property real targetWidth: monLayoutRow.implicitWidth + barWindow.s(24)
+                                width: targetWidth
+                                Behavior on width { NumberAnimation { duration: 500; easing.type: Easing.OutQuint } }
+                                
+                                scale: isHovered ? 1.05 : 1.0
+                                Behavior on scale { NumberAnimation { duration: 250; easing.type: Easing.OutExpo } }
+                                Behavior on color { ColorAnimation { duration: 200 } }
+
+                                property bool initAnimTrigger: false
+                                Timer { running: rightContent.showLayout && !parent.initAnimTrigger; interval: 175; onTriggered: parent.initAnimTrigger = true }
+                                opacity: initAnimTrigger ? 1 : 0
+                                transform: Translate { y: parent.initAnimTrigger ? 0 : barWindow.s(15); Behavior on y { NumberAnimation { duration: 500; easing.type: Easing.OutBack } } }
+                                Behavior on opacity { NumberAnimation { duration: 400; easing.type: Easing.OutCubic } }
+
+                                Row { 
+                                    id: monLayoutRow
+                                    anchors.centerIn: parent
+                                    Text { 
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        text: "󰍹"
+                                        font.family: "SF Pro "; font.pixelSize: barWindow.s(16); 
+                                        color: monMouse.containsMouse ? mocha.text : mocha.overlay2
+                                        Behavior on color { ColorAnimation { duration: 200 } }
+                                    }
+                                }
+                                MouseArea { id: monMouse; hoverEnabled: true; anchors.fill: parent; onClicked: Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/qs_manager.sh toggle monitors"]) }
                             }
 
                             Rectangle {
@@ -1408,7 +1529,7 @@ Variants {
                                     Text { 
                                         anchors.verticalCenter: parent.verticalCenter
                                         text: barWindow.isDesktop ? "" : barWindow.batIcon; 
-                                        font.family: "Iosevka Nerd Font"; font.pixelSize: barWindow.isDesktop ? barWindow.s(18) : barWindow.s(16); 
+                                        font.family: "SF Pro "; font.pixelSize: barWindow.isDesktop ? barWindow.s(18) : barWindow.s(16); 
                                         color: mocha.base 
                                         Behavior on color { ColorAnimation { duration: 300 } }
                                     }
@@ -1452,7 +1573,7 @@ Variants {
                             id: recIcon
                             anchors.centerIn: parent
                             text: "" 
-                            font.family: "Iosevka Nerd Font"
+                            font.family: "SF Pro "
                             font.pixelSize: barWindow.s(20)
                             color: mocha.red
                             

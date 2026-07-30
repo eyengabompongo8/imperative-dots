@@ -96,7 +96,7 @@ compile_settings() {
     cp "$TMPL_DIR/monitors.lua.template" "$MONITORS_CONF"
     MONITOR_COUNT=$(jq '.monitors | length' "$SETTINGS_FILE" 2>/dev/null)
     if [[ "$MONITOR_COUNT" -gt 0 ]]; then
-        jq -r '.monitors[]? | "hl.monitor({ output = \"\(.name)\", mode = \"\(.resW)x\(.resH)@\(.rate)\", position = \"\(.x)x\(.y)\", scale = \(.scale)\(if .transform and .transform != 0 then ", transform = \(.transform)" else "" end) })"' "$SETTINGS_FILE" >> "$MONITORS_CONF"
+        jq -r '.monitors[]? | if .disabled then "hl.monitor({ output = \"\(.name)\", mode = \"disable\" })" elif (.mirrorOf // "") != "" then "hl.monitor({ output = \"\(.name)\", mode = \"preferred\", position = \"auto\", scale = \(.scale), mirror = \"\(.mirrorOf)\" })" else "hl.monitor({ output = \"\(.name)\", mode = \"\(.resW)x\(.resH)@\(.rate)\", position = \"\(.x)x\(.y)\", scale = \(.scale)\(if .transform and .transform != 0 then ", transform = \(.transform)" else "" end) })" end' "$SETTINGS_FILE" >> "$MONITORS_CONF"
     else
         echo 'hl.monitor({ output = "", mode = "preferred", position = "auto", scale = 1 })' >> "$MONITORS_CONF"
     fi
