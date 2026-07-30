@@ -117,6 +117,7 @@ Item {
     // -------------------------------------------------------------------------
     // STATE & POLLING
     // -------------------------------------------------------------------------
+    property bool hasBattery: false
     property int batCapacity: 0
     property string batStatus: "Unknown"
     property string powerProfile: "balanced"
@@ -161,6 +162,7 @@ Item {
 
     // Unified hue for Battery
     readonly property color batColorStart: {
+        if (!window.hasBattery) return window.blue;
         if (isCharging) return window.green;
         if (batCapacity >= 70) return window.blue;
         if (batCapacity >= 30) return window.yellow;
@@ -179,6 +181,7 @@ Item {
     // Ambient Blobs - Based strictly on aesthetic pairs derived from battery state
     readonly property color ambientPrimary: window.batColorStart
     readonly property color ambientSecondary: {
+        if (!window.hasBattery) return window.mauve;
         if (isCharging) return window.sapphire;
         if (batCapacity >= 70) return window.mauve;
         if (batCapacity >= 30) return window.peach;
@@ -217,6 +220,7 @@ Item {
     Process {
         id: sysPoller
         command: ["bash", "-c", 
+            "ls /sys/class/power_supply/BAT* 1>/dev/null 2>&1 && echo '1' || echo '0'; " +
             "cat /sys/class/power_supply/BAT*/capacity 2>/dev/null | head -n1 || echo '0'; " +
             "cat /sys/class/power_supply/BAT*/status 2>/dev/null | head -n1 || echo 'Unknown'; " +
             "powerprofilesctl get 2>/dev/null || echo 'balanced'; " +
@@ -231,37 +235,39 @@ Item {
         stdout: StdioCollector {
             onStreamFinished: {
                 let lines = this.text.trim().split("\n");
-                if (lines.length >= 6) {
-                    if (window.batCapacity !== parseInt(lines[0])) {
-                        window.batCapacity = parseInt(lines[0]);
+                if (lines.length >= 7) {
+                    window.hasBattery = (lines[0] === "1");
+                    let batCap = parseInt(lines[1]) || 0;
+                    if (window.batCapacity !== batCap) {
+                        window.batCapacity = batCap;
                         window.animCapacity = window.batCapacity;
                     }
-                    window.batStatus = lines[1];
-                    window.powerProfile = lines[2];
+                    window.batStatus = lines[2];
+                    window.powerProfile = lines[3];
                     
-                    let upParts = lines[3].split("h ");
+                    let upParts = lines[4].split("h ");
                     if (upParts.length === 2) {
                         window.upHours = parseInt(upParts[0]) || 0;
                         window.upMins = parseInt(upParts[1].replace("m", "")) || 0;
                     }
 
                     if (!window.isDraggingVol) {
-                        let volParts = (lines[4] || "0 on").trim().split(" ");
+                        let volParts = (lines[5] || "0 on").trim().split(" ");
                         window.sysVolume = parseInt(volParts[0]) || 0;
                         window.sysMuted = (volParts[1] === "off");
                     }
                     
                     if (!window.isDraggingBri) {
-                        window.sysBrightness = parseInt(lines[5]) || 0;
+                        window.sysBrightness = parseInt(lines[6]) || 0;
                     }
-                    if (lines.length >= 9) {
-                        window.caffeineIdle = (lines[6] || "off").trim();
-                        window.caffeineMonitor = ((lines[7] || "off").trim() === "on");
-                        window.caffeineLid = ((lines[8] || "off").trim() === "on");
-                        window.sunsetActive = ((lines[9] || "off").trim().toLowerCase() === "on");
+                    if (lines.length >= 10) {
+                        window.caffeineIdle = (lines[7] || "off").trim();
+                        window.caffeineMonitor = ((lines[8] || "off").trim() === "on");
+                        window.caffeineLid = ((lines[9] || "off").trim() === "on");
+                        window.sunsetActive = ((lines[10] || "off").trim().toLowerCase() === "on");
                     }
-                    if (lines.length >= 11) {
-                        widgetCache.diskUsage = parseInt(lines[10]) || 0;
+                    if (lines.length >= 12) {
+                        widgetCache.diskUsage = parseInt(lines[11]) || 0;
                     }
                 }
             }
@@ -459,7 +465,7 @@ Item {
                                     }
 
                                     Text {
-                                        font.family: "Iosevka Nerd Font"
+                                        font.family: "SF Pro "
                                         font.pixelSize: window.s(18)
                                         color: window.dndEnabled ? window.red : (dndMa.containsMouse ? window.text : window.overlay0)
                                         text: window.dndEnabled ? "󰂛" : "󰂚"
@@ -566,7 +572,7 @@ Item {
                                                 spacing: window.s(8)
                                                 
                                                 Text {
-                                                    font.family: "Iosevka Nerd Font"
+                                                    font.family: "SF Pro "
                                                     font.pixelSize: window.s(14)
                                                     color: window.mauve
                                                     text: window.isCollapsed(section) ? "󰅂" : "󰅀"
@@ -595,7 +601,7 @@ Item {
 
                                             Text {
                                                 anchors.centerIn: parent
-                                                font.family: "Iosevka Nerd Font"
+                                                font.family: "SF Pro "
                                                 font.pixelSize: window.s(14)
                                                 color: groupClearMa.containsMouse ? window.red : window.overlay0
                                                 text: "󰅖"
@@ -737,7 +743,7 @@ Item {
 
                                                 Text {
                                                     anchors.centerIn: parent
-                                                    font.family: "Iosevka Nerd Font"
+                                                    font.family: "SF Pro "
                                                     font.pixelSize: window.s(12)
                                                     color: itemClearMa.containsMouse ? window.red : window.overlay0
                                                     text: "󰅖"
@@ -968,7 +974,7 @@ Item {
                             }
 
                             Text {
-                                font.family: "Iosevka Nerd Font"; font.pixelSize: window.s(18)
+                                font.family: "SF Pro "; font.pixelSize: window.s(18)
                                 color: logoutMa.containsMouse ? window.red : window.overlay0
                                 text: "󰍃"
                                 anchors.verticalCenter: parent.verticalCenter
@@ -1022,7 +1028,7 @@ Item {
                             radius: width / 2
                             z: 1
                             
-                            property bool isDangerState: !window.isCharging && window.batCapacity < 15
+                            property bool isDangerState: window.hasBattery && !window.isCharging && window.batCapacity < 15
                             
                             SequentialAnimation on scale {
                                 loops: Animation.Infinite
@@ -1233,7 +1239,7 @@ Item {
                                       anchors.centerIn: parent; spacing: 0
                                       RowLayout {
                                         Layout.alignment: Qt.AlignHCenter; spacing: window.s(4)
-                                        Text { font.family: "Iosevka Nerd Font"; font.pixelSize: window.s(18); color: window.blue; text: "" }
+                                        Text { font.family: "SF Pro "; font.pixelSize: window.s(18); color: window.blue; text: "" }
                                         Text { font.family: "SF Pro Compact"; font.weight: Font.Black; font.pixelSize: window.s(22); color: window.text; text: Math.round(cpuOrb.animVal) + "%" }
                                       }
                                       Text { Layout.alignment: Qt.AlignHCenter; font.family: "SF Pro Text"; font.weight: Font.Bold; font.pixelSize: window.s(10); color: window.subtext0; text: "CPU LOAD" }
@@ -1279,7 +1285,7 @@ Item {
                                       anchors.centerIn: parent; spacing: 0
                                       RowLayout {
                                         Layout.alignment: Qt.AlignHCenter; spacing: window.s(4)
-                                        Text { font.family: "Iosevka Nerd Font"; font.pixelSize: window.s(18); color: window.mauve; text: "󰍛" }
+                                        Text { font.family: "SF Pro "; font.pixelSize: window.s(18); color: window.mauve; text: "󰍛" }
                                         Text { font.family: "SF Pro Compact"; font.weight: Font.Black; font.pixelSize: window.s(22); color: window.text; text: Math.round(ramOrb.animVal) + "%" }
                                       }
                                       Text { Layout.alignment: Qt.AlignHCenter; font.family: "SF Pro Text"; font.weight: Font.Bold; font.pixelSize: window.s(10); color: window.subtext0; text: "MEMORY" }
@@ -1325,7 +1331,7 @@ Item {
                                       anchors.centerIn: parent; spacing: 0
                                       RowLayout {
                                         Layout.alignment: Qt.AlignHCenter; spacing: window.s(4)
-                                        Text { font.family: "Iosevka Nerd Font"; font.pixelSize: window.s(18); color: window.peach; text: "󰋊" }
+                                        Text { font.family: "SF Pro "; font.pixelSize: window.s(18); color: window.peach; text: "󰋊" }
                                         Text { font.family: "SF Pro Compact"; font.weight: Font.Black; font.pixelSize: window.s(22); color: window.text; text: Math.round(diskOrb.animVal) + "%" }
                                       }
                                       Text { Layout.alignment: Qt.AlignHCenter; font.family: "SF Pro Text"; font.weight: Font.Bold; font.pixelSize: window.s(10); color: window.subtext0; text: "STORAGE" }
@@ -1371,7 +1377,7 @@ Item {
                                       anchors.centerIn: parent; spacing: 0
                                       RowLayout {
                                         Layout.alignment: Qt.AlignHCenter; spacing: window.s(4)
-                                        Text { font.family: "Iosevka Nerd Font"; font.pixelSize: window.s(18); color: window.red; text: "" }
+                                        Text { font.family: "SF Pro "; font.pixelSize: window.s(18); color: window.red; text: "" }
                                         Text { font.family: "SF Pro Compact"; font.weight: Font.Black; font.pixelSize: window.s(22); color: window.text; text: Math.round(tempOrb.animVal) + "°" }
                                       }
                                       Text { Layout.alignment: Qt.AlignHCenter; font.family: "SF Pro Text"; font.weight: Font.Bold; font.pixelSize: window.s(10); color: window.subtext0; text: "SYSTEM TEMP" }
@@ -1383,16 +1389,16 @@ Item {
                         }
 
                         ColumnLayout {
-                            visible: window.batCapacity > 0
+                            visible: window.hasBattery && window.batCapacity > 0
                             anchors.right: parent.right
-                            anchors.rightMargin: window.s(20)
+                            anchors.rightMargin: window.s(30)
                             anchors.bottom: centralCore.bottom
-                            anchors.bottomMargin: window.s(-10)
+                            anchors.bottomMargin: window.s(-15)
                             spacing: 0
                             
                             RowLayout {
                                 Layout.alignment: Qt.AlignHCenter; spacing: window.s(4)
-                                Text { font.family: "Iosevka Nerd Font"; font.pixelSize: window.s(18); color: window.isCharging ? window.green : window.ambientPrimary; text: window.isCharging ? "󰂄" : "󰁹"; Behavior on color { ColorAnimation { duration: 400 } } }
+                                Text { font.family: "SF Pro "; font.pixelSize: window.s(18); color: window.isCharging ? window.green : window.ambientPrimary; text: window.isCharging ? "󰂄" : "󰁹"; Behavior on color { ColorAnimation { duration: 400 } } }
                                 Text { font.family: "SF Pro Compact"; font.weight: Font.Black; font.pixelSize: window.s(22); color: window.text; text: Math.round(window.animCapacity) + "%" }
                             }
                             Text { Layout.alignment: Qt.AlignHCenter; font.family: "SF Pro Text"; font.weight: Font.Bold; font.pixelSize: window.s(10); color: window.subtext0; text: "BATTERY" }
@@ -1434,7 +1440,7 @@ Item {
                                             Text {
                                                 anchors.centerIn: parent
                                                 text: window.sysBrightness > 66 ? "󰃠" : (window.sysBrightness > 33 ? "󰃟" : "󰃞")
-                                                font.family: "Iosevka Nerd Font"
+                                                font.family: "SF Pro "
                                                 font.pixelSize: window.s(22)
                                                 color: window.ambientPrimary
                                                 Behavior on color { ColorAnimation { duration: 200 } }
@@ -1516,7 +1522,7 @@ Item {
                                             Text {
                                                 anchors.centerIn: parent
                                                 text: window.sysMuted || window.sysVolume === 0 ? "󰖁" : (window.sysVolume > 50 ? "󰕾" : "󰖀")
-                                                font.family: "Iosevka Nerd Font"
+                                                font.family: "SF Pro "
                                                 font.pixelSize: window.s(22)
                                                 color: window.sysMuted ? window.overlay0 : window.profileStart
                                                 Behavior on color { ColorAnimation { duration: 200 } }
@@ -1623,7 +1629,7 @@ Item {
 
                                     Text {
                                         anchors.centerIn: parent
-                                        font.family: "Iosevka Nerd Font"
+                                        font.family: "SF Pro "
                                         font.pixelSize: window.s(22)
                                         color: window.sunsetActive ? window.crust : window.text
                                         text: "󰈈"
@@ -1660,7 +1666,7 @@ Item {
                                             Layout.fillHeight: true
                                             radius: window.s(8)
                                             color: window.caffeineLid ? window.mauve : (lidMa.containsMouse ? window.surface1 : "transparent")
-                                            Text { anchors.centerIn: parent; font.family: "Iosevka Nerd Font"; font.pixelSize: window.s(16); color: window.caffeineLid ? window.crust : window.text; text: "󰌢" }
+                                            Text { anchors.centerIn: parent; font.family: "SF Pro "; font.pixelSize: window.s(16); color: window.caffeineLid ? window.crust : window.text; text: "󰌢" }
                                             MouseArea { id: lidMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: { Quickshell.execDetached(["hyprcaffeine", "lid", "toggle"]); sysPoller.running = true; } }
                                         }
                                         
@@ -1670,7 +1676,7 @@ Item {
                                             Layout.fillHeight: true
                                             radius: window.s(8)
                                             color: window.caffeineMonitor ? window.mauve : (monMa.containsMouse ? window.surface1 : "transparent")
-                                            Text { anchors.centerIn: parent; font.family: "Iosevka Nerd Font"; font.pixelSize: window.s(16); color: window.caffeineMonitor ? window.crust : window.text; text: "󰍹" }
+                                            Text { anchors.centerIn: parent; font.family: "SF Pro "; font.pixelSize: window.s(16); color: window.caffeineMonitor ? window.crust : window.text; text: "󰍹" }
                                             MouseArea { id: monMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: { Quickshell.execDetached(["hyprcaffeine", "monitor", "toggle"]); sysPoller.running = true; } }
                                         }
 
@@ -1680,7 +1686,7 @@ Item {
                                             Layout.fillHeight: true
                                             radius: window.s(8)
                                             color: window.caffeineIdle !== "off" ? window.mauve : (idleMa.containsMouse ? window.surface1 : "transparent")
-                                            Text { anchors.centerIn: parent; font.family: "Iosevka Nerd Font"; font.pixelSize: window.s(16); color: window.caffeineIdle !== "off" ? window.crust : window.text; text: "󰛊" }
+                                            Text { anchors.centerIn: parent; font.family: "SF Pro "; font.pixelSize: window.s(16); color: window.caffeineIdle !== "off" ? window.crust : window.text; text: "󰛊" }
                                             MouseArea { id: idleMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: { Quickshell.execDetached(["hyprcaffeine", "toggle"]); sysPoller.running = true; } }
                                         }
 
@@ -1737,7 +1743,7 @@ Item {
                                             Layout.fillHeight: true
                                             radius: window.s(8)
                                             color: applyMa.containsMouse ? window.surface2 : window.surface1
-                                            Text { anchors.centerIn: parent; font.family: "Iosevka Nerd Font"; font.pixelSize: window.s(16); color: window.text; text: "󰄬" }
+                                            Text { anchors.centerIn: parent; font.family: "SF Pro "; font.pixelSize: window.s(16); color: window.text; text: "󰄬" }
                                             MouseArea {
                                                 id: applyMa
                                                 anchors.fill: parent
@@ -1860,7 +1866,7 @@ Item {
 
                                         Text { 
                                             anchors.centerIn: parent
-                                            font.family: "Iosevka Nerd Font"
+                                            font.family: "SF Pro "
                                             font.pixelSize: window.s(24)
                                             color: actionMa.containsMouse ? window.text : window.subtext0
                                             text: icon
@@ -1875,7 +1881,7 @@ Item {
                                             Text { 
                                                 anchors.horizontalCenter: parent.horizontalCenter
                                                 y: (actionCapsule.height / 2) - (height / 2) - (actionCapsule.height - parent.height)
-                                                font.family: "Iosevka Nerd Font"
+                                                font.family: "SF Pro "
                                                 font.pixelSize: window.s(24)
                                                 color: window.crust
                                                 text: icon 
@@ -1976,7 +1982,7 @@ Item {
                                                 anchors.centerIn: parent
                                                 spacing: window.s(8)
                                                 Text {
-                                                    font.family: "Iosevka Nerd Font"; font.pixelSize: window.s(18)
+                                                    font.family: "SF Pro "; font.pixelSize: window.s(18)
                                                     color: window.powerProfile === name ? window.crust : (profileMa.containsMouse ? window.text : window.subtext0)
                                                     text: icon
                                                     Behavior on color { ColorAnimation { duration: 200 } }
