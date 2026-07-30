@@ -1,4 +1,3 @@
-
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Window
@@ -937,15 +936,20 @@ Item {
                         }
                     }
 
-                    // Expanding top-right logout icon
+                    // Expanding top-right logout icon with hold-to-confirm left-to-right fill animation
                     Rectangle {
                         id: logoutBtn
                         anchors.top: parent.top; anchors.right: parent.right
                         anchors.margins: window.s(25)
                         width: logoutMa.containsMouse ? window.s(44) + usernameText.implicitWidth + window.s(12) : window.s(44)
                         height: window.s(44); radius: window.s(14)
+                        
+                        property color c1: window.red
+                        property color c2: Qt.lighter(c1, 1.2)
+                        
                         color: logoutMa.containsMouse ? window.surface1 : "transparent"
-                        border.color: logoutMa.containsMouse ? window.surface2 : "transparent"
+                        border.color: logoutMa.containsMouse ? c1 : "transparent"
+                        border.width: logoutMa.containsMouse ? 2 : 1
                         clip: true
                         
                         transform: Translate { y: window.s(-20) * (1.0 - introTop) }
@@ -954,8 +958,83 @@ Item {
                         Behavior on width { NumberAnimation { duration: 300; easing.type: Easing.OutQuint } }
                         Behavior on color { ColorAnimation { duration: 150 } }
                         Behavior on border.color { ColorAnimation { duration: 150 } }
+                        
+                        scale: logoutMa.pressed ? 0.96 : (logoutMa.containsMouse ? 1.05 : 1.0)
+                        Behavior on scale { NumberAnimation { duration: 400; easing.type: Easing.OutQuart } }
 
+                        property real fillLevel: 0.0
+                        property bool triggered: false
+                        property real flashOpacity: 0.0
+
+                        Canvas {
+                            id: logoutWaveCanvas
+                            anchors.fill: parent
+                            
+                            property real wavePhase: 0.0
+                            NumberAnimation on wavePhase {
+                                running: logoutBtn.fillLevel > 0.0 && logoutBtn.fillLevel < 1.0
+                                loops: Animation.Infinite
+                                from: 0; to: Math.PI * 2; duration: 800
+                            }
+                            onWavePhaseChanged: requestPaint()
+                            Connections { target: logoutBtn; function onFillLevelChanged() { logoutWaveCanvas.requestPaint() } }
+                            
+                            onPaint: {
+                                var ctx = getContext("2d");
+                                ctx.clearRect(0, 0, width, height);
+                                if (logoutBtn.fillLevel <= 0.001) return;
+                                
+                                var r = window.s(14); 
+                                var fillX = width * logoutBtn.fillLevel;
+                                ctx.save();
+                                ctx.beginPath();
+                                ctx.moveTo(r, 0);
+                                ctx.lineTo(width - r, 0);
+                                ctx.arcTo(width, 0, width, r, r);
+                                ctx.lineTo(width, height - r);
+                                ctx.arcTo(width, height, width - r, height, r);
+                                ctx.lineTo(r, height);
+                                ctx.arcTo(0, height, 0, height - r, r);
+                                ctx.lineTo(0, r);
+                                ctx.arcTo(0, 0, r, 0, r);
+                                ctx.closePath();
+                                ctx.clip(); 
+                                
+                                ctx.beginPath();
+                                ctx.moveTo(fillX, 0);
+                                if (logoutBtn.fillLevel < 0.99) {
+                                    var waveAmp = window.s(8) * Math.sin(logoutBtn.fillLevel * Math.PI); 
+                                    var cp1x = fillX + Math.sin(wavePhase) * waveAmp;
+                                    var cp2x = fillX + Math.cos(wavePhase + Math.PI) * waveAmp;
+                                    ctx.bezierCurveTo(cp2x, height * 0.33, cp1x, height * 0.66, fillX, height);
+                                    ctx.lineTo(0, height);
+                                    ctx.lineTo(0, 0);
+                                } else {
+                                    ctx.lineTo(width, 0);
+                                    ctx.lineTo(width, height);
+                                    ctx.lineTo(0, height);
+                                    ctx.lineTo(0, 0);
+                                }
+                                ctx.closePath();
+                                
+                                var grad = ctx.createLinearGradient(0, 0, width, 0);
+                                grad.addColorStop(0, logoutBtn.c1.toString());
+                                grad.addColorStop(1, logoutBtn.c2.toString());
+                                ctx.fillStyle = grad;
+                                ctx.fill();
+                                ctx.restore();
+                            }
+                        }
+
+                        Rectangle {
+                            anchors.fill: parent; radius: window.s(14); color: "#ffffff"
+                            opacity: logoutBtn.flashOpacity
+                            PropertyAnimation on opacity { id: logoutFlashAnim; to: 0; duration: 500; easing.type: Easing.OutExpo }
+                        }
+
+                        // Base unfilled text layout
                         Row {
+                            id: baseTextRow
                             anchors.right: parent.right
                             anchors.rightMargin: window.s(13)
                             anchors.verticalCenter: parent.verticalCenter
@@ -982,13 +1061,77 @@ Item {
                             }
                         }
 
+                        // Filled contrast text layout (clipped to width * fillLevel)
+                        Item {
+                            anchors.left: parent.left
+                            anchors.top: parent.top
+                            anchors.bottom: parent.bottom
+                            width: logoutBtn.width * logoutBtn.fillLevel
+                            clip: true
+
+                            Row {
+                                x: baseTextRow.x
+                                y: baseTextRow.y
+                                spacing: baseTextRow.spacing
+
+                                Text {
+                                    text: window.currentUserName
+                                    font.family: "SF Pro Text"
+                                    font.weight: Font.Bold
+                                    font.pixelSize: window.s(14)
+                                    color: window.crust
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    opacity: usernameText.opacity
+                                }
+
+                                Text {
+                                    font.family: "SF Pro "; font.pixelSize: window.s(18)
+                                    color: window.crust
+                                    text: "󰍃"
+                                    anchors.verticalCenter: parent.verticalCenter
+                                }
+                            }
+                        }
+
                         MouseArea {
                             id: logoutMa
-                            anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                            onClicked: { 
-                                exitAnim.start(); // Trigger graceful UI exit
-                                Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/exit.sh"]); 
-                                Quickshell.execDetached(["sh", "-c", "echo 'close' > " + paths.runDir + "/widget_state"]); 
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: logoutBtn.triggered ? Qt.ArrowCursor : Qt.PointingHandCursor
+                            
+                            onPressed: {
+                                if (!logoutBtn.triggered) {
+                                    logoutDrainAnim.stop();
+                                    logoutFillAnim.start();
+                                }
+                            }
+                            onReleased: {
+                                if (!logoutBtn.triggered && logoutBtn.fillLevel < 1.0) {
+                                    logoutFillAnim.stop();
+                                    logoutDrainAnim.start();
+                                }
+                            }
+                        }
+
+                        NumberAnimation {
+                            id: logoutFillAnim; target: logoutBtn; property: "fillLevel"; to: 1.0
+                            duration: 900 * (1.0 - logoutBtn.fillLevel); easing.type: Easing.InSine
+                            onFinished: {
+                                logoutBtn.triggered = true; logoutBtn.flashOpacity = 0.6; logoutFlashAnim.start();
+                                exitAnim.start(); logoutExitTimer.start();
+                            }
+                        }
+
+                        NumberAnimation {
+                            id: logoutDrainAnim; target: logoutBtn; property: "fillLevel"; to: 0.0
+                            duration: 1500 * logoutBtn.fillLevel; easing.type: Easing.OutQuad
+                        }
+
+                        Timer {
+                            id: logoutExitTimer; interval: 500
+                            onTriggered: {
+                                Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/exit.sh"]);
+                                Quickshell.execDetached(["sh", "-c", "echo 'close' > " + paths.runDir + "/widget_state"]);
                             }
                         }
                     }
