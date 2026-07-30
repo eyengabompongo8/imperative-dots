@@ -127,6 +127,7 @@ Item {
     property real sysVolume: 0
     property bool sysMuted: false
     property real sysBrightness: 0
+    property bool hasBacklight: true
     
     property string caffeineIdle: "off"
     property bool caffeineMonitor: false
@@ -228,7 +229,8 @@ Item {
             "brightnessctl -m 2>/dev/null | awk -F, '{print substr($4, 1, length($4)-1)}' || echo '0'; " +
             "caff=$(hyprcaffeine status 2>/dev/null); echo \"$caff\" | python3 -c \"import sys,re; line=sys.stdin.read(); m=re.search(r'Idle: (.+?) \\\\S+ Monitor:', line); idle=m.group(1).strip() if m else 'off'; idle=re.sub(r'[^\\\\x00-\\\\x7F\\\\s]','',idle).strip() or 'off'; mm=re.search(r'Monitor: (\\\\S+)',line); lm=re.search(r'Lid: (\\\\S+)',line); print(idle); print((mm.group(1) if mm else 'off').lower()); print((lm.group(1) if lm else 'off').lower())\"; " +
             "pidof hyprsunset >/dev/null && echo 'on' || echo 'off'; " +
-            "df -h / | awk 'NR==2 {print $5}' | tr -d '%' || echo '0'"
+            "df -h / | awk 'NR==2 {print $5}' | tr -d '%' || echo '0'; " +
+            "ls -A /sys/class/backlight 2>/dev/null | grep -q . && echo '1' || echo '0'"
         ]
         running: true
         stdout: StdioCollector {
@@ -267,6 +269,9 @@ Item {
                     }
                     if (lines.length >= 12) {
                         widgetCache.diskUsage = parseInt(lines[11]) || 0;
+                    }
+                    if (lines.length > 0) {
+                        window.hasBacklight = (lines[lines.length - 1] === "1");
                     }
                 }
             }
@@ -1558,7 +1563,7 @@ Item {
                             // 1. HARDWARE CONTROLS DOCK (Sliders)
                             Rectangle {
                                 Layout.fillWidth: true
-                                Layout.preferredHeight: window.s(96)
+                                Layout.preferredHeight: window.hasBacklight ? window.s(96) : window.s(52)
                                 radius: window.s(14)
                                 color: window.surface0
                                 border.color: window.surface1
@@ -1575,6 +1580,7 @@ Item {
                                     // Brightness Slider
                                     RowLayout {
                                         Layout.fillWidth: true
+                                        visible: window.hasBacklight
                                         spacing: window.s(15)
 
                                         Item {
