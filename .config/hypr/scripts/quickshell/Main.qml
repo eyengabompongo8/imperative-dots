@@ -152,9 +152,9 @@ PanelWindow {
     property string activeArg: ""
     property bool disableMorph: false
 
-    property int morphDuration: 230
-    property int morphDurationSwitch: 210
-    property int exitDuration: 160
+    property int morphDuration: 150
+    property int morphDurationSwitch: 130
+    property int exitDuration: 100
 
     property real animW: 1
     property real animH: 1
@@ -360,7 +360,7 @@ PanelWindow {
         opacity: masterWindow.isVisible ? 1.0 : 0.0
         Behavior on opacity {
             NumberAnimation {
-                duration: 160
+                duration: 100
                 easing.type: masterWindow.isVisible ? Easing.OutCubic : Easing.InCubic
             }
         }
@@ -440,7 +440,7 @@ PanelWindow {
             }
         } else {
             if (currentActive === "hidden" || !masterWindow.isVisible) {
-                masterWindow.morphDuration = 230;
+                masterWindow.morphDuration = 150;
                 masterWindow.disableMorph = false;
 
                 let t = getLayout(newWidget);
@@ -520,7 +520,7 @@ PanelWindow {
 
     Timer {
         id: delayedClear
-        interval: 200
+        interval: 120
         onTriggered: {
             masterWindow.currentActive = "hidden";
             widgetStack.clear();

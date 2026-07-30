@@ -149,36 +149,36 @@ Item {
 
         ParallelAnimation {
             // Base window fades and scales slightly
-            NumberAnimation { target: window; property: "introMain"; from: 0; to: 1.0; duration: 800; easing.type: Easing.OutQuart }
+            NumberAnimation { target: window; property: "introMain"; from: 0; to: 1.0; duration: 300; easing.type: Easing.OutCubic }
 
             // Ambient background glows and big parallax icon fade in
             SequentialAnimation {
-                PauseAnimation { duration: 150 }
-                NumberAnimation { target: window; property: "introAmbient"; from: 0; to: 1.0; duration: 1000; easing.type: Easing.OutSine }
+                PauseAnimation { duration: 50 }
+                NumberAnimation { target: window; property: "introAmbient"; from: 0; to: 1.0; duration: 350; easing.type: Easing.OutSine }
             }
 
             // Central clock and 3D orbital pop from the center
             SequentialAnimation {
-                PauseAnimation { duration: 250 }
-                NumberAnimation { target: window; property: "introClock"; from: 0; to: 1.0; duration: 900; easing.type: Easing.OutBack; easing.overshoot: 1.15 }
+                PauseAnimation { duration: 80 }
+                NumberAnimation { target: window; property: "introClock"; from: 0; to: 1.0; duration: 320; easing.type: Easing.OutBack; easing.overshoot: 1.10 }
             }
 
             // Left wing (Calendar) slides in from the left
             SequentialAnimation {
-                PauseAnimation { duration: 350 }
-                NumberAnimation { target: window; property: "introCalendar"; from: 0; to: 1.0; duration: 850; easing.type: Easing.OutQuint }
+                PauseAnimation { duration: 100 }
+                NumberAnimation { target: window; property: "introCalendar"; from: 0; to: 1.0; duration: 300; easing.type: Easing.OutCubic }
             }
 
             // Right wing (Weather) slides in from the right
             SequentialAnimation {
-                PauseAnimation { duration: 400 }
-                NumberAnimation { target: window; property: "introWeather"; from: 0; to: 1.0; duration: 850; easing.type: Easing.OutQuint }
+                PauseAnimation { duration: 120 }
+                NumberAnimation { target: window; property: "introWeather"; from: 0; to: 1.0; duration: 300; easing.type: Easing.OutCubic }
             }
 
             // Bottom section (Schedule) flows up smoothly
             SequentialAnimation {
-                PauseAnimation { duration: 500 }
-                NumberAnimation { target: window; property: "introSchedule"; from: 0; to: 1.0; duration: 900; easing.type: Easing.OutExpo }
+                PauseAnimation { duration: 140 }
+                NumberAnimation { target: window; property: "introSchedule"; from: 0; to: 1.0; duration: 300; easing.type: Easing.OutCubic }
             }
         }
         ScriptAction { script: window.startupComplete = true }
@@ -556,7 +556,7 @@ Item {
                     if (window.weatherData.forecast && window.weatherData.forecast[window.weatherView]) return window.weatherData.forecast[window.weatherView].icon;
                     return "";
                 }
-                font.family: "Iosevka Nerd Font"
+                font.family: "SF Pro "
                 font.pixelSize: Math.round(800 * window.sf)
                 color: window.activeWeatherHex
                 opacity: (0.03 + (0.01 * Math.sin(window.globalOrbitAngle * 4))) * window.introAmbient * window.weatherContentOpacity
@@ -774,7 +774,7 @@ Item {
                                     Text { 
                                         Layout.alignment: Qt.AlignHCenter
                                         text: modelData.icon || (window.weatherData && window.weatherData.forecast[window.weatherView] ? window.weatherData.forecast[window.weatherView].icon : "")
-                                        font.family: "Iosevka Nerd Font"; font.pixelSize: Math.round(18 * window.sf)
+                                        font.family: "SF Pro "; font.pixelSize: Math.round(18 * window.sf)
                                         color: isHighlighted ? window.base : (modelData.hex || window.text)
                                         
                                         transform: Translate { y: hrMa.containsMouse ? Math.round(-3 * window.sf) : 0 }
@@ -830,7 +830,7 @@ Item {
                             opacity: window.targetMonthOffset !== 0 ? 1.0 : 0.0
                             visible: opacity > 0
                             Behavior on opacity { NumberAnimation { duration: 200 } }
-                            Text { anchors.centerIn: parent; text: "󰃭"; font.family: "Iosevka Nerd Font"; color: window.text; font.pixelSize: Math.round(16 * window.sf) }
+                            Text { anchors.centerIn: parent; text: "󰃭"; font.family: "SF Pro "; color: window.text; font.pixelSize: Math.round(16 * window.sf) }
                             MouseArea { 
                                 id: homeMa; anchors.fill: parent; hoverEnabled: window.targetMonthOffset !== 0; 
                                 onClicked: if (window.targetMonthOffset !== 0) window.setMonthOffset(0) 
@@ -840,7 +840,7 @@ Item {
                         Rectangle {
                             Layout.preferredWidth: Math.round(32 * window.sf); Layout.preferredHeight: Math.round(32 * window.sf); radius: Math.round(16 * window.sf)
                             color: prevMa.containsMouse ? window.surface1 : "transparent"
-                            Text { anchors.centerIn: parent; text: ""; font.family: "Iosevka Nerd Font"; color: window.text; font.pixelSize: Math.round(16 * window.sf) }
+                            Text { anchors.centerIn: parent; text: ""; font.family: "SF Pro "; color: window.text; font.pixelSize: Math.round(16 * window.sf) }
                             MouseArea { id: prevMa; anchors.fill: parent; hoverEnabled: true; onClicked: window.setMonthOffset(window.targetMonthOffset - 1) }
                         }
                         
@@ -862,14 +862,14 @@ Item {
                         Rectangle {
                             Layout.preferredWidth: Math.round(32 * window.sf); Layout.preferredHeight: Math.round(32 * window.sf); radius: Math.round(16 * window.sf)
                             color: nextMa.containsMouse ? window.surface1 : "transparent"
-                            Text { anchors.centerIn: parent; text: ""; font.family: "Iosevka Nerd Font"; color: window.text; font.pixelSize: Math.round(16 * window.sf) }
+                            Text { anchors.centerIn: parent; text: ""; font.family: "SF Pro "; color: window.text; font.pixelSize: Math.round(16 * window.sf) }
                             MouseArea { id: nextMa; anchors.fill: parent; hoverEnabled: true; onClicked: window.setMonthOffset(window.targetMonthOffset + 1) }
                         }
 
                         Rectangle {
                             Layout.preferredWidth: Math.round(32 * window.sf); Layout.preferredHeight: Math.round(32 * window.sf); radius: Math.round(16 * window.sf)
                             color: diaryMa.containsMouse ? window.surface1 : "transparent"
-                            Text { anchors.centerIn: parent; text: "+"; font.family: "Iosevka Nerd Font"; color: diaryMa.containsMouse ? window.mauve : window.text; font.pixelSize: Math.round(32 * window.sf) }
+                            Text { anchors.centerIn: parent; text: "+"; font.family: "SF Pro "; color: diaryMa.containsMouse ? window.mauve : window.text; font.pixelSize: Math.round(32 * window.sf) }
                             MouseArea { 
                                 id: diaryMa; anchors.fill: parent; hoverEnabled: true; 
                                 onClicked: Quickshell.execDetached(["bash", window.scriptsDir + "/diary_manager.sh"]) 
@@ -971,7 +971,7 @@ Item {
                             }
                             
                             Text { 
-                                anchors.centerIn: parent; text: ""; font.family: "Iosevka Nerd Font"; font.pixelSize: Math.round(18 * window.sf)
+                                anchors.centerIn: parent; text: ""; font.family: "SF Pro "; font.pixelSize: Math.round(18 * window.sf)
                                 color: parent.containsMouse ? window.textAccent : window.overlay1
                                 transform: Translate { x: parent.containsMouse ? Math.round(-5 * window.sf) : wPrevMa.pulseOffset }
                                 Behavior on transform { NumberAnimation { duration: 250; easing.type: Easing.OutBack } }
@@ -1002,7 +1002,7 @@ Item {
                             }
                             
                             Text { 
-                                anchors.centerIn: parent; text: ""; font.family: "Iosevka Nerd Font"; font.pixelSize: Math.round(18 * window.sf)
+                                anchors.centerIn: parent; text: ""; font.family: "SF Pro "; font.pixelSize: Math.round(18 * window.sf)
                                 color: parent.containsMouse ? window.textAccent : window.overlay1
                                 transform: Translate { x: parent.containsMouse ? Math.round(5 * window.sf) : wNextMa.pulseOffset }
                                 Behavior on transform { NumberAnimation { duration: 250; easing.type: Easing.OutBack } }
@@ -1159,7 +1159,7 @@ Item {
                                         
                                         Text { 
                                             text: gaugeWrapper.gaugeIcon
-                                            font.family: "Iosevka Nerd Font"
+                                            font.family: "SF Pro "
                                             font.pixelSize: Math.round(12 * window.sf)
                                             color: gaugeMa.containsMouse ? window.textAccent : window.overlay0
                                             Behavior on color { ColorAnimation { duration: 200 } }
@@ -1306,7 +1306,7 @@ Item {
                         
                         Rectangle {
                             Layout.preferredWidth: Math.round(40 * window.sf); Layout.preferredHeight: Math.round(40 * window.sf); radius: Math.round(20 * window.sf); color: window.surface0
-                            Text { anchors.centerIn: parent; text: ""; font.family: "Iosevka Nerd Font"; font.pixelSize: Math.round(18 * window.sf); color: window.textAccent }
+                            Text { anchors.centerIn: parent; text: ""; font.family: "SF Pro "; font.pixelSize: Math.round(18 * window.sf); color: window.textAccent }
                         }
                         
                         Text { 
@@ -1331,7 +1331,7 @@ Item {
                                 anchors.centerIn: parent
                                 spacing: Math.round(6 * window.sf)
                                 Text { text: "Open Web"; font.family: "SF Pro Text"; font.weight: Font.Bold; font.pixelSize: Math.round(14 * window.sf); color: schLinkMa.containsMouse ? window.base : window.text }
-                                Text { text: ""; font.family: "Iosevka Nerd Font"; font.pixelSize: Math.round(14 * window.sf); color: schLinkMa.containsMouse ? window.base : window.text }
+                                Text { text: ""; font.family: "SF Pro "; font.pixelSize: Math.round(14 * window.sf); color: schLinkMa.containsMouse ? window.base : window.text }
                             }
                             
                             MouseArea {
@@ -1468,14 +1468,14 @@ Item {
                                                 RowLayout {
                                                     visible: !modelData.is_compact
                                                     spacing: Math.round(8 * window.sf)
-                                                    Text { text: "󰅐"; font.family: "Iosevka Nerd Font"; font.pixelSize: Math.round(14 * window.sf); color: classNode.isActive ? window.mauve : window.overlay1 }
+                                                    Text { text: "󰅐"; font.family: "SF Pro "; font.pixelSize: Math.round(14 * window.sf); color: classNode.isActive ? window.mauve : window.overlay1 }
                                                     Text { text: modelData.time || ""; font.family: "SF Pro Text"; font.weight: Font.Bold; font.pixelSize: Math.round(14 * window.sf); color: classNode.isActive ? window.text : window.overlay1 }
                                                 }
 
                                                 RowLayout {
                                                     visible: !modelData.is_compact && (modelData.room || "") !== ""
                                                     spacing: Math.round(8 * window.sf)
-                                                    Text { text: ""; font.family: "Iosevka Nerd Font"; font.pixelSize: Math.round(14 * window.sf); color: classNode.isPast ? window.surface2 : window.peach }
+                                                    Text { text: ""; font.family: "SF Pro "; font.pixelSize: Math.round(14 * window.sf); color: classNode.isPast ? window.surface2 : window.peach }
                                                     Text { text: modelData.room || ""; font.family: "SF Pro Text"; font.weight: Font.Bold; font.pixelSize: Math.round(14 * window.sf); color: window.subtext1; elide: Text.ElideRight; Layout.fillWidth: true }
                                                 }
                                             }

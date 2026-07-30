@@ -59,7 +59,7 @@ PanelWindow {
     height: Math.min(popupList.contentHeight, Screen.height * 0.8)
 
     Behavior on height {
-        NumberAnimation { duration: 400; easing.type: Easing.OutQuint }
+        NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
     }
 
     property bool dndEnabled: false
@@ -82,7 +82,7 @@ PanelWindow {
 
         opacity: popupWindow.dndEnabled ? 0.0 : 1.0
         visible: opacity > 0.01
-        Behavior on opacity { NumberAnimation { duration: 300 } }
+        Behavior on opacity { NumberAnimation { duration: 200 } }
 
         MatugenColors { id: _theme }
 
@@ -104,22 +104,22 @@ PanelWindow {
 
             add: Transition {
                 ParallelAnimation {
-                    NumberAnimation { property: "opacity"; from: 0.0; to: 1.0; duration: 400; easing.type: Easing.OutQuint }
-                    NumberAnimation { property: "x"; from: popupWindow.width * 0.4; to: 0; duration: 500; easing.type: Easing.OutQuint }
-                    NumberAnimation { property: "scale"; from: 0.9; to: 1.0; duration: 500; easing.type: Easing.OutQuint }
+                    NumberAnimation { property: "opacity"; from: 0.0; to: 1.0; duration: 200; easing.type: Easing.OutCubic }
+                    NumberAnimation { property: "x"; from: popupWindow.width * 0.4; to: 0; duration: 220; easing.type: Easing.OutCubic }
+                    NumberAnimation { property: "scale"; from: 0.9; to: 1.0; duration: 220; easing.type: Easing.OutCubic }
                 }
             }
 
             remove: Transition {
                 ParallelAnimation {
-                    NumberAnimation { property: "opacity"; to: 0.0; duration: 350; easing.type: Easing.OutQuint }
-                    NumberAnimation { property: "x"; to: popupWindow.width * 0.4; duration: 400; easing.type: Easing.OutQuint }
-                    NumberAnimation { property: "scale"; to: 0.9; duration: 400; easing.type: Easing.OutQuint }
+                    NumberAnimation { property: "opacity"; to: 0.0; duration: 150; easing.type: Easing.InCubic }
+                    NumberAnimation { property: "x"; to: popupWindow.width * 0.4; duration: 150; easing.type: Easing.InCubic }
+                    NumberAnimation { property: "scale"; to: 0.9; duration: 150; easing.type: Easing.InCubic }
                 }
             }
 
             displaced: Transition {
-                NumberAnimation { properties: "x,y"; duration: 450; easing.type: Easing.OutQuint }
+                NumberAnimation { properties: "x,y"; duration: 200; easing.type: Easing.OutCubic }
             }
 
             delegate: Item {
