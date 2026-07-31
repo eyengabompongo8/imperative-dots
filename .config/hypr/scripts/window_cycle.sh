@@ -19,7 +19,7 @@ if [ "$LAYOUT" = "monocle" ]; then
     hyprctl dispatch "hl.dsp.layout('cycleprev')" >/dev/null 2>&1
   fi
 else
-  # Dwindle/Master use the standard cyclenext
+  # Dwindle/Scrolling use the standard cyclenext
   if [ "$ARG" = "next" ]; then
     hyprctl dispatch "hl.dsp.window.cycle_next({ next = true })" >/dev/null 2>&1
   else
