@@ -28,3 +28,24 @@ As an AI agent working in this repository, please adhere to the following guidel
 4. **Documentation:** Keep the `README.md` clean. If new significant features are added, document them.
 5. **Code Style:** Follow standard bash scripting practices for scripts (e.g., `install.sh` and files in `scripts/`). Use clear, descriptive variable names and comments.
 
+## Key Skills
+
+The following AI agent skills are installed in `.agents/skills/` to assist with Hyprland configuration and migration tasks:
+
+1. **Hyprland Documentation Skill (`hyprland`)**
+   - **Path:** [`.agents/skills/hyprland/SKILL.md`](file://.agents/skills/hyprland/SKILL.md)
+   - **Source:** [marceloeatworld/hyprland-ai-skill](https://github.com/marceloeatworld/hyprland-ai-skill)
+   - **Description:** Complete, auto-updated reference for the Hyprland Wayland compositor based on the official wiki. Covers Hyprland 0.55+ Lua configuration format (`hyprland.lua`), options, dispatchers, binds, window/layer rules, animations, and ecosystem tools (`hyprlock`, `hypridle`, `hyprpaper`, `hyprpicker`, `hyprsunset`, `xdg-desktop-portal-hyprland`).
+
+2. **Hyprland Lua Migration Skill (`hyprland-lua-migration`)**
+   - **Path:** [`.agents/skills/hyprland-lua-migration/SKILL.md`](file://.agents/skills/hyprland-lua-migration/SKILL.md)
+   - **Source:** [dabstractor/hyprland-lua-migration](https://github.com/dabstractor/hyprland-lua-migration)
+   - **Description:** Step-by-step migration guide and reference table for converting legacy Hyprland `hyprland.conf` (hyprlang syntax) to the modern v0.55 Lua API (`hl.*` functions).
+
+### Updating Skills
+
+To pull the latest updates for installed skills:
+```bash
+git -C .agents/skills/hyprland pull
+git -C .agents/skills/hyprland-lua-migration pull
+```
