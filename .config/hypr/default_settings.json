@@ -177,21 +177,21 @@
       "mods": " $mainMod SHIFT",
       "key": "D",
       "dispatcher": "lua",
-      "command": "hl.config({ general = { layout = \"dwindle\" } })"
+      "command": "set_active_layout(\"dwindle\")"
     },
     {
       "type": "bind",
       "mods": " $mainMod SHIFT",
       "key": "S",
       "dispatcher": "lua",
-      "command": "hl.config({ general = { layout = \"scrolling\" } })"
+      "command": "set_active_layout(\"scrolling\")"
     },
     {
       "type": "bind",
       "mods": " $mainMod SHIFT",
       "key": "M",
       "dispatcher": "lua",
-      "command": "hl.config({ general = { layout = \"monocle\" } })"
+      "command": "set_active_layout(\"monocle\")"
     },
     {
       "type": "bind",
