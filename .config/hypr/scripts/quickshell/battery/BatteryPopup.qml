@@ -221,15 +221,15 @@ Item {
         id: sysPoller
         command: ["bash", "-c", 
             "ls /sys/class/power_supply/BAT* 1>/dev/null 2>&1 && echo '1' || echo '0'; " +
-            "cat /sys/class/power_supply/BAT*/capacity 2>/dev/null | head -n1 || echo '0'; " +
-            "cat /sys/class/power_supply/BAT*/status 2>/dev/null | head -n1 || echo 'Unknown'; " +
-            "powerprofilesctl get 2>/dev/null || echo 'balanced'; " +
-            "awk '{print int($1/3600)\"h \"int(($1%3600)/60)\"m\"}' /proc/uptime 2>/dev/null || echo '0h 0m'; " +
-            "wpctl get-volume @DEFAULT_AUDIO_SINK@ 2>/dev/null | awk '{print int($2*100), ($3==\"[MUTED]\"?\"off\":\"on\")}' || echo '0 on'; " +
-            "brightnessctl -m 2>/dev/null | awk -F, '{print substr($4, 1, length($4)-1)}' || echo '0'; " +
+            "(cat /sys/class/power_supply/BAT*/capacity 2>/dev/null | head -n1 | grep .) || echo '0'; " +
+            "(cat /sys/class/power_supply/BAT*/status 2>/dev/null | head -n1 | grep .) || echo 'Unknown'; " +
+            "(powerprofilesctl get 2>/dev/null | head -n1 | grep .) || echo 'balanced'; " +
+            "(awk '{print int($1/3600)\"h \"int(($1%3600)/60)\"m\"}' /proc/uptime 2>/dev/null | grep .) || echo '0h 0m'; " +
+            "(wpctl get-volume @DEFAULT_AUDIO_SINK@ 2>/dev/null | awk '{print int($2*100), ($3==\"[MUTED]\"?\"off\":\"on\")}' | grep .) || echo '0 on'; " +
+            "(brightnessctl -m 2>/dev/null | awk -F, '{print substr($4, 1, length($4)-1)}' | grep .) || echo '0'; " +
             "caff=$(hyprcaffeine status 2>/dev/null); echo \"$caff\" | python3 -c \"import sys,re; line=sys.stdin.read(); m=re.search(r'Idle: (.+?) \\\\S+ Monitor:', line); idle=m.group(1).strip() if m else 'off'; idle=re.sub(r'[^\\\\x00-\\\\x7F\\\\s]','',idle).strip() or 'off'; mm=re.search(r'Monitor: (\\\\S+)',line); lm=re.search(r'Lid: (\\\\S+)',line); print(idle); print((mm.group(1) if mm else 'off').lower()); print((lm.group(1) if lm else 'off').lower())\"; " +
             "pidof hyprsunset >/dev/null && echo 'on' || echo 'off'; " +
-            "df -h / | awk 'NR==2 {print $5}' | tr -d '%' || echo '0'; " +
+            "(df -h / 2>/dev/null | awk 'NR==2 {print $5}' | tr -d '%' | grep .) || echo '0'; " +
             "ls -A /sys/class/backlight 2>/dev/null | grep -q . && echo '1' || echo '0'"
         ]
         running: true
@@ -2160,3 +2160,4 @@ Item {
         }
     }
 }
+
