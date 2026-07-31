@@ -1730,6 +1730,24 @@ else
   rm -f "$TARGET_FONTS_DIR/IosevkaNerdFont/"*Mono*.ttf
 fi
 
+if [ -d "$TARGET_FONTS_DIR/LigaSFMonoNerdFont" ] && [ "$(ls -A "$TARGET_FONTS_DIR/LigaSFMonoNerdFont" 2>/dev/null | grep -i "\.otf")" ]; then
+  echo -e "  -> ${C_GREEN}Ligaturized SF Mono Nerd Font already installed in $TARGET_FONTS_DIR. Skipping download.${RESET}"
+else
+  printf "  -> Creating temporary directory... \n"
+  mkdir -p /tmp/SFMono-Nerd-Font-Ligaturized
+
+  printf "  -> Downloading latest full Ligaturized SF Mono Nerd Font pack... \n"
+  git clone https://github.com/shaunsingh/SFMono-Nerd-Font-Ligaturized.git
+
+  printf "  -> Installing fonts to Ligaturized SF Mono Nerd Font directory... \n"
+  mkdir -p "$TARGET_FONTS_DIR/LigaSFMonoNerdFont"
+  mv /tmp/SFMono-Nerd-Font-Ligaturized/*.otf "$TARGET_FONTS_DIR/LigaSFMonoNerdFont/"
+  sudo cp -r "$TARGET_FONTS_DIR/LigaSFMonoNerdFont" /usr/share/fonts/
+
+  printf "  -> Cleaning up temporary files... \n"
+  rm -rf /tmp/SFMono-Nerd-Font-Ligaturized
+fi
+
 find "$TARGET_FONTS_DIR" -type f -exec chmod 644 {} \; 2>/dev/null
 find "$TARGET_FONTS_DIR" -type d -exec chmod 755 {} \; 2>/dev/null
 
