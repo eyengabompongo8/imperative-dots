@@ -4,7 +4,10 @@ import QtQuick.Layouts
 import QtQuick.Controls
 import Quickshell
 import Quickshell.Io
+import Quickshell.Wayland
+import Quickshell.Hyprland
 import "../"
+
 
 Item {
     id: window
@@ -34,17 +37,42 @@ Item {
     property real monHeight: 1080
     property var workspacesData: []
 
+    // Monocle window aspect ratio (usable workspace area: monWidth / usable height)
+    readonly property real monocleRatio: (monWidth > 0 && monHeight > 60) ? ((monWidth - 12) / (monHeight - 68)) : (16.0 / 9.0)
+    readonly property real targetMasterWidth: window.s(1200)
+    readonly property real targetMasterHeight: Math.round(2 * ((targetMasterWidth - window.s(44)) / 4) / monocleRatio + window.s(72))
+
     // Drag & Drop State Tracking
     property string draggedWindowAddress: ""
     property int draggedFromWs: 0
     property bool isDragging: false
     property bool isOverTrash: false
 
+
     function fetchOverviewData() {
         if (!overviewFetcher.running) {
             overviewFetcher.running = true;
         }
     }
+
+    function getToplevelForAddress(addr) {
+        if (!addr || typeof Hyprland === "undefined" || !Hyprland.toplevels) return null;
+        let target = addr.toString().replace(/^0x/i, "").toLowerCase();
+        let list = Hyprland.toplevels.values;
+        for (let i = 0; i < list.length; i++) {
+            let htl = list[i];
+            if (htl && htl.address) {
+                let htlAddr = htl.address.toString().replace(/^0x/i, "").toLowerCase();
+                if (htlAddr === target) {
+                    return htl.wayland || null;
+                }
+            }
+        }
+        return null;
+    }
+
+
+
 
     Process {
         id: overviewFetcher
@@ -87,6 +115,8 @@ Item {
             }
         }
     }
+
+
 
     // -------------------------------------------------------------------------
     // HYPRLAND LUA DISPATCH ACTIONS
@@ -157,7 +187,8 @@ Item {
                     delegate: Rectangle {
                         id: wsCard
                         Layout.fillWidth: true
-                        Layout.fillHeight: true
+                        Layout.preferredHeight: Math.round(wsCard.width / window.monocleRatio)
+
 
                         readonly property int wsId: modelData.id
                         readonly property bool isActive: modelData.isActive
@@ -273,6 +304,40 @@ Item {
 
                                         Behavior on color { ColorAnimation { duration: 120 } }
                                         Behavior on border.color { ColorAnimation { duration: 120 } }
+
+                                        // Live Screencopy Background Preview (Aspect-Crop to Fill Container)
+                                        Item {
+                                            id: scCropWrapper
+                                            anchors.fill: parent
+                                            clip: true
+                                            visible: scView.hasContent
+
+                                            readonly property real srcRatio: window.monocleRatio
+
+                                            readonly property real containerRatio: (winMiniCard.width / Math.max(1, winMiniCard.height))
+
+                                            ScreencopyView {
+                                                id: scView
+                                                width: (scCropWrapper.srcRatio > scCropWrapper.containerRatio) ? (winMiniCard.height * scCropWrapper.srcRatio) : winMiniCard.width
+                                                height: (scCropWrapper.srcRatio > scCropWrapper.containerRatio) ? winMiniCard.height : (winMiniCard.width / scCropWrapper.srcRatio)
+                                                anchors.centerIn: parent
+
+                                                captureSource: {
+                                                    let _dep = (typeof Hyprland !== "undefined" && Hyprland.toplevels) ? Hyprland.toplevels.values.length : 0;
+                                                    return window.getToplevelForAddress(winData.address);
+                                                }
+                                                live: window.visible
+                                                paintCursor: false
+                                            }
+
+                                            // Readability Overlay
+                                            Rectangle {
+                                                anchors.fill: parent
+                                                radius: window.s(6)
+                                                color: Qt.rgba(0, 0, 0, 0.35)
+                                            }
+                                        }
+
 
                                         // Centered Column Layout with Larger Logo on top & Title below
                                         ColumnLayout {
