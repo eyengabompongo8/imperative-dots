@@ -33,9 +33,32 @@ Item {
 
     property int workspaceCount: 8
     property int activeWorkspaceId: 1
+    property int selectedIndex: -1
+    property bool isUserSelecting: false
     property real monWidth: 1920
     property real monHeight: 1080
     property var workspacesData: []
+
+    Timer {
+        id: focusTimer
+        interval: 50
+        running: true
+        repeat: false
+        onTriggered: window.forceActiveFocus()
+    }
+
+    function syncSelectedIndex() {
+        if (!window.isUserSelecting || window.selectedIndex < 0 || window.selectedIndex >= window.workspacesData.length) {
+            if (window.workspacesData && window.workspacesData.length > 0) {
+                let idx = window.workspacesData.findIndex(function(w) { return w.id === window.activeWorkspaceId; });
+                if (idx !== -1) {
+                    window.selectedIndex = idx;
+                } else {
+                    window.selectedIndex = 0;
+                }
+            }
+        }
+    }
 
     // Monocle window aspect ratio (usable workspace area: monWidth / usable height)
     readonly property real monocleRatio: (monWidth > 0 && monHeight > 60) ? ((monWidth - 12) / (monHeight - 68)) : (16.0 / 9.0)
@@ -90,6 +113,7 @@ Item {
                             window.monHeight = parsed.monitor.height || 1080;
                         }
                         window.workspacesData = parsed.workspaces || [];
+                        window.syncSelectedIndex();
                     }
                 } catch(e) {
                     console.log("Error parsing overview data: ", e);
@@ -110,7 +134,11 @@ Item {
         target: window
         function onVisibleChanged() {
             if (window.visible) {
+                window.isUserSelecting = false;
+                window.selectedIndex = -1;
                 window.fetchOverviewData();
+                focusTimer.restart();
+                window.forceActiveFocus();
                 introPhaseAnim.restart();
             }
         }
@@ -147,6 +175,62 @@ Item {
 
     Keys.onEscapePressed: {
         closeOverview();
+        event.accepted = true;
+    }
+
+    Keys.onLeftPressed: {
+        window.isUserSelecting = true;
+        if (window.workspacesData.length > 0) {
+            let cur = (window.selectedIndex >= 0) ? window.selectedIndex : 0;
+            window.selectedIndex = (cur > 0) ? cur - 1 : window.workspacesData.length - 1;
+        }
+        event.accepted = true;
+    }
+
+    Keys.onRightPressed: {
+        window.isUserSelecting = true;
+        if (window.workspacesData.length > 0) {
+            let cur = (window.selectedIndex >= 0) ? window.selectedIndex : 0;
+            window.selectedIndex = (cur < window.workspacesData.length - 1) ? cur + 1 : 0;
+        }
+        event.accepted = true;
+    }
+
+    Keys.onUpPressed: {
+        window.isUserSelecting = true;
+        let cols = 4;
+        if (window.workspacesData.length > 0) {
+            let cur = (window.selectedIndex >= 0) ? window.selectedIndex : 0;
+            if (cur - cols >= 0) {
+                window.selectedIndex = cur - cols;
+            }
+        }
+        event.accepted = true;
+    }
+
+    Keys.onDownPressed: {
+        window.isUserSelecting = true;
+        let cols = 4;
+        if (window.workspacesData.length > 0) {
+            let cur = (window.selectedIndex >= 0) ? window.selectedIndex : 0;
+            if (cur + cols < window.workspacesData.length) {
+                window.selectedIndex = cur + cols;
+            }
+        }
+        event.accepted = true;
+    }
+
+    Keys.onReturnPressed: {
+        if (window.selectedIndex >= 0 && window.selectedIndex < window.workspacesData.length) {
+            window.focusWorkspace(window.workspacesData[window.selectedIndex].id);
+        }
+        event.accepted = true;
+    }
+
+    Keys.onEnterPressed: {
+        if (window.selectedIndex >= 0 && window.selectedIndex < window.workspacesData.length) {
+            window.focusWorkspace(window.workspacesData[window.selectedIndex].id);
+        }
         event.accepted = true;
     }
 
@@ -193,6 +277,7 @@ Item {
                         readonly property int wsId: modelData.id
                         readonly property bool isActive: modelData.isActive
                         readonly property bool isOccupied: modelData.isOccupied
+                        readonly property bool isSelected: index === window.selectedIndex
                         readonly property var windowsList: modelData.windows || []
                         property bool isHoveredDrop: false
 
@@ -201,10 +286,11 @@ Item {
 
                         radius: window.s(12)
                         color: isHoveredDrop ? Qt.rgba(window.surface1.r, window.surface1.g, window.surface1.b, 0.65) 
-                                             : (wsCardMa.containsMouse ? Qt.rgba(window.surface0.r, window.surface0.g, window.surface0.b, 0.55) 
-                                                                       : Qt.rgba(window.mantle.r, window.mantle.g, window.mantle.b, 0.25))
-                        border.color: isHoveredDrop ? window.green : (isActive ? window.mauve : (wsCardMa.containsMouse ? window.surface2 : Qt.rgba(window.surface1.r, window.surface1.g, window.surface1.b, 0.3)))
-                        border.width: (isActive || isHoveredDrop) ? 2 : 1
+                                             : (isSelected ? Qt.rgba(window.surface1.r, window.surface1.g, window.surface1.b, 0.55)
+                                                           : (wsCardMa.containsMouse ? Qt.rgba(window.surface0.r, window.surface0.g, window.surface0.b, 0.55) 
+                                                                                     : Qt.rgba(window.mantle.r, window.mantle.g, window.mantle.b, 0.25)))
+                        border.color: isHoveredDrop ? window.green : (isSelected ? window.mauve : (isActive ? Qt.rgba(window.blue.r, window.blue.g, window.blue.b, 0.7) : (wsCardMa.containsMouse ? window.surface2 : Qt.rgba(window.surface1.r, window.surface1.g, window.surface1.b, 0.3))))
+                        border.width: (isSelected || isHoveredDrop) ? 2 : 1
 
                         Behavior on color { ColorAnimation { duration: 120 } }
                         Behavior on border.color { ColorAnimation { duration: 120 } }
@@ -215,6 +301,10 @@ Item {
                             anchors.fill: parent
                             hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
+                            onPositionChanged: (mouse) => {
+                                window.isUserSelecting = true;
+                                window.selectedIndex = index;
+                            }
                             onClicked: {
                                 window.focusWorkspace(wsCard.wsId);
                             }
