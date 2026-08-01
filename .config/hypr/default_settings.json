@@ -161,6 +161,13 @@
     {
       "type": "bind",
       "mods": " $mainMod",
+      "key": "O",
+      "dispatcher": "exec",
+      "command": "~/.config/hypr/scripts/qs_manager.sh toggle overview"
+    },
+    {
+      "type": "bind",
+      "mods": " $mainMod",
       "key": "D",
       "dispatcher": "exec",
       "command": "~/.config/hypr/scripts/special_workspaces.sh toggle spotify_discord"
