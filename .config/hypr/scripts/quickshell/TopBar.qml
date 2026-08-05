@@ -1490,6 +1490,72 @@ Variants {
                                 MouseArea { id: monMouse; hoverEnabled: true; anchors.fill: parent; onClicked: Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/qs_manager.sh toggle monitors"]) }
                             }
 
+                            // --- Notification Pill (Left of Battery) ---
+                            Item {
+                                id: notifPillItem
+                                property int unreadNotifCount: 0
+                                width: notifPillRect.width
+                                height: sysLayout.pillHeight
+
+                                Process {
+                                    id: notifCountPoller
+                                    command: ["bash", "-c", "cat " + paths.runDir + "/notif_count 2>/dev/null || echo '0'"]
+                                    stdout: StdioCollector {
+                                        onStreamFinished: notifPillItem.unreadNotifCount = parseInt(this.text.trim()) || 0
+                                    }
+                                }
+                                Timer {
+                                    interval: 500; running: true; repeat: true; triggeredOnStart: true
+                                    onTriggered: notifCountPoller.running = true
+                                }
+
+                                Rectangle {
+                                    id: notifPillRect
+                                    property bool isHovered: notifMouse.containsMouse
+                                    property bool hasUnread: notifPillItem.unreadNotifCount > 0
+
+                                    color: isHovered ? Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, 0.6) : (hasUnread ? Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, 0.4) : Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.4))
+                                    radius: barWindow.s(10); height: sysLayout.pillHeight;
+                                    clip: true
+
+                                    property real targetWidth: notifLayoutRow.implicitWidth + barWindow.s(24)
+                                    width: targetWidth
+                                    Behavior on width { NumberAnimation { duration: 500; easing.type: Easing.OutQuint } }
+
+                                    scale: isHovered ? 1.05 : 1.0
+                                    Behavior on scale { NumberAnimation { duration: 250; easing.type: Easing.OutExpo } }
+                                    Behavior on color { ColorAnimation { duration: 200 } }
+
+                                    property bool initAnimTrigger: false
+                                    Timer { running: rightContent.showLayout && !parent.initAnimTrigger; interval: 190; onTriggered: parent.initAnimTrigger = true }
+                                    opacity: initAnimTrigger ? 1 : 0
+                                    transform: Translate { y: parent.initAnimTrigger ? 0 : barWindow.s(15); Behavior on y { NumberAnimation { duration: 500; easing.type: Easing.OutBack } } }
+                                    Behavior on opacity { NumberAnimation { duration: 400; easing.type: Easing.OutCubic } }
+
+                                    Row {
+                                        id: notifLayoutRow
+                                        anchors.centerIn: parent
+                                        spacing: barWindow.s(6)
+                                        Text {
+                                            anchors.verticalCenter: parent.verticalCenter
+                                            text: "󰂚"
+                                            font.family: "SF Pro "; font.pixelSize: barWindow.s(16);
+                                            color: notifMouse.containsMouse ? mocha.text : (notifPillRect.hasUnread ? mocha.mauve : mocha.overlay2)
+                                            Behavior on color { ColorAnimation { duration: 200 } }
+                                        }
+                                        Text {
+                                            anchors.verticalCenter: parent.verticalCenter
+                                            visible: notifPillItem.unreadNotifCount > 0
+                                            text: notifPillItem.unreadNotifCount
+                                            font.family: "SF Pro Text"; font.pixelSize: barWindow.s(12); font.weight: Font.Bold
+                                            color: notifMouse.containsMouse ? mocha.text : mocha.mauve
+                                            Behavior on color { ColorAnimation { duration: 200 } }
+                                        }
+                                    }
+                                    MouseArea { id: notifMouse; hoverEnabled: true; anchors.fill: parent; onClicked: Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/qs_manager.sh toggle notifications"]) }
+                                }
+                            }
+
                             Rectangle {
                                 property bool isHovered: batMouse.containsMouse
                                 color: isHovered ? Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, 0.6) : Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.4); 

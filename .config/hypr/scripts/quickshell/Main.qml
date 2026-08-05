@@ -192,6 +192,17 @@ PanelWindow {
         }
     } 
 
+    function focusApp(appName, desktopEntry) {
+        let target = (desktopEntry || appName || "").trim();
+        if (!target) return;
+        Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/focus_app.sh '" + target.replace(/'/g, "") + "'"]);
+    }
+
+    function updateNotifCountFile() {
+        let cnt = globalNotificationHistory.count;
+        Quickshell.execDetached(["bash", "-c", "mkdir -p " + paths.runDir + " && echo '" + cnt + "' > " + paths.runDir + "/notif_count"]);
+    }
+
     NotificationServer {
         id: globalNotificationServer
         bodySupported: true
@@ -202,14 +213,43 @@ PanelWindow {
             n.tracked = true;
 
             let extractedActions = [];
-            if (n.actions) {
-                for (let i = 0; i < n.actions.length; i++) {
-                    extractedActions.push({
-                        "id": n.actions[i].identifier || "",
-                        "text": n.actions[i].text || n.actions[i].name || "Action"
-                    });
+            if (n.actions && n.actions.length > 0) {
+                if (typeof n.actions[0] === "string") {
+                    // DBus raw string pair array: [id1, text1, id2, text2, ...]
+                    for (let i = 0; i < n.actions.length; i += 2) {
+                        let actionId = n.actions[i] || "";
+                        let actionText = (i + 1 < n.actions.length && n.actions[i + 1]) ? n.actions[i + 1] : actionId;
+                        if (actionId !== "default" && actionId !== "") {
+                            extractedActions.push({
+                                "id": actionId,
+                                "text": actionText
+                            });
+                        }
+                    }
+                } else {
+                    // QObject list or dictionary actions
+                    for (let i = 0; i < n.actions.length; i++) {
+                        let act = n.actions[i];
+                        if (!act) continue;
+                        let actionId = act.key !== undefined ? act.key : (act.identifier !== undefined ? act.identifier : (act.id !== undefined ? act.id : ""));
+                        let actionText = act.text !== undefined ? act.text : (act.label !== undefined ? act.label : (act.name !== undefined ? act.name : actionId));
+                        if (actionId !== "default" && actionId !== "") {
+                            extractedActions.push({
+                                "id": actionId,
+                                "text": actionText
+                            });
+                        }
+                    }
                 }
             }
+
+            let hints = n.hints || {};
+            let desktopEntry = hints["desktop-entry"] || "";
+            let urgencyVal = hints["urgency"] !== undefined ? hints["urgency"] : 1;
+            
+            // Only use explicit image hints or n.image for imagePath (never appIcon)
+            let imgPath = hints["image-path"] || hints["image_path"] || hints["image_data"] || "";
+            if (imgPath === "" && n.image !== undefined && n.image !== null) imgPath = n.image;
 
             masterWindow._popupCounter++;
             let currentUid = masterWindow._popupCounter;
@@ -218,13 +258,17 @@ PanelWindow {
             masterWindow.liveNotifs[currentUid] = n;
 
             let notifData = {
-                "appName":     n.appName  !== "" ? n.appName  : "System",
-                "summary":     n.summary  !== "" ? n.summary  : "No Title",
-                "body":        n.body     !== "" ? n.body     : "",
-                "iconPath":    n.appIcon  !== "" ? n.appIcon  : "",
-                "actionsJson": JSON.stringify(extractedActions),
-                "uid":         currentUid,
-                "notif":       n
+                "appName":      n.appName  !== "" ? n.appName  : "System",
+                "summary":      n.summary  !== "" ? n.summary  : "No Title",
+                "body":         n.body     !== "" ? n.body     : "",
+                "iconPath":     n.appIcon  !== "" ? n.appIcon  : "",
+                "imagePath":    imgPath,
+                "desktopEntry": desktopEntry,
+                "urgency":      urgencyVal,
+                "timestamp":    Date.now(),
+                "actionsJson":  JSON.stringify(extractedActions),
+                "uid":          currentUid,
+                "notif":        n
             };
 
             // Always silently add to the history list
@@ -236,6 +280,13 @@ PanelWindow {
                 osdPopups.storeNotif(currentUid, n);
             }
         }
+    }
+
+    Connections {
+        target: globalNotificationHistory
+        function onRowsInserted() { masterWindow.updateNotifCountFile(); }
+        function onRowsRemoved() { masterWindow.updateNotifCountFile(); }
+        function onModelReset() { masterWindow.updateNotifCountFile(); }
     }
 
     property var notifModel: globalNotificationHistory

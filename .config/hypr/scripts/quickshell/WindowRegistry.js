@@ -32,7 +32,8 @@ function getLayout(name, mx, my, mw, mh, userScale) {
 
     let base = {
         // --- Top Right Popups ---
-        "battery":   { w: s(801, scale), h: s(760, scale), rx: mw - s(805, scale), ry: s(60, scale), comp: "battery/BatteryPopup.qml" },
+        "notifications": { w: s(400, scale), h: s(760, scale), rx: mw - s(404, scale), ry: s(60, scale), comp: "notifications/NotificationsPopup.qml" },
+        "battery":   { w: s(480, scale), h: s(760, scale), rx: mw - s(484, scale), ry: s(60, scale), comp: "battery/BatteryPopup.qml" },
         "network":   { w: s(900, scale), h: s(700, scale), rx: mw - s(904, scale), ry: s(60, scale), comp: "network/NetworkPopup.qml" },
         "volume":    { w: s(450, scale), h: s(700, scale), rx: mw - s(455, scale), ry: s(60, scale), comp: "volume/VolumePopup.qml" },
         
