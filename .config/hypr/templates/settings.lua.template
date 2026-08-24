@@ -67,13 +67,19 @@ hl.config({
         }
     },
     cursor = {
-        no_warps = true
+      persistent_warps = true,
+      warp_on_toggle_special = true,
+      warp_on_change_workspace = true,
+      no_hardware_cursors = true
     },
     misc = {
         font_family = "SF Pro",
         disable_hyprland_logo = true,
         disable_splash_rendering = true,
         force_default_wallpaper = 0
+    },
+    render = {
+      direct_scanout = 1
     },
     ecosystem = {
         no_update_news = false,
