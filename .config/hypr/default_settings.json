@@ -183,22 +183,22 @@
       "type": "bind",
       "mods": " $mainMod SHIFT",
       "key": "D",
-      "dispatcher": "lua",
-      "command": "set_active_layout(\"dwindle\")"
+      "dispatcher": "exec",
+      "command": "~/.config/hypr/scripts/set_workspace_layout.sh dwindle"
     },
     {
       "type": "bind",
       "mods": " $mainMod SHIFT",
       "key": "S",
-      "dispatcher": "lua",
-      "command": "set_active_layout(\"scrolling\")"
+      "dispatcher": "exec",
+      "command": "~/.config/hypr/scripts/set_workspace_layout.sh scrolling"
     },
     {
       "type": "bind",
       "mods": " $mainMod SHIFT",
       "key": "M",
-      "dispatcher": "lua",
-      "command": "set_active_layout(\"monocle\")"
+      "dispatcher": "exec",
+      "command": "~/.config/hypr/scripts/set_workspace_layout.sh monocle"
     },
     {
       "type": "bind",

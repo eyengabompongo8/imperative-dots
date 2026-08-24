@@ -20,15 +20,4 @@ hl.gesture({ fingers = 3, direction = "pinchout", action = "float" })
 
 hl.gesture({ fingers = 4, direction = "pinch", action = "fullscreen" })
 
--- Helper function to target only the active workspace for layout rules
-local function set_active_layout(layout_name)
-    local ws = hl.get_active_workspace()
-    if ws and ws.name then
-        hl.workspace_rule({ 
-            workspace = ws.name, 
-            layout = layout_name 
-        })
-    end
-end
-
 -- ───────── Dynamic Settings Binds ─────────
