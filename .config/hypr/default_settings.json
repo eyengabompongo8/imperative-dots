@@ -432,9 +432,16 @@
       "dispatcher": "exec",
       "command": "bash ~/.config/hypr/scripts/qs_manager.sh toggle calendar"
     },
-    {
+{
       "type": "bind",
       "mods": "$mainMod",
+      "key": "N",
+      "dispatcher": "exec",
+      "command": "bash ~/.config/hypr/scripts/qs_manager.sh toggle notifications"
+    },
+    {
+      "type": "bind",
+      "mods": "$mainMod SHIFT",
       "key": "N",
       "dispatcher": "exec",
       "command": "bash ~/.config/hypr/scripts/qs_manager.sh toggle network"
