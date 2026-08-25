@@ -15,11 +15,47 @@ PanelWindow {
 
     Caching { id: paths }
 
+    property var mruAddresses: []
+    Connections {
+        target: Quickshell.Hyprland || null
+        function onActiveToplevelChanged() {
+            if (Quickshell.Hyprland && Quickshell.Hyprland.activeToplevel && Quickshell.Hyprland.activeToplevel.address) {
+                let addr = Quickshell.Hyprland.activeToplevel.address.toString().replace(/^0x/i, "").toLowerCase();
+                let newArr = [addr];
+                for (let i = 0; i < masterWindow.mruAddresses.length; i++) {
+                    if (masterWindow.mruAddresses[i] !== addr) {
+                        newArr.push(masterWindow.mruAddresses[i]);
+                    }
+                }
+                masterWindow.mruAddresses = newArr;
+            }
+        }
+    }
+
     IpcHandler {
         target: "main"
 
         function forceReload(): void {
             Quickshell.reload(true)
+        }
+
+        function switcherCycle(dir: string): void {
+            if (masterWindow.currentActive === "windowswitcher") {
+                let currentItem = widgetStack.currentItem;
+                if (currentItem && typeof currentItem.cycleNext === "function") {
+                    if (dir === "prev") currentItem.cyclePrev();
+                    else currentItem.cycleNext();
+                }
+            }
+        }
+
+        function switcherRelease(): void {
+            if (masterWindow.currentActive !== "windowswitcher") return;
+            let currentItem = widgetStack.currentItem;
+            if (currentItem && typeof currentItem.activateSelected === "function") {
+                currentItem.activateSelected();
+            }
+            switchWidget("hidden", "");
         }
 
         function handleCommand(cmd: string, targetWidget: string, arg: string): void {
@@ -127,6 +163,7 @@ PanelWindow {
 
     Component.onCompleted: {
         Qt.callLater(() => preloadWidget("settings"));
+        Qt.callLater(() => preloadWidget("windowswitcher"));
         preloadStaggerTimer.start();
     }
 
@@ -431,6 +468,18 @@ PanelWindow {
                     event.accepted = true;
                 }
 
+                Keys.onReleased: (event) => {
+                    if (masterWindow.currentActive === "windowswitcher") {
+                        if (event.key === Qt.Key_Alt || event.key === Qt.Key_AltGr || event.key === Qt.Key_Meta) {
+                            let currentItem = widgetStack.currentItem;
+                            if (currentItem && typeof currentItem.activateSelected === "function") {
+                                currentItem.activateSelected();
+                                event.accepted = true;
+                            }
+                        }
+                    }
+                }
+
                 onCurrentItemChanged: {
                     if (currentItem) currentItem.forceActiveFocus();
                 }
@@ -506,7 +555,11 @@ PanelWindow {
                 masterWindow.disableMorph = false;
             }
 
-            Qt.callLater(() => executeSwitch(newWidget, arg, false));
+            if (newWidget === "windowswitcher") {
+                executeSwitch(newWidget, arg, true);
+            } else {
+                Qt.callLater(() => executeSwitch(newWidget, arg, false));
+            }
         }
     }
 

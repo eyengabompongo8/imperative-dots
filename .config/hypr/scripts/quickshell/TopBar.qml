@@ -80,6 +80,9 @@ Variants {
             
             property int workspaceCount: 8
             
+            property bool hasHwFeatures: false
+            property bool isHwTurboOn: false
+            
             property string activeWidget: "" 
             property bool isSettingsOpen: activeWidget === "settings"
 
@@ -556,6 +559,24 @@ Variants {
                 }
             }
             Timer { interval: 150000; running: true; repeat: true; triggeredOnStart: true; onTriggered: { weatherPoller.running = false; weatherPoller.running = true; } }
+
+            Process {
+                id: hwPoller
+                command: ["bash", "-c", "~/.config/hypr/scripts/quickshell/hardware/hw_ctl.sh get 2>/dev/null || echo '{}'"]
+                running: true
+                stdout: StdioCollector {
+                    onStreamFinished: {
+                        try {
+                            if (this.text && this.text.trim().length > 0) {
+                                let d = JSON.parse(this.text);
+                                barWindow.hasHwFeatures = (d.hasBatteryThreshold || d.hasTurbo);
+                                barWindow.isHwTurboOn = (d.turbo === "on");
+                            }
+                        } catch(e) {}
+                    }
+                }
+            }
+            Timer { interval: 5000; running: true; repeat: true; onTriggered: { hwPoller.running = false; hwPoller.running = true; } }
 
 
             Timer {
@@ -1583,7 +1604,7 @@ Variants {
                                 Behavior on color { ColorAnimation { duration: 200 } }
 
                                 property bool initAnimTrigger: false
-                                Timer { running: rightContent.showLayout && !parent.initAnimTrigger; interval: 200; onTriggered: parent.initAnimTrigger = true }
+                                Timer { running: rightContent.showLayout && !parent.initAnimTrigger; interval: 195; onTriggered: parent.initAnimTrigger = true }
                                 opacity: initAnimTrigger ? 1 : 0
                                 transform: Translate { y: parent.initAnimTrigger ? 0 : barWindow.s(15); Behavior on y { NumberAnimation { duration: 500; easing.type: Easing.OutBack } } }
                                 Behavior on opacity { NumberAnimation { duration: 400; easing.type: Easing.OutCubic } }
@@ -1608,6 +1629,50 @@ Variants {
                                     }
                                 }
                                 MouseArea { id: batMouse; hoverEnabled: true; anchors.fill: parent; onClicked: Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/qs_manager.sh toggle battery"]) }
+                            }
+
+                            // --- Hardware / Power Settings Pill (Rightmost) ---
+                            Rectangle {
+                                id: hwPill
+                                property bool isHovered: hwMouse.containsMouse
+                                color: isHovered ? Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, 0.6) : Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.4)
+                                radius: barWindow.s(10); height: sysLayout.pillHeight;
+                                clip: true
+
+                                property real targetWidth: barWindow.hasHwFeatures ? hwLayoutRow.implicitWidth + barWindow.s(24) : 0
+                                width: targetWidth
+                                visible: targetWidth > 0
+                                Behavior on width { NumberAnimation { duration: 500; easing.type: Easing.OutQuint } }
+
+                                scale: isHovered ? 1.05 : 1.0
+                                Behavior on scale { NumberAnimation { duration: 250; easing.type: Easing.OutExpo } }
+                                Behavior on color { ColorAnimation { duration: 200 } }
+
+                                property bool initAnimTrigger: false
+                                Timer { running: rightContent.showLayout && !parent.initAnimTrigger; interval: 205; onTriggered: parent.initAnimTrigger = true }
+                                opacity: initAnimTrigger ? 1 : 0
+                                transform: Translate { y: parent.initAnimTrigger ? 0 : barWindow.s(15); Behavior on y { NumberAnimation { duration: 500; easing.type: Easing.OutBack } } }
+                                Behavior on opacity { NumberAnimation { duration: 400; easing.type: Easing.OutCubic } }
+
+                                Row {
+                                    id: hwLayoutRow
+                                    anchors.centerIn: parent
+                                    spacing: barWindow.s(6)
+                                    Text {
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        text: "" // Outline Crossed Tools (\uEB6D)
+                                        font.family: "SF Pro "
+                                        font.pixelSize: barWindow.s(16)
+                                        color: hwMouse.containsMouse ? mocha.text : (barWindow.isHwTurboOn ? mocha.peach : mocha.overlay2)
+                                        Behavior on color { ColorAnimation { duration: 200 } }
+                                    }
+                                }
+                                MouseArea {
+                                    id: hwMouse
+                                    hoverEnabled: true
+                                    anchors.fill: parent
+                                    onClicked: Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/qs_manager.sh toggle hardware"])
+                                }
                             }                       
                  }
             }
