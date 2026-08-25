@@ -159,21 +159,23 @@ if [ -f "$CACHE_DIR/rec_pid" ]; then
     if [ -f "$CACHE_DIR/processing.lock" ]; then exit 0; fi
     touch "$CACHE_DIR/processing.lock"
 
-    REC_PID=$(cat "$CACHE_DIR/rec_pid")
-    FINAL_FILE=$(cat "$CACHE_DIR/final_file")
+    REC_PID=$(cat "$CACHE_DIR/rec_pid" 2>/dev/null)
+    FINAL_FILE=$(cat "$CACHE_DIR/final_file" 2>/dev/null)
 
     # 1. SEND STOP SIGNAL TO GPU-SCREEN-RECORDER
-    [ "$REC_PID" != "0" ] && kill -SIGINT $REC_PID 2>/dev/null
+    if [ -n "$REC_PID" ] && [ "$REC_PID" != "0" ]; then
+        kill -SIGINT "$REC_PID" 2>/dev/null
 
-    # 2. WAIT FOR GSR TO CLOSE GRACEFULLY AND FINALIZE MP4
-    timeout=30
-    while kill -0 $REC_PID 2>/dev/null && [ $timeout -gt 0 ]; do
-        sleep 0.1
-        timeout=$((timeout - 1))
-    done
+        # 2. WAIT FOR GSR TO CLOSE GRACEFULLY AND FINALIZE MP4
+        timeout=50
+        while kill -0 "$REC_PID" 2>/dev/null && [ $timeout -gt 0 ]; do
+            sleep 0.1
+            timeout=$((timeout - 1))
+        done
 
-    # FORCE KILL IF STUCK
-    [ "$REC_PID" != "0" ] && kill -9 $REC_PID 2>/dev/null
+        # FORCE KILL IF STUCK
+        kill -9 "$REC_PID" 2>/dev/null
+    fi
 
     # 3. DESTROY PIPEWIRE VIRTUAL AUDIO CABLES
     if [ -f "$CACHE_DIR/pw_modules" ]; then
@@ -184,9 +186,9 @@ if [ -f "$CACHE_DIR/rec_pid" ]; then
     fi
 
     # 4. SEND FINAL NOTIFICATION
-    if [ -f "$FINAL_FILE" ]; then
+    if [ -n "$FINAL_FILE" ] && [ -s "$FINAL_FILE" ]; then
         (
-            ACTION=$(notify-send -a "Screen Recorder" -i "$FINAL_FILE" -A "default=Open Folder" "⏺ Recording Saved" "File: $(basename "$FINAL_FILE")\nFolder: $RECORD_DIR")
+            ACTION=$(notify-send -a "Screen Recorder" -i "video-x-generic" -A "default=Open Folder" "⏺ Recording Saved" "File: $(basename "$FINAL_FILE")\nFolder: $RECORD_DIR")
             if [ "$ACTION" = "default" ]; then
                 if command -v nautilus &> /dev/null; then
                     nautilus "$RECORD_DIR"
@@ -196,7 +198,7 @@ if [ -f "$CACHE_DIR/rec_pid" ]; then
             fi
         ) &
     else
-        notify-send -a "Screen Recorder" "❌ Error" "Failed to save the video file."
+        notify-send -a "Screen Recorder" -u critical "❌ Error" "Failed to save the video file. Check logs in $QS_LOG_DIR/gsr_debug.log"
     fi
 
     # 5. INSTANT UI CLEANUP
@@ -219,7 +221,10 @@ rm -f "$CACHE_DIR/processing.lock"
 if [ "$FULL_MODE" = true ] || [ -n "$GEOMETRY" ]; then
 
     if [ "$RECORD_MODE" = true ]; then
-        
+        mkdir -p "$QS_LOG_DIR"
+        GSR_LOG="$QS_LOG_DIR/gsr_debug.log"
+        rm -f "$GSR_LOG"
+
         # Clear out any old module IDs
         echo -n "" > "$CACHE_DIR/pw_modules"
 
@@ -229,47 +234,97 @@ if [ "$FULL_MODE" = true ] || [ -n "$GEOMETRY" ]; then
         [ -n "$MIC_DEVICE" ] && [ "$MIC_DEVICE" != "null" ] && MIC_DEV="$MIC_DEVICE" || MIC_DEV=$(pactl get-default-source 2>/dev/null)
         MIC_DEV="${MIC_DEV:-default}"
 
-        # Use direct screen capture
-        GSR_ARGS=(-w "screen" -c "mp4" -f "60" -ac "aac")
+        # Resolve capture target (focused monitor name or pixel-perfect region WxH+X+Y)
+        GSR_TARGET=$(python3 -c "
+import json, subprocess, re, sys
+geom = '''$GEOMETRY'''.strip()
+full = '''$FULL_MODE''' == 'true'
+
+try:
+    mons = json.loads(subprocess.check_output(['hyprctl', '-j', 'monitors']).decode())
+    focused = next((m for m in mons if m.get('focused')), mons[0] if mons else None)
+except Exception:
+    focused = None
+
+if full or not geom:
+    if focused and 'name' in focused:
+        print(focused['name'])
+    else:
+        print('screen')
+    sys.exit(0)
+
+m = re.match(r'(\d+),(\d+)\s+(\d+)x(\d+)', geom)
+if not m:
+    m2 = re.match(r'(\d+)x(\d+)\+(\d+)\+(\d+)', geom)
+    if m2:
+        print(geom)
+        sys.exit(0)
+    print(focused['name'] if focused else 'screen')
+    sys.exit(0)
+
+gx, gy, gw, gh = map(int, m.groups())
+scale = float(focused.get('scale', 1.0)) if focused else 1.0
+mon_w = int(focused.get('width', 1920)) if focused else 1920
+mon_h = int(focused.get('height', 1080)) if focused else 1080
+
+pw = int(round(gw * scale))
+ph = int(round(gh * scale))
+px = int(round(gx * scale))
+py = int(round(gy * scale))
+
+if abs(pw - mon_w) <= 10 and abs(ph - mon_h) <= 10 and px == 0:
+    print(focused['name'] if focused else 'screen')
+else:
+    pw = max(16, (pw // 2) * 2)
+    ph = max(16, (ph // 2) * 2)
+    print(f'{pw}x{ph}+{px}+{py}')
+")
+
+        GSR_TARGET="${GSR_TARGET:-screen}"
+        GSR_ARGS=(-w "$GSR_TARGET" -c "mp4" -f "60" -ac "aac")
 
         AUDIO_MIX=""
 
         # --- DESKTOP AUDIO VIRTUAL ROUTING ---
         if [ "$DESK_MUTE" != "true" ] && [ -n "$DESK_DEV" ]; then
             # Create a virtual sink
-            D_SINK_ID=$(pactl load-module module-null-sink sink_name=qs_virt_desk sink_properties=device.description="QS_Virtual_Desk")
-            # Loop the real desktop audio into the virtual sink
-            D_LOOP_ID=$(pactl load-module module-loopback source="$DESK_DEV" sink=qs_virt_desk)
-            
-            # Linearize volume calculation (0 - 65536) to prevent PulseAudio's steep cubic drop-off at 25%
-            D_VOL_INT=$(awk "BEGIN {print int(${DESK_VOL//,/.} * 65536)}")
-            pactl set-sink-volume qs_virt_desk "$D_VOL_INT"
-            
-            # Save IDs for teardown
-            echo "$D_SINK_ID" >> "$CACHE_DIR/pw_modules"
-            echo "$D_LOOP_ID" >> "$CACHE_DIR/pw_modules"
-            
-            # Append to mixing string
-            AUDIO_MIX="${AUDIO_MIX}qs_virt_desk.monitor|"
+            D_SINK_ID=$(pactl load-module module-null-sink sink_name=qs_virt_desk sink_properties=device.description="QS_Virtual_Desk" 2>/dev/null)
+            if [ -n "$D_SINK_ID" ]; then
+                # Loop the real desktop audio into the virtual sink
+                D_LOOP_ID=$(pactl load-module module-loopback source="$DESK_DEV" sink=qs_virt_desk 2>/dev/null)
+                
+                # Linearize volume calculation (0 - 65536) to prevent PulseAudio's steep cubic drop-off at 25%
+                D_VOL_INT=$(awk "BEGIN {print int(${DESK_VOL//,/.} * 65536)}")
+                pactl set-sink-volume qs_virt_desk "$D_VOL_INT" 2>/dev/null
+                
+                # Save IDs for teardown
+                echo "$D_SINK_ID" >> "$CACHE_DIR/pw_modules"
+                [ -n "$D_LOOP_ID" ] && echo "$D_LOOP_ID" >> "$CACHE_DIR/pw_modules"
+                
+                # Append to mixing string
+                AUDIO_MIX="${AUDIO_MIX}qs_virt_desk.monitor|"
+            fi
         fi
 
         # --- MICROPHONE VIRTUAL ROUTING ---
         if [ "$MIC_MUTE" != "true" ] && [ -n "$MIC_DEV" ]; then
             # Create a virtual sink for the mic
-            M_SINK_ID=$(pactl load-module module-null-sink sink_name=qs_virt_mic sink_properties=device.description="QS_Virtual_Mic")
-            # Loop the real mic into the virtual sink
-            M_LOOP_ID=$(pactl load-module module-loopback source="$MIC_DEV" sink=qs_virt_mic)
-            
-            # Linearize volume calculation (0 - 65536) to prevent PulseAudio's steep cubic drop-off
-            M_VOL_INT=$(awk "BEGIN {print int(${MIC_VOL//,/.} * 65536)}")
-            pactl set-sink-volume qs_virt_mic "$M_VOL_INT"
-            
-            # Save IDs for teardown
-            echo "$M_SINK_ID" >> "$CACHE_DIR/pw_modules"
-            echo "$M_LOOP_ID" >> "$CACHE_DIR/pw_modules"
-            
-            # Append to mixing string
-            AUDIO_MIX="${AUDIO_MIX}qs_virt_mic.monitor|"
+            M_SINK_ID=$(pactl load-module module-null-sink sink_name=qs_virt_mic sink_properties=device.description="QS_Virtual_Mic" 2>/dev/null)
+            if [ -n "$M_SINK_ID" ]; then
+                # Loop the real mic into the virtual sink
+                M_LOOP_ID=$(pactl load-module module-loopback source="$MIC_DEV" sink=qs_virt_mic 2>/dev/null)
+                
+                # Linearize volume calculation (0 - 65536) to prevent PulseAudio's steep cubic drop-off
+                M_VOL_INT=$(awk "BEGIN {print int(${MIC_VOL//,/.} * 65536)}")
+                pactl set-sink-volume qs_virt_mic "$M_VOL_INT" 2>/dev/null
+                
+                # Save IDs for teardown
+                echo "$M_SINK_ID" >> "$CACHE_DIR/pw_modules"
+                [ -n "$M_LOOP_ID" ] && echo "$M_LOOP_ID" >> "$CACHE_DIR/pw_modules"
+                
+                # Append to mixing string
+                AUDIO_MIX="${AUDIO_MIX}qs_virt_mic.monitor|"
+            fi
         fi
 
         # Remove trailing pipe and add the single mix string to the recorder so everything stays on one track
@@ -279,13 +334,27 @@ if [ "$FULL_MODE" = true ] || [ -n "$GEOMETRY" ]; then
         fi
 
         # Execute gpu-screen-recorder
-        gpu-screen-recorder "${GSR_ARGS[@]}" -o "$VID_FILENAME" > /dev/null 2>&1 &
+        gpu-screen-recorder "${GSR_ARGS[@]}" -o "$VID_FILENAME" > "$GSR_LOG" 2>&1 &
         REC_PID=$!
+
+        sleep 0.3
+        if ! kill -0 "$REC_PID" 2>/dev/null; then
+            # Clean up audio modules
+            if [ -f "$CACHE_DIR/pw_modules" ]; then
+                while read -r mod_id; do
+                    [ -n "$mod_id" ] && pactl unload-module "$mod_id" 2>/dev/null
+                done < "$CACHE_DIR/pw_modules"
+                rm -f "$CACHE_DIR/pw_modules"
+            fi
+            ERR_MSG=$(tail -n 5 "$GSR_LOG")
+            notify-send -u critical -a "Screen Recorder" "❌ Recording Failed to Start" "${ERR_MSG:-Check $GSR_LOG}"
+            exit 1
+        fi
 
         echo "$REC_PID" > "$CACHE_DIR/rec_pid"
         echo "$VID_FILENAME" > "$CACHE_DIR/final_file"
 
-        notify-send -a "Screen Recorder" "⏺ Recording Started" "Press your screenshot shortcut again to stop."
+        notify-send -a "Screen Recorder" -i "video-x-generic" "⏺ Recording Started" "Press your screenshot shortcut again to stop."
         exit 0
     fi
 
