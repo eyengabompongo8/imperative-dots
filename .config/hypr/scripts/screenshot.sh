@@ -229,8 +229,8 @@ if [ "$FULL_MODE" = true ] || [ -n "$GEOMETRY" ]; then
         [ -n "$MIC_DEVICE" ] && [ "$MIC_DEVICE" != "null" ] && MIC_DEV="$MIC_DEVICE" || MIC_DEV=$(pactl get-default-source 2>/dev/null)
         MIC_DEV="${MIC_DEV:-default}"
 
-        # Reverted back to the portal method for reliable security clearance
-        GSR_ARGS=(-w "portal" -c "mp4" -f "60" -ac "aac")
+        # Use direct screen capture
+        GSR_ARGS=(-w "screen" -c "mp4" -f "60" -ac "aac")
 
         AUDIO_MIX=""
 
