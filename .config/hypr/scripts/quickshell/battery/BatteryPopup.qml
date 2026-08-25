@@ -119,6 +119,7 @@ Item {
     property bool hasBattery: false
     property int batCapacity: 0
     property string batStatus: "Unknown"
+    property string batTime: "--:--"
     property string powerProfile: "balanced"
     
     property int upHours: 0
@@ -230,7 +231,8 @@ Item {
             "caff=$(hyprcaffeine status 2>/dev/null); echo \"$caff\" | python3 -c \"import sys,re; line=sys.stdin.read(); m=re.search(r'Idle: (.+?) \\\\S+ Monitor:', line); idle=m.group(1).strip() if m else 'off'; idle=re.sub(r'[^\\\\x00-\\\\x7F\\\\s]','',idle).strip() or 'off'; mm=re.search(r'Monitor: (\\\\S+)',line); lm=re.search(r'Lid: (\\\\S+)',line); print(idle); print((mm.group(1) if mm else 'off').lower()); print((lm.group(1) if lm else 'off').lower())\"; " +
             "pidof hyprsunset >/dev/null && echo 'on' || echo 'off'; " +
             "(df -h / 2>/dev/null | awk 'NR==2 {print $5}' | tr -d '%' | grep .) || echo '0'; " +
-            "ls -A /sys/class/backlight 2>/dev/null | grep -q . && echo '1' || echo '0'"
+            "ls -A /sys/class/backlight 2>/dev/null | grep -q . && echo '1' || echo '0'; " +
+            "python3 -c \"import glob; f=lambda p: int(open(glob.glob(p)[0]).read().strip()) if glob.glob(p) else 0; s=lambda p: open(glob.glob(p)[0]).read().strip() if glob.glob(p) else ''; cn=f('/sys/class/power_supply/BAT*/charge_now') or f('/sys/class/power_supply/BAT*/energy_now'); cf=f('/sys/class/power_supply/BAT*/charge_full') or f('/sys/class/power_supply/BAT*/energy_full'); cr=f('/sys/class/power_supply/BAT*/current_now') or f('/sys/class/power_supply/BAT*/power_now'); st=s('/sys/class/power_supply/BAT*/status'); m=((cf-cn)*60//cr) if (cr>0 and st=='Charging') else ((cn*60//cr) if (cr>0 and st=='Discharging') else -1); print(f'{m//60:02d}:{m%60:02d}' if m>=0 else ('Full' if st=='Full' else '--:--'))\""
         ]
         running: true
         stdout: StdioCollector {
@@ -270,8 +272,11 @@ Item {
                     if (lines.length >= 12) {
                         widgetCache.diskUsage = parseInt(lines[11]) || 0;
                     }
-                    if (lines.length > 0) {
-                        window.hasBacklight = (lines[lines.length - 1] === "1");
+                    if (lines.length >= 13) {
+                        window.hasBacklight = (lines[12] === "1");
+                    }
+                    if (lines.length >= 14) {
+                        window.batTime = lines[13].trim() || "--:--";
                     }
                 }
             }
@@ -1100,6 +1105,43 @@ Item {
                             }
                         }
 
+                        // Battery Time Remaining (Bottom Left)
+                        ColumnLayout {
+                            visible: window.hasBattery && window.batCapacity > 0
+                            anchors.left: parent.left
+                            anchors.leftMargin: window.s(30)
+                            anchors.bottom: centralCore.bottom
+                            anchors.bottomMargin: window.s(-15)
+                            spacing: 0
+                            
+                            RowLayout {
+                                Layout.alignment: Qt.AlignHCenter; spacing: window.s(4)
+                                Text { 
+                                    font.family: "SF Pro "
+                                    font.pixelSize: window.s(18)
+                                    color: window.isCharging ? window.green : window.ambientPrimary
+                                    text: "󰅐"
+                                    Behavior on color { ColorAnimation { duration: 400 } }
+                                }
+                                Text { 
+                                    font.family: "SF Pro Compact"
+                                    font.weight: Font.Black
+                                    font.pixelSize: window.s(22)
+                                    color: window.text
+                                    text: window.batTime
+                                }
+                            }
+                            Text { 
+                                Layout.alignment: Qt.AlignHCenter
+                                font.family: "SF Pro Text"
+                                font.weight: Font.Bold
+                                font.pixelSize: window.s(10)
+                                color: window.subtext0
+                                text: window.isCharging ? "TO FULL" : (window.batStatus === "Full" ? "CHARGED" : "TIME LEFT")
+                            }
+                        }
+
+                        // Battery Capacity (Bottom Right)
                         ColumnLayout {
                             visible: window.hasBattery && window.batCapacity > 0
                             anchors.right: parent.right
