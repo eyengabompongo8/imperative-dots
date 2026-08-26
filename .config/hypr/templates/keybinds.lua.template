@@ -20,4 +20,7 @@ hl.gesture({ fingers = 3, direction = "pinchout", action = "float" })
 
 hl.gesture({ fingers = 4, direction = "pinch", action = "fullscreen" })
 
--- ───────── Dynamic Settings Binds ─────────
+-- ───────── Lid ─────────
+hl.bind("switch:off:Lid Switch", hl.dsp.dpms({ action = "enable" }), { locked = true })
+hl.bind("switch:on:Lid Switch", hl.dsp.dpms({ action = "disable" }), { locked = true })
+
