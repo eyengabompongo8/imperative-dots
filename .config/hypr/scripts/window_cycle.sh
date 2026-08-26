@@ -1,12 +1,9 @@
 #!/bin/bash
 
-# Accept "prev" as an argument, otherwise default to next
-DIRECTION=$1
+# Silent window cycling for gestures & non-monocle layouts
+DIRECTION="${1:-next}"
 [ "$DIRECTION" == "prev" ] && ARG="prev" || ARG="next"
 
-# Get current layout and window state
-echo "window_cycle.sh called with ARG=$ARG" >>/tmp/hypr_debug.log
-# Get active workspace ID (supports both regular and special workspaces via active window / monitor)
 ACTIVE_WIN=$(hyprctl activewindow -j 2>/dev/null)
 WS_ID=$(echo "$ACTIVE_WIN" | jq -r '.workspace.id // empty')
 
@@ -28,17 +25,54 @@ fi
 if [ -z "$LAYOUT" ] || [ "$LAYOUT" = "null" ]; then
   LAYOUT=$(hyprctl getoption general:layout -j 2>/dev/null | jq -r '.str')
 fi
-echo "LAYOUT=$LAYOUT" >>/tmp/hypr_debug.log
 
 if [ "$LAYOUT" = "monocle" ]; then
-  # Monocle prefers the layout dispatcher for clean stack rotation
-  if [ "$ARG" = "next" ]; then
-    hyprctl dispatch "hl.dsp.layout('cyclenext')" >/dev/null 2>&1
-  else
-    hyprctl dispatch "hl.dsp.layout('cycleprev')" >/dev/null 2>&1
+  # Monocle layout: cycle through ALL windows on the workspace (both tiled and floating)
+  ACTIVE_ADDR=$(echo "$ACTIVE_WIN" | jq -r '.address // empty' | tr '[:upper:]' '[:lower:]')
+  CLIENTS=$(hyprctl clients -j 2>/dev/null)
+
+  TARGET_ADDR=$(echo "$CLIENTS" | jq -r --argjson ws "$WS_ID" --arg act "$ACTIVE_ADDR" --arg dir "$ARG" '
+    [ .[] | select((.workspace.id == $ws) and (.mapped == true) and (.hidden != true)) ] as $wins
+    | ($wins | length) as $len
+    | if $len <= 1 then empty
+      else
+        ($wins | map(.address | ascii_downcase)) as $addrs
+        | ($addrs | index($act) // 0) as $cur_idx
+        | if $dir == "prev" then
+            $wins[(($cur_idx - 1 + $len) % $len)].address
+          else
+            $wins[(($cur_idx + 1) % $len)].address
+          end
+      end
+  ')
+  if [ -n "$TARGET_ADDR" ] && [ "$TARGET_ADDR" != "null" ]; then
+    hyprctl dispatch "hl.dsp.focus({ window = \"address:$TARGET_ADDR\" })" >/dev/null 2>&1
+  fi
+elif [ "$LAYOUT" = "scrolling" ]; then
+  # Scrolling layout: geometric cycle across columns (X) and stacked windows (Y)
+  ACTIVE_ADDR=$(echo "$ACTIVE_WIN" | jq -r '.address // empty' | tr '[:upper:]' '[:lower:]')
+  CLIENTS=$(hyprctl clients -j 2>/dev/null)
+
+  TARGET_ADDR=$(echo "$CLIENTS" | jq -r --argjson ws "$WS_ID" --arg act "$ACTIVE_ADDR" --arg dir "$ARG" '
+    [ .[] | select((.workspace.id == $ws) and (.mapped == true) and (.hidden != true)) ]
+    | sort_by(.at[0], .at[1]) as $wins
+    | ($wins | length) as $len
+    | if $len <= 1 then empty
+      else
+        ($wins | map(.address | ascii_downcase)) as $addrs
+        | ($addrs | index($act) // 0) as $cur_idx
+        | if $dir == "prev" then
+            $wins[(($cur_idx - 1 + $len) % $len)].address
+          else
+            $wins[(($cur_idx + 1) % $len)].address
+          end
+      end
+  ')
+  if [ -n "$TARGET_ADDR" ] && [ "$TARGET_ADDR" != "null" ]; then
+    hyprctl dispatch "hl.dsp.focus({ window = \"address:$TARGET_ADDR\" })" >/dev/null 2>&1
   fi
 else
-  # Dwindle/Scrolling use the standard cyclenext
+  # Dwindle/Master or generic layout window cycle
   if [ "$ARG" = "next" ]; then
     hyprctl dispatch "hl.dsp.window.cycle_next({ next = true })" >/dev/null 2>&1
   else

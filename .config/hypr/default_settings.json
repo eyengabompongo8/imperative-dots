@@ -1,3 +1,4 @@
+
 {
   "uiScale": 1.0,
   "openGuideAtStartup": false,
@@ -35,6 +36,34 @@
     {
       "type": "binde",
       "mods": "$mainMod SHIFT",
+      "key": "H",
+      "dispatcher": "resizeactive",
+      "command": "-50 0"
+    },
+    {
+      "type": "binde",
+      "mods": "$mainMod SHIFT",
+      "key": "L",
+      "dispatcher": "resizeactive",
+      "command": "50 0"
+    },
+    {
+      "type": "binde",
+      "mods": "$mainMod SHIFT",
+      "key": "K",
+      "dispatcher": "resizeactive",
+      "command": "0 -50"
+    },
+    {
+      "type": "binde",
+      "mods": "$mainMod SHIFT",
+      "key": "J",
+      "dispatcher": "resizeactive",
+      "command": "0 50"
+    },
+    {
+      "type": "binde",
+      "mods": "$mainMod SHIFT",
       "key": "left",
       "dispatcher": "resizeactive",
       "command": "-50 0"
@@ -63,6 +92,34 @@
     {
       "type": "bind",
       "mods": "$mainMod CTRL",
+      "key": "H",
+      "dispatcher": "movewindow",
+      "command": "l"
+    },
+    {
+      "type": "bind",
+      "mods": "$mainMod CTRL",
+      "key": "L",
+      "dispatcher": "movewindow",
+      "command": "r"
+    },
+    {
+      "type": "bind",
+      "mods": "$mainMod CTRL",
+      "key": "K",
+      "dispatcher": "movewindow",
+      "command": "u"
+    },
+    {
+      "type": "bind",
+      "mods": "$mainMod CTRL",
+      "key": "J",
+      "dispatcher": "movewindow",
+      "command": "d"
+    },
+    {
+      "type": "bind",
+      "mods": "$mainMod CTRL",
       "key": "left",
       "dispatcher": "movewindow",
       "command": "l"
@@ -86,6 +143,34 @@
       "mods": "$mainMod CTRL",
       "key": "down",
       "dispatcher": "movewindow",
+      "command": "d"
+    },
+    {
+      "type": "bind",
+      "mods": "$mainMod",
+      "key": "H",
+      "dispatcher": "movefocus",
+      "command": "l"
+    },
+    {
+      "type": "bind",
+      "mods": "$mainMod",
+      "key": "L",
+      "dispatcher": "movefocus",
+      "command": "r"
+    },
+    {
+      "type": "bind",
+      "mods": "$mainMod",
+      "key": "K",
+      "dispatcher": "movefocus",
+      "command": "u"
+    },
+    {
+      "type": "bind",
+      "mods": "$mainMod",
+      "key": "J",
+      "dispatcher": "movefocus",
       "command": "d"
     },
     {
@@ -432,7 +517,7 @@
       "dispatcher": "exec",
       "command": "bash ~/.config/hypr/scripts/qs_manager.sh toggle calendar"
     },
-{
+    {
       "type": "bind",
       "mods": "$mainMod",
       "key": "N",
@@ -459,13 +544,6 @@
       "key": "V",
       "dispatcher": "exec",
       "command": "bash ~/.config/hypr/scripts/qs_manager.sh toggle volume"
-    },
-    {
-      "type": "bind",
-      "mods": "$mainMod",
-      "key": "H",
-      "dispatcher": "exec",
-      "command": "bash ~/.config/hypr/scripts/qs_manager.sh toggle guide"
     },
     {
       "type": "bindl",
@@ -524,9 +602,9 @@
       "command": "bash ~/.config/hypr/scripts/lock.sh"
     },
     {
-      "type": "bindel",
+      "type": "bindl",
       "mods": "$mainMod",
-      "key": "L",
+      "key": "ESCAPE",
       "dispatcher": "exec",
       "command": "bash ~/.config/hypr/scripts/lock.sh"
     },
@@ -624,7 +702,6 @@
     {
       "command": "~/.config/hypr/scripts/volume_listener.sh"
     },
-
     {
       "command": "[workspace special:monitoring silent] kitty btop"
     },
@@ -642,3 +719,4 @@
     }
   ]
 }
+
