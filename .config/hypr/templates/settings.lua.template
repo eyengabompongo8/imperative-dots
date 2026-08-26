@@ -17,7 +17,7 @@ hl.config({
         resize_on_border = true,
         extend_border_grab_area = 30,
         col = {
-            active_border = colors.active_border1,
+            active_border = { colors = { colors.active_border1, "rgba(00000000)", colors.active_border2, "rgba(00000000)",  colors.active_border3}, angle = 30 },
             inactive_border = colors.inactive_border,
         },
         layout = "monocle"
@@ -93,6 +93,7 @@ hl.curve("easeOutExpo", { type = "bezier", points = { { 0.16, 1 }, { 0.3, 1 } } 
 hl.curve("snappy", { type = "bezier", points = { { 0.1, 0.9 }, { 0.1, 1.05 } } })
 hl.curve("quick", { type = "bezier", points = { { 0.15, 0 }, { 0.1, 1 } } })
 hl.curve("linear", { type = "bezier", points = { { 0, 0 }, { 1, 1 } } })
+hl.curve("hyperDecel", { type = "bezier", points = { { 0.05, 0.9 }, { 0.1, 1.0 } } })
 
 hl.animation({ leaf = "windows", enabled = true, speed = 2.8, bezier = "md3_decel", style = "popin 85%" })
 hl.animation({ leaf = "windowsIn", enabled = true, speed = 2.8, bezier = "md3_decel", style = "popin 85%" })
@@ -104,3 +105,7 @@ hl.animation({ leaf = "fade", enabled = true, speed = 2.0, bezier = "quick" })
 hl.animation({ leaf = "workspaces", enabled = true, speed = 2.5, bezier = "easeOutExpo", style = "slide" })
 hl.animation({ leaf = "specialWorkspaceIn", enabled = true, speed = 2.5, bezier = "md3_decel", style = "fade" })
 hl.animation({ leaf = "specialWorkspaceOut", enabled = true, speed = 1.8, bezier = "md3_accel", style = "fade" })
+
+-- Border Animations
+hl.animation({ leaf = "border", enabled = true, speed = 4.0, bezier = "linear" })
+hl.animation({ leaf = "borderangle", enabled = true, speed = 20, bezier = "hyperDecel" })
