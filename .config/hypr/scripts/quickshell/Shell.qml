@@ -12,5 +12,6 @@ ShellRoot {
     Main {}
     TopBar {}
     Floating {}
+    ScreenCorners {}
 }
 
