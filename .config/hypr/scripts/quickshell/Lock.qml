@@ -1,4 +1,3 @@
-
 import QtQuick
 import QtQuick.Window
 import QtQuick.Controls
@@ -586,25 +585,35 @@ ShellRoot {
                             spacing: 12 * screenRoot.sc
 
                             // Cover Art / Music Icon
-                            Rectangle {
+                            Item {
                                 Layout.preferredWidth: 64 * screenRoot.sc
                                 Layout.preferredHeight: 64 * screenRoot.sc
-                                radius: 12 * screenRoot.sc
-                                color: root.surface1
-                                clip: true
-                                border.width: screenRoot.musicData.status === "Playing" ? Math.max(1, 1 * screenRoot.sc) : 0
-                                border.color: root.mauve
+
+                                Rectangle {
+                                    id: lockArtMask
+                                    anchors.fill: parent
+                                    radius: 12 * screenRoot.sc
+                                    visible: false
+                                    layer.enabled: true
+                                }
 
                                 Rectangle {
                                     anchors.fill: parent
-                                    color: Qt.rgba(root.mauve.r, root.mauve.g, root.mauve.b, 0.15)
-                                    visible: !lockArtImg.visible || lockArtImg.status !== Image.Ready
-                                    Text {
-                                        anchors.centerIn: parent
-                                        text: "󰎆"
-                                        font.family: "SF Pro "
-                                        font.pixelSize: 26 * screenRoot.sc
-                                        color: root.mauve
+                                    radius: 12 * screenRoot.sc
+                                    color: root.surface1
+
+                                    Rectangle {
+                                        anchors.fill: parent
+                                        radius: 12 * screenRoot.sc
+                                        color: Qt.rgba(root.mauve.r, root.mauve.g, root.mauve.b, 0.15)
+                                        visible: !lockArtImg.visible || lockArtImg.status !== Image.Ready
+                                        Text {
+                                            anchors.centerIn: parent
+                                            text: "󰎆"
+                                            font.family: "SF Pro "
+                                            font.pixelSize: 26 * screenRoot.sc
+                                            color: root.mauve
+                                        }
                                     }
                                 }
 
@@ -614,7 +623,23 @@ ShellRoot {
                                     source: screenRoot.musicData.artUrl ? (screenRoot.musicData.artUrl.startsWith("file://") || screenRoot.musicData.artUrl.startsWith("http") ? screenRoot.musicData.artUrl : "file://" + screenRoot.musicData.artUrl) : ""
                                     fillMode: Image.PreserveAspectCrop
                                     asynchronous: true
-                                    visible: status === Image.Ready
+                                    visible: false
+                                }
+
+                                MultiEffect {
+                                    source: lockArtImg
+                                    anchors.fill: parent
+                                    maskEnabled: true
+                                    maskSource: lockArtMask
+                                    visible: lockArtImg.status === Image.Ready
+                                }
+
+                                Rectangle {
+                                    anchors.fill: parent
+                                    radius: 12 * screenRoot.sc
+                                    color: "transparent"
+                                    border.width: screenRoot.musicData.status === "Playing" ? Math.max(1, 1 * screenRoot.sc) : 0
+                                    border.color: root.mauve
                                 }
                             }
 

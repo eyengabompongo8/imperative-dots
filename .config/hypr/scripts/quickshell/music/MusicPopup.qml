@@ -327,196 +327,41 @@ Item {
         id: mainWrapper
         anchors.fill: parent
         
-        // Deepened scale effect and introduced a gentle Y-axis translation for the main container
-        scale: 0.92 + (0.08 * root.introMain)
+        scale: 0.95 + (0.05 * root.introMain)
         opacity: root.introMain
         transform: Translate { y: root.s(15) * (1 - root.introMain) }
 
-        // OUTER ANIMATED BORDER WITH PROPER CLIPPING
-        Item {
-            anchors.fill: parent
-
-            Shape {
-                id: maskRectOuter
-                anchors.fill: parent
-                visible: false // Hidden because MultiEffect will render it as a mask
-                layer.enabled: true
-                preferredRendererType: Shape.GeometryRenderer // Fixes lag by hardware accelerating the stroke
-
-                property real sw: root.s(6)
-                property real inset: (sw / 2) + root.s(0.5) 
-                property real w: width
-                property real h: height
-                property real r: root.s(14) - inset
-                
-                // Mathematical perimeter
-                property real straightLines: 2 * (w - 2 * inset - 2 * r) + 2 * (h - 2 * inset - 2 * r)
-                property real arcLines: 2 * Math.PI * r
-                property real perimeter: straightLines + arcLines
-
-                property real drawProgress: 0
-
-                NumberAnimation on drawProgress {
-                    id: chargeAnim
-                    from: 0
-                    to: maskRectOuter.perimeter
-                    duration: 1200 // The time it takes to "charge" the whole wick
-                    easing.type: Easing.OutCubic
-                    running: true // Ensure it starts reliably
-                }
-
-                ShapePath {
-                    strokeWidth: maskRectOuter.sw
-                    strokeColor: "black" 
-                    fillColor: "transparent"
-                    capStyle: ShapePath.FlatCap 
-
-                    // QML Shape dash patterns are measured in units of strokeWidth! 
-                    dashPattern: [maskRectOuter.perimeter / maskRectOuter.sw, maskRectOuter.perimeter / maskRectOuter.sw]
-                    dashOffset: (maskRectOuter.perimeter - maskRectOuter.drawProgress) / maskRectOuter.sw
-
-                    // Start exactly at Bottom-Left corner, going UP clockwise
-                    startX: maskRectOuter.inset
-                    startY: maskRectOuter.h - maskRectOuter.inset - maskRectOuter.r
-
-                    // 1. Up to top-left corner
-                    PathLine { x: maskRectOuter.inset; y: maskRectOuter.inset + maskRectOuter.r }
-                    // 2. Arc top-left
-                    PathArc { 
-                        x: maskRectOuter.inset + maskRectOuter.r; y: maskRectOuter.inset 
-                        radiusX: maskRectOuter.r; radiusY: maskRectOuter.r; direction: PathArc.Clockwise 
-                    }
-                    // 3. Right to top-right corner
-                    PathLine { x: maskRectOuter.w - maskRectOuter.inset - maskRectOuter.r; y: maskRectOuter.inset }
-                    // 4. Arc top-right
-                    PathArc { 
-                        x: maskRectOuter.w - maskRectOuter.inset; y: maskRectOuter.inset + maskRectOuter.r 
-                        radiusX: maskRectOuter.r; radiusY: maskRectOuter.r; direction: PathArc.Clockwise 
-                    }
-                    // 5. Down to bottom-right corner
-                    PathLine { x: maskRectOuter.w - maskRectOuter.inset; y: maskRectOuter.h - maskRectOuter.inset - maskRectOuter.r }
-                    // 6. Arc bottom-right
-                    PathArc { 
-                        x: maskRectOuter.w - maskRectOuter.inset - maskRectOuter.r; y: maskRectOuter.h - maskRectOuter.inset 
-                        radiusX: maskRectOuter.r; radiusY: maskRectOuter.r; direction: PathArc.Clockwise 
-                    }
-                    // 7. Left to bottom-left corner
-                    PathLine { x: maskRectOuter.inset + maskRectOuter.r; y: maskRectOuter.h - maskRectOuter.inset }
-                    // 8. Arc bottom-left to finish
-                    PathArc { 
-                        x: maskRectOuter.inset; y: maskRectOuter.h - maskRectOuter.inset - maskRectOuter.r 
-                        radiusX: maskRectOuter.r; radiusY: maskRectOuter.r; direction: PathArc.Clockwise 
-                    }
-                }
-            }
-
-            Item {
-                id: gradContainer
-                anchors.fill: parent
-                visible: false // Hidden for MultiEffect mapping
-                clip: true // Prevents the rotated gradient bounding box from bulging out the sides!
-
-                Rectangle {
-                    width: Math.max(parent.width, parent.height) * 2
-                    height: width
-                    anchors.centerIn: parent
-                    
-                    NumberAnimation on rotation {
-                        from: 0; to: 360; duration: 5000
-                        loops: Animation.Infinite
-                        running: true
-                    }
-
-                    gradient: Gradient {
-                        // FIXED: Using securely unpacked color bindings
-                        GradientStop { position: 0.0; color: root.bc1; Behavior on color { ColorAnimation { duration: 800; easing.type: Easing.InOutQuad } } }
-                        GradientStop { position: 0.33; color: root.bc2; Behavior on color { ColorAnimation { duration: 800; easing.type: Easing.InOutQuad } } }
-                        GradientStop { position: 0.66; color: root.bc3; Behavior on color { ColorAnimation { duration: 800; easing.type: Easing.InOutQuad } } }
-                        GradientStop { position: 1.0; color: root.bc4; Behavior on color { ColorAnimation { duration: 800; easing.type: Easing.InOutQuad } } }
-                    }
-                }
-            }
-
-            MultiEffect {
-                source: gradContainer
-                anchors.fill: parent
-                maskEnabled: true
-                maskSource: maskRectOuter
-            }
-        }
-
-        // INNER WINDOW BOX
         Rectangle {
-            id: innerBg
+            id: mainBg
             anchors.fill: parent
-            anchors.margins: root.s(3)
+            radius: root.s(20)
             color: root.base
-            radius: root.s(10)
+            border.color: root.surface0
+            border.width: 1
+            clip: true
 
-            // FIX: This forces the entire background to render as a single hardware texture,
-            // preventing the UI from dragging and causing "shadow boxes" during the StackView transition!
-            layer.enabled: true
-
-            // Provide a perfectly rounded mask for the inner content
+            // Ambient background rotating blobs
             Rectangle {
-                id: innerBgMask
-                anchors.fill: parent
-                radius: root.s(10)
-                visible: false
-                
-                // FIX: Masks in MultiEffect strictly require layer.enabled to correctly capture the radius during scaling!
-                layer.enabled: true 
+                width: parent.width * 0.8; height: width; radius: width / 2
+                x: (parent.width / 2 - width / 2) + Math.cos(root.globalOrbitAngle * 2) * root.s(150)
+                y: (parent.height / 2 - height / 2) + Math.sin(root.globalOrbitAngle * 2) * root.s(100)
+                opacity: root.musicData.status === "Playing" ? 0.08 : (root.musicData.status === "Paused" ? 0.04 : 0.03)
+                color: root.mauve
+                Behavior on color { ColorAnimation { duration: 1000 } }
+                Behavior on opacity { NumberAnimation { duration: 1000 } }
+            }
+            
+            Rectangle {
+                width: parent.width * 0.9; height: width; radius: width / 2
+                x: (parent.width / 2 - width / 2) + Math.sin(root.globalOrbitAngle * 1.5) * root.s(-150)
+                y: (parent.height / 2 - height / 2) + Math.cos(root.globalOrbitAngle * 1.5) * root.s(-100)
+                opacity: root.musicData.status === "Playing" ? 0.08 : (root.musicData.status === "Paused" ? 0.02 : 0.02)
+                color: root.blue
+                Behavior on color { ColorAnimation { duration: 1000 } }
+                Behavior on opacity { NumberAnimation { duration: 1000 } }
             }
 
-            Item {
-                id: bgEffectsLayer
-                anchors.fill: parent
-                
-                // This correctly clamps the blur and orbit circles to the 10px radius corners
-                layer.enabled: true
-                layer.effect: MultiEffect {
-                    maskEnabled: true
-                    maskSource: innerBgMask
-                }
-
-                // LAYER 1: Background Blur (Smooth fade-in)
-                Image {
-                    anchors.fill: parent
-                    source: root.musicData.blur ? "file://" + root.musicData.blur : ""
-                    fillMode: Image.PreserveAspectCrop
-                    
-                    // Fixed: Ensures blur is completely hidden when stopped so the pure base color matches the calendar
-                    opacity: (status === Image.Ready && root.musicData.status !== "Stopped" && root.musicData.status !== "Offline") ? 0.9 : 0.0
-                    Behavior on opacity { NumberAnimation { duration: 800; easing.type: Easing.InOutQuad } }
-                }
-
-                // LAYER 1.5: Flowing Orbits
-                Rectangle {
-                    width: parent.width * 0.8; height: width; radius: width / 2
-                    x: (parent.width / 2 - width / 2) + Math.cos(root.globalOrbitAngle * 2) * root.s(150)
-                    y: (parent.height / 2 - height / 2) + Math.sin(root.globalOrbitAngle * 2) * root.s(100)
-                    
-                    // Fixed: Hides orbits when stopped
-                    opacity: root.musicData.status === "Playing" ? 0.08 : (root.musicData.status === "Paused" ? 0.04 : 0.0)
-                    color: root.musicData.status === "Playing" ? root.mauve : root.surface2
-                    Behavior on color { ColorAnimation { duration: 1000 } }
-                    Behavior on opacity { NumberAnimation { duration: 1000 } }
-                }
-                
-                Rectangle {
-                    width: parent.width * 0.9; height: width; radius: width / 2
-                    x: (parent.width / 2 - width / 2) + Math.sin(root.globalOrbitAngle * 1.5) * root.s(-150)
-                    y: (parent.height / 2 - height / 2) + Math.cos(root.globalOrbitAngle * 1.5) * root.s(-100)
-                    
-                    // Fixed: Hides orbits when stopped
-                    opacity: root.musicData.status === "Playing" ? 0.08 : (root.musicData.status === "Paused" ? 0.02 : 0.0)
-                    color: root.musicData.status === "Playing" ? root.blue : root.surface1
-                    Behavior on color { ColorAnimation { duration: 1000 } }
-                    Behavior on opacity { NumberAnimation { duration: 1000 } }
-                }
-            }
-
-            // LAYER 2: UI Content
+            // UI Content
             ColumnLayout {
                 anchors.fill: parent
                 anchors.margins: root.s(20)
@@ -537,42 +382,55 @@ Item {
                         Layout.alignment: Qt.AlignVCenter
 
                         opacity: root.introCover
-                        // Enhanced 2D drift animation
                         transform: Translate { x: root.s(-40) * (1 - root.introCover); y: root.s(10) * (1 - root.introCover) }
 
                         // Elastic response to play/pause state
-                        scale: root.musicData.status === "Playing" ? 1.0 : 0.90
+                        scale: root.musicData.status === "Playing" ? 1.0 : 0.95
                         Behavior on scale { NumberAnimation { duration: 800; easing.type: Easing.OutElastic; easing.overshoot: 1.2 } }
 
+                        // Glow Effect surrounding the thumbnail
+                        Rectangle {
+                            z: -1
+                            anchors.centerIn: parent
+                            width: parent.width + root.s(16)
+                            height: parent.height + root.s(16)
+                            radius: root.s(20)
+                            color: root.mauve
+                            opacity: root.musicData.status === "Playing" ? 0.4 : 0.0
+                            Behavior on opacity { NumberAnimation { duration: 500 } }
+                            layer.enabled: true
+                            layer.effect: MultiEffect {
+                                blurEnabled: true
+                                blurMax: 32
+                                blur: 1.0
+                            }
+                        }
+
+                        // Container Box
                         Rectangle {
                             anchors.fill: parent
-                            radius: root.s(110)
+                            radius: root.s(16)
                             color: root.surface1
-                            border.width: root.s(4)
+                            border.width: root.musicData.status === "Playing" ? root.s(2) : 1
                             border.color: root.musicData.status === "Playing" ? root.mauve : root.overlay0
                             Behavior on border.color { ColorAnimation { duration: 500 } }
 
-                            // Glow Effect surrounding the thumbnail
-                            Rectangle {
-                                z: -1
+                            // Placeholder music icon when no art is loaded
+                            Text {
                                 anchors.centerIn: parent
-                                width: parent.width + root.s(20)
-                                height: parent.height + root.s(20)
-                                radius: width / 2
-                                color: root.mauve
-                                opacity: root.musicData.status === "Playing" ? 0.5 : 0.0
-                                Behavior on opacity { NumberAnimation { duration: 500 } }
-                                layer.enabled: true
-                                layer.effect: MultiEffect {
-                                    blurEnabled: true
-                                    blurMax: 32
-                                    blur: 1.0
-                                }
+                                text: "󰎈"
+                                font.family: "SF Pro Display"
+                                font.pixelSize: root.s(64)
+                                color: root.overlay0
+                                opacity: (artImg.status === Image.Ready && root.musicData.artUrl) ? 0.0 : 0.8
+                                Behavior on opacity { NumberAnimation { duration: 400 } }
                             }
 
+                            // Art Content Layer
                             Item {
                                 anchors.fill: parent
-                                anchors.margins: root.s(4)
+                                anchors.margins: root.s(3)
+
                                 Image {
                                     id: artImg
                                     anchors.fill: parent
@@ -580,43 +438,32 @@ Item {
                                     fillMode: Image.PreserveAspectCrop
                                     visible: false 
                                 }
+
                                 Rectangle {
                                     id: maskRect
                                     anchors.fill: parent
-                                    radius: width / 2
+                                    radius: root.s(13)
                                     visible: false
                                     layer.enabled: true 
                                 }
+
                                 MultiEffect {
                                     anchors.fill: parent
                                     source: artImg
                                     maskEnabled: true
                                     maskSource: maskRect
-                                    opacity: artImg.status === Image.Ready ? 1.0 : 0.0
+                                    opacity: (artImg.status === Image.Ready && root.musicData.artUrl) ? 1.0 : 0.0
                                     Behavior on opacity { NumberAnimation { duration: 800 } }
                                 }
                                 
-                                // NEW: Dimmed slightly by tinting with the primary mauve accent, as requested
+                                // Subtle accent tint overlay
                                 Rectangle {
                                     anchors.fill: parent
-                                    radius: width / 2
-                                    color: Qt.rgba(root.mauve.r, root.mauve.g, root.mauve.b, 0.2)
-                                    opacity: artImg.status === Image.Ready ? 1.0 : 0.0
+                                    radius: root.s(13)
+                                    color: Qt.rgba(root.mauve.r, root.mauve.g, root.mauve.b, 0.15)
+                                    opacity: (artImg.status === Image.Ready && root.musicData.artUrl) ? 1.0 : 0.0
                                     Behavior on opacity { NumberAnimation { duration: 800 } }
                                 }
-
-                                Rectangle {
-                                    width: root.s(40); height: root.s(40)
-                                    radius: root.s(20); color: "#000000"
-                                    opacity: 0.8; anchors.centerIn: parent
-                                }
-                            }
-                            
-                            NumberAnimation on rotation {
-                                from: 0; to: 360; duration: 8000
-                                loops: Animation.Infinite
-                                running: true
-                                paused: root.musicData.status !== "Playing"
                             }
                         }
                     }
@@ -877,7 +724,10 @@ Item {
                             MouseArea {
                                 width: root.s(30); height: root.s(30)
                                 cursorShape: Qt.PointingHandCursor
-                                onClicked: root.execCmd("playerctl previous")
+                                onClicked: {
+                                    var safePlayer = root.musicData.playerName || "";
+                                    root.execCmd(`$HOME/.config/hypr/scripts/quickshell/music/player_control.sh prev "" "" "${safePlayer}"`);
+                                }
                                 Text { anchors.centerIn: parent; text: ""; color: parent.pressed ? root.text : root.overlay2; font.family: "Iosevka Nerd Font"; font.pixelSize: root.s(24) }
                             }
                             MouseArea {
@@ -890,7 +740,8 @@ Item {
                                     var temp = Object.assign({}, root.musicData);
                                     temp.status = (temp.status === "Playing" ? "Paused" : "Playing");
                                     root.musicData = temp;
-                                    root.execCmd("playerctl play-pause");
+                                    var safePlayer = root.musicData.playerName || "";
+                                    root.execCmd(`$HOME/.config/hypr/scripts/quickshell/music/player_control.sh play-pause "" "" "${safePlayer}"`);
                                 }
 
                                 // Fluid Ripple Animation Element
@@ -941,7 +792,10 @@ Item {
                             MouseArea {
                                 width: root.s(30); height: root.s(30)
                                 cursorShape: Qt.PointingHandCursor
-                                onClicked: root.execCmd("playerctl next")
+                                onClicked: {
+                                    var safePlayer = root.musicData.playerName || "";
+                                    root.execCmd(`$HOME/.config/hypr/scripts/quickshell/music/player_control.sh next "" "" "${safePlayer}"`);
+                                }
                                 Text { anchors.centerIn: parent; text: ""; color: parent.pressed ? root.text : root.overlay2; font.family: "Iosevka Nerd Font"; font.pixelSize: root.s(24) }
                             }
                         }
@@ -1445,7 +1299,7 @@ Item {
         property bool isActivePreset: root.eqData && root.eqData.preset === name
         property bool isHovered: hoverMa.containsMouse
 
-        color: isActivePreset ? root.mauve : (isHovered ? root.surface1 : "#BF1E1E2E")
+        color: isActivePreset ? root.mauve : (isHovered ? root.surface1 : root.surface0)
         scale: isHovered && !isActivePreset ? 1.05 : 1.0
 
         Behavior on color { ColorAnimation { duration: 200 } }
