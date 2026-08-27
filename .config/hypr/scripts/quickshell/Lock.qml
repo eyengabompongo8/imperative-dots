@@ -122,11 +122,24 @@ ShellRoot {
 
                 property string batPct: "100"
                 property string batStatus: "AC"
+                property string batTime: ""
                 property string currentUser: "User"
                 property string faceIconPath: ""
                 property string kbLayout: "US"
                 property string weatherIcon: ""
                 property string weatherTemp: "--°C"
+
+                property string wifiStatus: "disabled"
+                property string wifiIcon: "󰤮"
+                property string wifiSsid: ""
+                property string ethStatus: "Disconnected"
+
+                property string btStatus: "off"
+                property string btIcon: "󰂲"
+                property string btDevice: "Off"
+
+                property var musicData: ({ "status": "Stopped", "title": "", "artist": "", "artUrl": "", "timeStr": "", "percent": 0, "lengthStr": "", "positionStr": "" })
+                property bool isMediaActive: screenRoot.musicData !== null && screenRoot.musicData.status !== "Stopped" && screenRoot.musicData.title !== ""
 
                 // UI States
                 property real introState: 0.0
@@ -137,6 +150,11 @@ ShellRoot {
                 
                 Component.onCompleted: {
                     introSequence.start();
+                    SysData.subscribe();
+                }
+
+                Component.onDestruction: {
+                    SysData.unsubscribe();
                 }
 
                 property real globalOrbitAngle: 0
@@ -205,13 +223,21 @@ ShellRoot {
                 Process {
                     id: batPoller
                     running: !screenRoot.isDesktop
-                    command: ["bash", "-c", "cat /sys/class/power_supply/BAT*/capacity 2>/dev/null | head -n1 || echo '100'; cat /sys/class/power_supply/BAT*/status 2>/dev/null | head -n1 || echo 'AC'"]
+                    command: [
+                        "bash", "-c",
+                        "cat /sys/class/power_supply/BAT*/capacity 2>/dev/null | head -n1 || echo '100'; " +
+                        "cat /sys/class/power_supply/BAT*/status 2>/dev/null | head -n1 || echo 'AC'; " +
+                        "python3 -c \"import glob; f=lambda p: int(open(glob.glob(p)[0]).read().strip()) if glob.glob(p) else 0; s=lambda p: open(glob.glob(p)[0]).read().strip() if glob.glob(p) else ''; cn=f('/sys/class/power_supply/BAT*/charge_now') or f('/sys/class/power_supply/BAT*/energy_now'); cf=f('/sys/class/power_supply/BAT*/charge_full') or f('/sys/class/power_supply/BAT*/energy_full'); cr=f('/sys/class/power_supply/BAT*/current_now') or f('/sys/class/power_supply/BAT*/power_now'); st=s('/sys/class/power_supply/BAT*/status'); m=((cf-cn)*60//cr) if (cr>0 and st=='Charging') else ((cn*60//cr) if (cr>0 and st=='Discharging') else -1); print(f'{m//60}h {m%60:02d}m' if m>=0 else ('Full' if st=='Full' else ''))\""
+                    ]
                     stdout: StdioCollector {
                         onStreamFinished: {
                             let lines = this.text.trim().split("\n");
                             if (lines.length >= 2) {
                                 screenRoot.batPct = lines[0] || "100";
                                 screenRoot.batStatus = lines[1] || "Unknown";
+                            }
+                            if (lines.length >= 3) {
+                                screenRoot.batTime = lines[2].trim() || "";
                             }
                         }
                     }
@@ -233,6 +259,125 @@ ShellRoot {
                     }
                 }
                 Timer { interval: 900000; running: true; repeat: true; triggeredOnStart: true; onTriggered: weatherPoller.running = true }
+
+                Process {
+                    id: networkPoller; running: true
+                    command: ["bash", "-c", "~/.config/hypr/scripts/quickshell/watchers/network_fetch.sh"]
+                    stdout: StdioCollector {
+                        onStreamFinished: {
+                            let txt = this.text.trim();
+                            if (txt !== "") {
+                                try {
+                                    let data = JSON.parse(txt);
+                                    if (data.status !== undefined) screenRoot.wifiStatus = data.status;
+                                    if (data.icon !== undefined) screenRoot.wifiIcon = data.icon;
+                                    if (data.ssid !== undefined) screenRoot.wifiSsid = data.ssid;
+                                    if (data.eth_status !== undefined) screenRoot.ethStatus = data.eth_status;
+                                } catch(e) {}
+                            }
+                            networkWaiter.running = false;
+                            networkWaiter.running = true;
+                        }
+                    }
+                }
+                Process { id: networkWaiter; command: ["bash", "-c", "~/.config/hypr/scripts/quickshell/watchers/network_wait.sh"]; onExited: { networkPoller.running = false; networkPoller.running = true; } }
+
+                Process {
+                    id: btPoller; running: true
+                    command: ["bash", "-c", "~/.config/hypr/scripts/quickshell/watchers/bt_fetch.sh"]
+                    stdout: StdioCollector {
+                        onStreamFinished: {
+                            let txt = this.text.trim();
+                            if (txt !== "") {
+                                try {
+                                    let data = JSON.parse(txt);
+                                    if (data.status !== undefined) screenRoot.btStatus = data.status;
+                                    if (data.icon !== undefined) screenRoot.btIcon = data.icon;
+                                    if (data.connected !== undefined) screenRoot.btDevice = data.connected;
+                                } catch(e) {}
+                            }
+                            btWaiter.running = false;
+                            btWaiter.running = true;
+                        }
+                    }
+                }
+                Process { id: btWaiter; command: ["bash", "-c", "~/.config/hypr/scripts/quickshell/watchers/bt_wait.sh"]; onExited: { btPoller.running = false; btPoller.running = true; } }
+
+                Process {
+                    id: musicForceRefresh
+                    running: true
+                    command: ["bash", "-c", "bash ~/.config/hypr/scripts/quickshell/music/music_info.sh | tee " + paths.getRunDir("music") + "/music_info.json"]
+                    stdout: StdioCollector {
+                        onStreamFinished: {
+                            let txt = this.text.trim();
+                            if (txt !== "") {
+                                try {
+                                    screenRoot.musicData = JSON.parse(txt);
+                                } catch(e) {}
+                            }
+                        }
+                    }
+                }
+
+                Process {
+                    id: mprisWatcher
+                    running: true
+                    command: ["bash", "-c", "dbus-monitor --session \"type='signal',interface='org.freedesktop.DBus.Properties',member='PropertiesChanged',arg0='org.mpris.MediaPlayer2.Player'\" \"type='signal',interface='org.mpris.MediaPlayer2.Player',member='Seeked'\" 2>/dev/null | grep -m 1 'member=' > /dev/null || sleep 2"]
+                    onExited: {
+                        musicForceRefresh.running = false;
+                        musicForceRefresh.running = true;
+                        running = false;
+                        running = true;
+                    }
+                }
+
+                Timer {
+                    interval: 1000
+                    running: screenRoot.musicData !== null && screenRoot.musicData.status === "Playing"
+                    repeat: true
+                    onTriggered: {
+                        if (!screenRoot.musicData || screenRoot.musicData.status !== "Playing") return;
+                        if (!screenRoot.musicData.timeStr || screenRoot.musicData.timeStr === "") return;
+
+                        let parts = screenRoot.musicData.timeStr.split(" / ");
+                        if (parts.length !== 2) return;
+
+                        let posParts = parts[0].split(":").map(Number);
+                        let lenParts = parts[1].split(":").map(Number);
+
+                        let posSecs = (posParts.length === 3) 
+                            ? (posParts[0] * 3600 + posParts[1] * 60 + posParts[2]) 
+                            : (posParts[0] * 60 + posParts[1]);
+
+                        let lenSecs = (lenParts.length === 3) 
+                            ? (lenParts[0] * 3600 + lenParts[1] * 60 + lenParts[2]) 
+                            : (lenParts[0] * 60 + lenParts[1]);
+
+                        if (isNaN(posSecs) || isNaN(lenSecs)) return;
+
+                        posSecs++;
+                        if (posSecs > lenSecs) posSecs = lenSecs;
+
+                        let newPosStr = "";
+                        if (posParts.length === 3) {
+                            let h = Math.floor(posSecs / 3600);
+                            let m = Math.floor((posSecs % 3600) / 60);
+                            let s = posSecs % 60;
+                            newPosStr = h + ":" + (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s;
+                        } else {
+                            let m = Math.floor(posSecs / 60);
+                            let s = posSecs % 60;
+                            newPosStr = (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s;
+                        }
+
+                        let newData = Object.assign({}, screenRoot.musicData);
+                        newData.timeStr = newPosStr + " / " + parts[1];
+                        newData.positionStr = newPosStr;
+                        if (lenSecs > 0) newData.percent = Math.min(100, Math.round((posSecs / lenSecs) * 100));
+                        
+                        screenRoot.musicData = newData;
+                    }
+                }
 
                 // ---------------------------------------------------------
                 // 1. LIVING BACKGROUND
@@ -401,6 +546,235 @@ ShellRoot {
                         }
                     }
 
+                    // --- AUDIO PLAYER CARD (Idle State) ---
+                    Rectangle {
+                        id: lockAudioPlayer
+                        anchors.top: clockModule.bottom
+                        anchors.topMargin: 56 * screenRoot.sc
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        width: 460 * screenRoot.sc
+                        height: 84 * screenRoot.sc
+                        radius: 20 * screenRoot.sc
+                        clip: true
+
+                        property bool isHovered: mediaMouseArea.containsMouse
+                        visible: opacity > 0.01
+                        opacity: (screenRoot.isMediaActive && !screenRoot.inputActive) ? screenRoot.introState : 0.0
+                        scale: (screenRoot.isMediaActive && !screenRoot.inputActive) ? (isHovered ? 1.02 : 1.0) : 0.92
+
+                        color: isHovered ? Qt.rgba(root.surface1.r, root.surface1.g, root.surface1.b, 0.65) : Qt.rgba(root.surface0.r, root.surface0.g, root.surface0.b, 0.5)
+                        border.color: isHovered ? Qt.rgba(root.mauve.r, root.mauve.g, root.mauve.b, 0.35) : Qt.rgba(root.text.r, root.text.g, root.text.b, 0.08)
+                        border.width: Math.max(1, 1 * screenRoot.sc)
+
+                        Behavior on opacity { NumberAnimation { duration: 350; easing.type: Easing.OutCubic } }
+                        Behavior on scale { NumberAnimation { duration: 300; easing.type: Easing.OutBack } }
+                        Behavior on color { ColorAnimation { duration: 200 } }
+                        Behavior on border.color { ColorAnimation { duration: 200 } }
+
+                        MouseArea {
+                            id: mediaMouseArea
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            enabled: !screenRoot.isPlayingIntro
+                            preventStealing: true
+                            onClicked: {}
+                        }
+
+                        RowLayout {
+                            anchors.fill: parent
+                            anchors.margins: 10 * screenRoot.sc
+                            spacing: 12 * screenRoot.sc
+
+                            // Cover Art / Music Icon
+                            Rectangle {
+                                Layout.preferredWidth: 64 * screenRoot.sc
+                                Layout.preferredHeight: 64 * screenRoot.sc
+                                radius: 12 * screenRoot.sc
+                                color: root.surface1
+                                clip: true
+                                border.width: screenRoot.musicData.status === "Playing" ? Math.max(1, 1 * screenRoot.sc) : 0
+                                border.color: root.mauve
+
+                                Rectangle {
+                                    anchors.fill: parent
+                                    color: Qt.rgba(root.mauve.r, root.mauve.g, root.mauve.b, 0.15)
+                                    visible: !lockArtImg.visible || lockArtImg.status !== Image.Ready
+                                    Text {
+                                        anchors.centerIn: parent
+                                        text: "󰎆"
+                                        font.family: "SF Pro "
+                                        font.pixelSize: 26 * screenRoot.sc
+                                        color: root.mauve
+                                    }
+                                }
+
+                                Image {
+                                    id: lockArtImg
+                                    anchors.fill: parent
+                                    source: screenRoot.musicData.artUrl ? (screenRoot.musicData.artUrl.startsWith("file://") || screenRoot.musicData.artUrl.startsWith("http") ? screenRoot.musicData.artUrl : "file://" + screenRoot.musicData.artUrl) : ""
+                                    fillMode: Image.PreserveAspectCrop
+                                    asynchronous: true
+                                    visible: status === Image.Ready
+                                }
+                            }
+
+                            // Track Info & Progress
+                            ColumnLayout {
+                                Layout.fillWidth: true
+                                Layout.alignment: Qt.AlignVCenter
+                                spacing: 4 * screenRoot.sc
+
+                                Text {
+                                    Layout.fillWidth: true
+                                    text: screenRoot.musicData.title || "No Media"
+                                    font.family: "SF Pro Display"
+                                    font.pixelSize: 14 * screenRoot.sc
+                                    font.weight: Font.Bold
+                                    color: root.text
+                                    elide: Text.ElideRight
+                                    maximumLineCount: 1
+                                }
+
+                                Text {
+                                    Layout.fillWidth: true
+                                    text: screenRoot.musicData.artist || screenRoot.musicData.playerName || "Player"
+                                    font.family: "SF Pro Text"
+                                    font.pixelSize: 12 * screenRoot.sc
+                                    font.weight: Font.Medium
+                                    color: root.subtext0
+                                    elide: Text.ElideRight
+                                    maximumLineCount: 1
+                                }
+
+                                // Progress Bar & Position
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    spacing: 8 * screenRoot.sc
+
+                                    Rectangle {
+                                        Layout.fillWidth: true
+                                        Layout.preferredHeight: 4 * screenRoot.sc
+                                        radius: height / 2
+                                        color: Qt.rgba(root.surface2.r, root.surface2.g, root.surface2.b, 0.6)
+
+                                        Rectangle {
+                                            width: Math.max(0, Math.min(parent.width, (parent.width * (parseFloat(screenRoot.musicData.percent) || 0)) / 100))
+                                            height: parent.height
+                                            radius: height / 2
+                                            color: root.mauve
+                                            Behavior on width { NumberAnimation { duration: 200 } }
+                                        }
+                                    }
+
+                                    Text {
+                                        text: screenRoot.musicData.positionStr || (screenRoot.musicData.timeStr ? screenRoot.musicData.timeStr.split(" / ")[0] : "00:00")
+                                        font.family: "SF Pro Text"
+                                        font.pixelSize: 10 * screenRoot.sc
+                                        font.weight: Font.Medium
+                                        color: root.overlay2
+                                    }
+                                }
+                            }
+
+                            // Control Buttons
+                            RowLayout {
+                                Layout.alignment: Qt.AlignVCenter
+                                spacing: 4 * screenRoot.sc
+
+                                // Previous
+                                Rectangle {
+                                    Layout.preferredWidth: 32 * screenRoot.sc
+                                    Layout.preferredHeight: 32 * screenRoot.sc
+                                    radius: height / 2
+                                    color: prevMa.containsMouse ? Qt.rgba(root.surface1.r, root.surface1.g, root.surface1.b, 0.8) : "transparent"
+                                    scale: prevMa.pressed ? 0.9 : (prevMa.containsMouse ? 1.1 : 1.0)
+                                    Behavior on color { ColorAnimation { duration: 150 } }
+                                    Behavior on scale { NumberAnimation { duration: 150; easing.type: Easing.OutBack } }
+
+                                    Text {
+                                        anchors.centerIn: parent
+                                        text: "󰒮"
+                                        font.family: "SF Pro "
+                                        font.pixelSize: 18 * screenRoot.sc
+                                        color: prevMa.containsMouse ? root.text : root.subtext0
+                                        Behavior on color { ColorAnimation { duration: 150 } }
+                                    }
+                                    MouseArea {
+                                        id: prevMa
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        enabled: !screenRoot.isPlayingIntro
+                                        onClicked: {
+                                            Quickshell.execDetached(["playerctl", "previous"]);
+                                            musicForceRefresh.running = true;
+                                        }
+                                    }
+                                }
+
+                                // Play / Pause
+                                Rectangle {
+                                    Layout.preferredWidth: 38 * screenRoot.sc
+                                    Layout.preferredHeight: 38 * screenRoot.sc
+                                    radius: height / 2
+                                    color: root.mauve
+                                    scale: playMa.pressed ? 0.9 : (playMa.containsMouse ? 1.1 : 1.0)
+                                    Behavior on scale { NumberAnimation { duration: 150; easing.type: Easing.OutBack } }
+
+                                    Text {
+                                        anchors.centerIn: parent
+                                        anchors.horizontalCenterOffset: screenRoot.musicData.status === "Playing" ? 0 : Math.max(1, 1.5 * screenRoot.sc)
+                                        text: screenRoot.musicData.status === "Playing" ? "󰏤" : "󰐊"
+                                        font.family: "SF Pro "
+                                        font.pixelSize: 20 * screenRoot.sc
+                                        horizontalAlignment: Text.AlignHCenter
+                                        verticalAlignment: Text.AlignVCenter
+                                        color: root.base
+                                    }
+                                    MouseArea {
+                                        id: playMa
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        enabled: !screenRoot.isPlayingIntro
+                                        onClicked: {
+                                            Quickshell.execDetached(["playerctl", "play-pause"]);
+                                            musicForceRefresh.running = true;
+                                        }
+                                    }
+                                }
+
+                                // Next
+                                Rectangle {
+                                    Layout.preferredWidth: 32 * screenRoot.sc
+                                    Layout.preferredHeight: 32 * screenRoot.sc
+                                    radius: height / 2
+                                    color: nextMa.containsMouse ? Qt.rgba(root.surface1.r, root.surface1.g, root.surface1.b, 0.8) : "transparent"
+                                    scale: nextMa.pressed ? 0.9 : (nextMa.containsMouse ? 1.1 : 1.0)
+                                    Behavior on color { ColorAnimation { duration: 150 } }
+                                    Behavior on scale { NumberAnimation { duration: 150; easing.type: Easing.OutBack } }
+
+                                    Text {
+                                        anchors.centerIn: parent
+                                        text: "󰒭"
+                                        font.family: "SF Pro "
+                                        font.pixelSize: 18 * screenRoot.sc
+                                        color: nextMa.containsMouse ? root.text : root.subtext0
+                                        Behavior on color { ColorAnimation { duration: 150 } }
+                                    }
+                                    MouseArea {
+                                        id: nextMa
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        enabled: !screenRoot.isPlayingIntro
+                                        onClicked: {
+                                            Quickshell.execDetached(["playerctl", "next"]);
+                                            musicForceRefresh.running = true;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
                     // --- AUTHENTICATION MODULE (Input State) ---
                     RowLayout {
                         id: authModule
@@ -440,7 +814,7 @@ ShellRoot {
                                 Text {
                                     anchors.centerIn: parent
                                     text: "󰄽"
-                                    font.family: "Iosevka Nerd Font"
+                                    font.family: "SF Pro "
                                     font.pixelSize: 64 * screenRoot.sc
                                     color: root.subtext0
                                 }
@@ -512,7 +886,7 @@ ShellRoot {
                                     Text {
                                         anchors.centerIn: parent
                                         text: lockUI.failed ? "󰌾" : (lockUI.authenticating ? "󰌿" : "󰌾")
-                                        font.family: "Iosevka Nerd Font"
+                                        font.family: "SF Pro "
                                         font.pixelSize: 18 * screenRoot.sc
                                         color: lockUI.failed
                                             ? root.red
@@ -702,39 +1076,92 @@ ShellRoot {
                 }
 
                 // ---------------------------------------------------------
-                // 3. BOTTOM SYSTEM INFO PILLS
+                // 3A. BOTTOM-LEFT HARDWARE & BATTERY PILLS
                 // ---------------------------------------------------------
                 RowLayout {
                     anchors.bottom: parent.bottom
                     anchors.bottomMargin: 40 * screenRoot.sc
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    spacing: 16 * screenRoot.sc
+                    anchors.left: parent.left
+                    anchors.leftMargin: 40 * screenRoot.sc
+                    spacing: 12 * screenRoot.sc
 
                     opacity: screenRoot.introState
                     transform: Translate { y: (20 * screenRoot.sc) * (1.0 - screenRoot.introState) }
 
-                    // KB Layout Pill
+                    // CPU Usage Pill
                     Rectangle {
-                        property bool isHovered: kbMouse.containsMouse
+                        id: cpuPill
+                        property bool isHovered: cpuMouse.containsMouse
                         Layout.preferredHeight: 48 * screenRoot.sc
-                        Layout.preferredWidth: kbLayoutRow.implicitWidth + (36 * screenRoot.sc)
-                        radius: height / 2 // Dynamic pill shape
+                        Layout.preferredWidth: cpuLayoutRow.implicitWidth + (36 * screenRoot.sc)
+                        radius: height / 2
                         
                         color: isHovered ? Qt.rgba(root.surface1.r, root.surface1.g, root.surface1.b, 0.6) : Qt.rgba(root.surface0.r, root.surface0.g, root.surface0.b, 0.4)
-                        border.color: isHovered ? root.mauve : Qt.rgba(root.text.r, root.text.g, root.text.b, 0.08)
+                        border.color: isHovered ? (SysData.cpu >= 80 ? root.red : (SysData.cpu >= 50 ? root.peach : root.mauve)) : Qt.rgba(root.text.r, root.text.g, root.text.b, 0.08)
                         border.width: Math.max(1, 1 * screenRoot.sc)
-                        
+
                         scale: isHovered ? 1.05 : 1.0
                         Behavior on scale { NumberAnimation { duration: 250; easing.type: Easing.OutExpo } }
                         Behavior on color { ColorAnimation { duration: 200 } }
                         Behavior on border.color { ColorAnimation { duration: 200 } }
 
                         RowLayout { 
-                            id: kbLayoutRow; anchors.centerIn: parent; spacing: 8 * screenRoot.sc
-                            Text { text: "󰌌"; font.family: "Iosevka Nerd Font"; font.pixelSize: 18 * screenRoot.sc; color: parent.parent.isHovered ? root.mauve : root.overlay2; Behavior on color { ColorAnimation { duration: 200 } } }
-                            Text { text: screenRoot.kbLayout; font.family: "SF Pro Text"; font.pixelSize: 14 * screenRoot.sc; font.weight: Font.Black; color: root.text }
+                            id: cpuLayoutRow; anchors.centerIn: parent; spacing: 8 * screenRoot.sc
+                            Text { 
+                                text: "󰍛"
+                                font.family: "SF Pro "
+                                font.pixelSize: 18 * screenRoot.sc
+                                color: SysData.cpu >= 80 ? root.red : (SysData.cpu >= 50 ? root.peach : (cpuPill.isHovered ? root.mauve : root.overlay2))
+                                Behavior on color { ColorAnimation { duration: 200 } }
+                            }
+                            Text { 
+                                text: (SysData.cpu || 0) + "%"
+                                font.family: "SF Pro Text"
+                                font.pixelSize: 14 * screenRoot.sc
+                                font.weight: Font.Black
+                                color: SysData.cpu >= 80 ? root.red : root.text
+                                Behavior on color { ColorAnimation { duration: 200 } }
+                            }
                         }
-                        MouseArea { id: kbMouse; anchors.fill: parent; hoverEnabled: true; enabled: !screenRoot.isPlayingIntro }
+                        MouseArea { id: cpuMouse; anchors.fill: parent; hoverEnabled: true; enabled: !screenRoot.isPlayingIntro }
+                    }
+
+                    // CPU Temp Pill
+                    Rectangle {
+                        id: tempPill
+                        property bool isHovered: tempMouse.containsMouse
+                        Layout.preferredHeight: 48 * screenRoot.sc
+                        Layout.preferredWidth: tempLayoutRow.implicitWidth + (36 * screenRoot.sc)
+                        radius: height / 2
+                        
+                        color: isHovered ? Qt.rgba(root.surface1.r, root.surface1.g, root.surface1.b, 0.6) : Qt.rgba(root.surface0.r, root.surface0.g, root.surface0.b, 0.4)
+                        border.color: isHovered ? (SysData.temp >= 80 ? root.red : (SysData.temp >= 65 ? root.peach : root.blue)) : Qt.rgba(root.text.r, root.text.g, root.text.b, 0.08)
+                        border.width: Math.max(1, 1 * screenRoot.sc)
+
+                        scale: isHovered ? 1.05 : 1.0
+                        Behavior on scale { NumberAnimation { duration: 250; easing.type: Easing.OutExpo } }
+                        Behavior on color { ColorAnimation { duration: 200 } }
+                        Behavior on border.color { ColorAnimation { duration: 200 } }
+
+                        RowLayout { 
+                            id: tempLayoutRow; anchors.centerIn: parent; spacing: 8 * screenRoot.sc
+                            Text { 
+                                text: SysData.temp >= 80 ? "󱃂" : ""
+                                font.family: "SF Pro "
+                                font.pixelSize: 18 * screenRoot.sc
+                                color: SysData.temp >= 80 ? root.red : (SysData.temp >= 65 ? root.peach : (tempPill.isHovered ? root.blue : root.overlay2))
+                                Behavior on color { ColorAnimation { duration: 200 } }
+                            }
+                            Text { 
+                                text: (SysData.temp || 0) + "°C"
+                                font.family: "SF Pro Text"
+                                font.pixelSize: 14 * screenRoot.sc
+                                font.weight: Font.Black
+                                color: SysData.temp >= 80 ? root.red : (SysData.temp >= 65 ? root.peach : root.text)
+                                Behavior on color { ColorAnimation { duration: 200 } }
+                            }
+                        }
+                        MouseArea { id: tempMouse; anchors.fill: parent; hoverEnabled: true; enabled: !screenRoot.isPlayingIntro }
                     }
 
                     // Battery Pill
@@ -767,13 +1194,25 @@ ShellRoot {
 
                             Text { 
                                 text: screenRoot.batStatus === "Charging" ? "󰂄" : (parseInt(screenRoot.batPct) < 20 ? "󰂃" : "󰁹")
-                                font.family: "Iosevka Nerd Font"
+                                font.family: "SF Pro "
                                 font.pixelSize: 20 * screenRoot.sc
                                 color: batLayoutRow.dynamicBatColor
                                 Behavior on color { ColorAnimation { duration: 200 } }
                             }
                             Text { 
-                                text: screenRoot.batPct + "%"
+                                text: {
+                                    let base = screenRoot.batPct + "%";
+                                    if (screenRoot.batTime !== "" && screenRoot.batTime !== "Full") {
+                                        if (screenRoot.batStatus === "Charging") {
+                                            return base + " (" + screenRoot.batTime + " to full)";
+                                        } else if (screenRoot.batStatus === "Discharging") {
+                                            return base + " (" + screenRoot.batTime + " left)";
+                                        } else {
+                                            return base + " (" + screenRoot.batTime + ")";
+                                        }
+                                    }
+                                    return base;
+                                }
                                 font.family: "SF Pro Text"
                                 font.pixelSize: 14 * screenRoot.sc
                                 font.weight: Font.Black
@@ -782,6 +1221,121 @@ ShellRoot {
                             }
                         }
                         MouseArea { id: batMouse; anchors.fill: parent; hoverEnabled: true; enabled: !screenRoot.isPlayingIntro }
+                    }
+                }
+
+                // ---------------------------------------------------------
+                // 3B. BOTTOM-CENTER SYSTEM & CONNECTIVITY PILLS
+                // ---------------------------------------------------------
+                RowLayout {
+                    anchors.bottom: parent.bottom
+                    anchors.bottomMargin: 40 * screenRoot.sc
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    spacing: 12 * screenRoot.sc
+
+                    opacity: screenRoot.introState
+                    transform: Translate { y: (20 * screenRoot.sc) * (1.0 - screenRoot.introState) }
+
+                    // KB Layout Pill
+                    Rectangle {
+                        property bool isHovered: kbMouse.containsMouse
+                        Layout.preferredHeight: 48 * screenRoot.sc
+                        Layout.preferredWidth: kbLayoutRow.implicitWidth + (36 * screenRoot.sc)
+                        radius: height / 2 // Dynamic pill shape
+                        
+                        color: isHovered ? Qt.rgba(root.surface1.r, root.surface1.g, root.surface1.b, 0.6) : Qt.rgba(root.surface0.r, root.surface0.g, root.surface0.b, 0.4)
+                        border.color: isHovered ? root.mauve : Qt.rgba(root.text.r, root.text.g, root.text.b, 0.08)
+                        border.width: Math.max(1, 1 * screenRoot.sc)
+                        
+                        scale: isHovered ? 1.05 : 1.0
+                        Behavior on scale { NumberAnimation { duration: 250; easing.type: Easing.OutExpo } }
+                        Behavior on color { ColorAnimation { duration: 200 } }
+                        Behavior on border.color { ColorAnimation { duration: 200 } }
+
+                        RowLayout { 
+                            id: kbLayoutRow; anchors.centerIn: parent; spacing: 8 * screenRoot.sc
+                            Text { text: "󰌌"; font.family: "SF Pro "; font.pixelSize: 18 * screenRoot.sc; color: parent.parent.isHovered ? root.mauve : root.overlay2; Behavior on color { ColorAnimation { duration: 200 } } }
+                            Text { text: screenRoot.kbLayout; font.family: "SF Pro Text"; font.pixelSize: 14 * screenRoot.sc; font.weight: Font.Black; color: root.text }
+                        }
+                        MouseArea { id: kbMouse; anchors.fill: parent; hoverEnabled: true; enabled: !screenRoot.isPlayingIntro }
+                    }
+
+                    // Network Pill
+                    Rectangle {
+                        id: netPill
+                        property bool isHovered: netMouse.containsMouse
+                        Layout.preferredHeight: 48 * screenRoot.sc
+                        Layout.preferredWidth: netLayoutRow.implicitWidth + (36 * screenRoot.sc)
+                        radius: height / 2
+                        
+                        color: isHovered ? Qt.rgba(root.surface1.r, root.surface1.g, root.surface1.b, 0.6) : Qt.rgba(root.surface0.r, root.surface0.g, root.surface0.b, 0.4)
+                        border.color: isHovered ? root.blue : Qt.rgba(root.text.r, root.text.g, root.text.b, 0.08)
+                        border.width: Math.max(1, 1 * screenRoot.sc)
+
+                        scale: isHovered ? 1.05 : 1.0
+                        Behavior on scale { NumberAnimation { duration: 250; easing.type: Easing.OutExpo } }
+                        Behavior on color { ColorAnimation { duration: 200 } }
+                        Behavior on border.color { ColorAnimation { duration: 200 } }
+
+                        RowLayout { 
+                            id: netLayoutRow; anchors.centerIn: parent; spacing: 8 * screenRoot.sc
+                            Text { 
+                                text: screenRoot.ethStatus === "Connected" ? "󰈀" : (screenRoot.wifiIcon || "󰤮")
+                                font.family: "SF Pro "
+                                font.pixelSize: 18 * screenRoot.sc
+                                color: (screenRoot.ethStatus === "Connected" || screenRoot.wifiSsid !== "") ? root.blue : (netPill.isHovered ? root.blue : root.overlay2)
+                                Behavior on color { ColorAnimation { duration: 200 } }
+                            }
+                            Text { 
+                                text: screenRoot.ethStatus === "Connected" ? "Ethernet" : (screenRoot.wifiSsid !== "" ? screenRoot.wifiSsid : (screenRoot.wifiStatus === "enabled" ? "Disconnected" : "Offline"))
+                                font.family: "SF Pro Text"
+                                font.pixelSize: 14 * screenRoot.sc
+                                font.weight: Font.Black
+                                color: root.text
+                                elide: Text.ElideRight
+                                Layout.maximumWidth: 160 * screenRoot.sc
+                            }
+                        }
+                        MouseArea { id: netMouse; anchors.fill: parent; hoverEnabled: true; enabled: !screenRoot.isPlayingIntro }
+                    }
+
+                    // Bluetooth Pill
+                    Rectangle {
+                        id: btPill
+                        property bool isHovered: btMouse.containsMouse
+                        Layout.preferredHeight: 48 * screenRoot.sc
+                        Layout.preferredWidth: btLayoutRow.implicitWidth + (36 * screenRoot.sc)
+                        radius: height / 2
+                        
+                        color: isHovered ? Qt.rgba(root.surface1.r, root.surface1.g, root.surface1.b, 0.6) : Qt.rgba(root.surface0.r, root.surface0.g, root.surface0.b, 0.4)
+                        border.color: isHovered ? root.mauve : Qt.rgba(root.text.r, root.text.g, root.text.b, 0.08)
+                        border.width: Math.max(1, 1 * screenRoot.sc)
+
+                        scale: isHovered ? 1.05 : 1.0
+                        Behavior on scale { NumberAnimation { duration: 250; easing.type: Easing.OutExpo } }
+                        Behavior on color { ColorAnimation { duration: 200 } }
+                        Behavior on border.color { ColorAnimation { duration: 200 } }
+
+                        RowLayout { 
+                            id: btLayoutRow; anchors.centerIn: parent; spacing: 8 * screenRoot.sc
+                            Text { 
+                                text: screenRoot.btIcon || "󰂲"
+                                font.family: "SF Pro "
+                                font.pixelSize: 18 * screenRoot.sc
+                                color: (screenRoot.btDevice !== "" && screenRoot.btDevice !== "Disconnected" && screenRoot.btDevice !== "Off") ? root.mauve : (screenRoot.btStatus === "on" ? root.blue : (btPill.isHovered ? root.mauve : root.overlay2))
+                                Behavior on color { ColorAnimation { duration: 200 } }
+                            }
+                            Text { 
+                                text: (screenRoot.btDevice !== "" && screenRoot.btDevice !== "Disconnected" && screenRoot.btDevice !== "Off") ? screenRoot.btDevice : (screenRoot.btStatus === "on" ? "Bluetooth On" : "Bluetooth Off")
+                                font.family: "SF Pro Text"
+                                font.pixelSize: 14 * screenRoot.sc
+                                font.weight: Font.Black
+                                color: root.text
+                                elide: Text.ElideRight
+                                Layout.maximumWidth: 160 * screenRoot.sc
+                            }
+                        }
+                        MouseArea { id: btMouse; anchors.fill: parent; hoverEnabled: true; enabled: !screenRoot.isPlayingIntro }
                     }
 
                     // Weather Pill
@@ -804,7 +1358,7 @@ ShellRoot {
                             id: weatherLayoutRow; anchors.centerIn: parent; spacing: 8 * screenRoot.sc
                             Text { 
                                 text: screenRoot.weatherIcon
-                                font.family: "Iosevka Nerd Font"
+                                font.family: "SF Pro "
                                 font.pixelSize: 20 * screenRoot.sc
                                 color: parent.parent.isHovered ? root.blue : root.text
                                 Behavior on color { ColorAnimation { duration: 200 } }
@@ -1012,7 +1566,7 @@ ShellRoot {
                             
                             RowLayout {
                                 anchors.fill: parent; anchors.leftMargin: 16 * screenRoot.sc; anchors.rightMargin: 16 * screenRoot.sc; spacing: 0
-                                Text { text: "󰒲"; font.family: "Iosevka Nerd Font"; font.pixelSize: 18 * screenRoot.sc; color: ma2.containsMouse ? root.mauve : Qt.rgba(root.mauve.r, root.mauve.g, root.mauve.b, 0.6); Behavior on color { ColorAnimation { duration: 200 } } }
+                                Text { text: "󰒲"; font.family: "SF Pro "; font.pixelSize: 18 * screenRoot.sc; color: ma2.containsMouse ? root.mauve : Qt.rgba(root.mauve.r, root.mauve.g, root.mauve.b, 0.6); Behavior on color { ColorAnimation { duration: 200 } } }
                                 Item { Layout.fillWidth: true }
                                 Text { text: "Suspend"; font.family: "SF Pro Text"; font.pixelSize: 15 * screenRoot.sc; font.weight: Font.Medium; color: ma2.containsMouse ? root.mauve : Qt.rgba(root.mauve.r, root.mauve.g, root.mauve.b, 0.6); Behavior on color { ColorAnimation { duration: 200 } } }
                             }
@@ -1034,7 +1588,7 @@ ShellRoot {
                             
                             RowLayout {
                                 anchors.fill: parent; anchors.leftMargin: 16 * screenRoot.sc; anchors.rightMargin: 16 * screenRoot.sc; spacing: 0
-                                Text { text: ""; font.family: "Iosevka Nerd Font"; font.pixelSize: 18 * screenRoot.sc; color: maHibernate.containsMouse ? root.peach : Qt.rgba(root.peach.r, root.peach.g, root.peach.b, 0.6); Behavior on color { ColorAnimation { duration: 200 } } }
+                                Text { text: ""; font.family: "SF Pro "; font.pixelSize: 18 * screenRoot.sc; color: maHibernate.containsMouse ? root.peach : Qt.rgba(root.peach.r, root.peach.g, root.peach.b, 0.6); Behavior on color { ColorAnimation { duration: 200 } } }
                                 Item { Layout.fillWidth: true }
                                 Text { text: "Hibernate"; font.family: "SF Pro Text"; font.pixelSize: 15 * screenRoot.sc; font.weight: Font.Medium; color: maHibernate.containsMouse ? root.peach : Qt.rgba(root.peach.r, root.peach.g, root.peach.b, 0.6); Behavior on color { ColorAnimation { duration: 200 } } }
                             }
@@ -1056,7 +1610,7 @@ ShellRoot {
 
                           RowLayout {
                             anchors.fill: parent; anchors.leftMargin: 16 * screenRoot.sc; anchors.rightMargin: 16 * screenRoot.sc; spacing: 0
-                            Text { text: "󰜉"; font.family: "Iosevka Nerd Font"; font.pixelSize: 18 * screenRoot.sc; color: ma1.containsMouse ? root.blue : Qt.rgba(root.blue.r, root.blue.g, root.blue.b, 0.6); Behavior on color { ColorAnimation { duration: 200 } } }
+                            Text { text: "󰜉"; font.family: "SF Pro "; font.pixelSize: 18 * screenRoot.sc; color: ma1.containsMouse ? root.blue : Qt.rgba(root.blue.r, root.blue.g, root.blue.b, 0.6); Behavior on color { ColorAnimation { duration: 200 } } }
                             Item { Layout.fillWidth: true }
                             Text { text: "Reboot"; font.family: "SF Pro Text"; font.pixelSize: 15 * screenRoot.sc; font.weight: Font.Medium; color: ma1.containsMouse ? root.blue : Qt.rgba(root.blue.r, root.blue.g, root.blue.b, 0.6); Behavior on color { ColorAnimation { duration: 200 } } }
                           }
@@ -1078,7 +1632,7 @@ ShellRoot {
                             
                             RowLayout {
                                 anchors.fill: parent; anchors.leftMargin: 16 * screenRoot.sc; anchors.rightMargin: 16 * screenRoot.sc; spacing: 0
-                                Text { text: "󰐥"; font.family: "Iosevka Nerd Font"; font.pixelSize: 18 * screenRoot.sc; color: ma3.containsMouse ? root.red : Qt.rgba(root.red.r, root.red.g, root.red.b, 0.6); Behavior on color { ColorAnimation { duration: 200 } } }
+                                Text { text: "󰐥"; font.family: "SF Pro "; font.pixelSize: 18 * screenRoot.sc; color: ma3.containsMouse ? root.red : Qt.rgba(root.red.r, root.red.g, root.red.b, 0.6); Behavior on color { ColorAnimation { duration: 200 } } }
                                 Item { Layout.fillWidth: true }
                                 Text { text: "Power Off"; font.family: "SF Pro Text"; font.pixelSize: 15 * screenRoot.sc; font.weight: Font.Medium; color: ma3.containsMouse ? root.red : Qt.rgba(root.red.r, root.red.g, root.red.b, 0.6); Behavior on color { ColorAnimation { duration: 200 } } }
                             }
@@ -1121,7 +1675,7 @@ ShellRoot {
                     Text {
                         anchors.centerIn: parent
                         text: "󰐥"
-                        font.family: "Iosevka Nerd Font"
+                        font.family: "SF Pro "
                         font.pixelSize: 22 * screenRoot.sc
                         color: screenRoot.powerMenuOpen ? root.red : (powerBtnMa.containsMouse ? root.text : root.subtext0)
                         Behavior on color { ColorAnimation { duration: 200 } }
@@ -1205,7 +1759,7 @@ ShellRoot {
                             id: introIconUnlocked
                             anchors.centerIn: parent
                             text: "󰌿"
-                            font.family: "Iosevka Nerd Font"
+                            font.family: "SF Pro "
                             font.pixelSize: 64 * screenRoot.sc 
                             color: root.text
                             opacity: 1.0
@@ -1217,7 +1771,7 @@ ShellRoot {
                             id: introIconLocked
                             anchors.centerIn: parent
                             text: "󰌾"
-                            font.family: "Iosevka Nerd Font"
+                            font.family: "SF Pro "
                             font.pixelSize: 64 * screenRoot.sc 
                             color: root.text
                             opacity: 0.0
