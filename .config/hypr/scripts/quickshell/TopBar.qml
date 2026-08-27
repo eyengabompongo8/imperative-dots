@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls
+import QtQuick.Effects
 import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
@@ -95,7 +96,7 @@ Variants {
             readonly property bool isRightHidden: isWindowFullscreen && !isRightRevealed && !isRightWidgetOpen
 
             exclusionMode: isWindowFullscreen ? ExclusionMode.Ignore : ExclusionMode.Normal
-            exclusiveZone: isWindowFullscreen ? 0 : (barHeight + s(4))
+            exclusiveZone: isWindowFullscreen ? 0 : barHeight
             color: "transparent"
 
             mask: Region {
@@ -1302,20 +1303,60 @@ Variants {
                                     scale: mediaInfoMouse.containsMouse ? 1.02 : 1.0
                                     Behavior on scale { NumberAnimation { duration: 250; easing.type: Easing.OutExpo } }
 
-                                    Rectangle {
-                                        width: barWindow.s(28); height: barWindow.s(28); radius: barWindow.s(8); color: mocha.surface1
-                                        border.width: barWindow.musicData.status === "Playing" ? 1 : 0
-                                        border.color: mocha.mauve
-                                        clip: true
-                                        Image { 
-                                            anchors.fill: parent; 
-                                            source: barWindow.displayArtUrl || ""; 
-                                            fillMode: Image.PreserveAspectCrop 
-                                        }
-                                        
+                                    Item {
+                                        width: barWindow.s(28); height: barWindow.s(28)
+
+                                        // Base placeholder background
                                         Rectangle {
                                             anchors.fill: parent
-                                            color: Qt.rgba(mocha.mauve.r, mocha.mauve.g, mocha.mauve.b, 0.2)
+                                            radius: barWindow.s(8)
+                                            color: mocha.surface1
+                                        }
+
+                                        // Rounded Mask for art & tint
+                                        Rectangle {
+                                            id: mediaArtMask
+                                            anchors.fill: parent
+                                            radius: barWindow.s(8)
+                                            visible: false
+                                            layer.enabled: true
+                                        }
+
+                                        // Content Layer
+                                        Item {
+                                            id: mediaArtContent
+                                            anchors.fill: parent
+                                            visible: false
+                                            layer.enabled: true
+
+                                            Image { 
+                                                anchors.fill: parent
+                                                source: barWindow.displayArtUrl || ""
+                                                fillMode: Image.PreserveAspectCrop 
+                                            }
+                                            
+                                            Rectangle {
+                                                anchors.fill: parent
+                                                color: Qt.rgba(mocha.mauve.r, mocha.mauve.g, mocha.mauve.b, 0.2)
+                                            }
+                                        }
+
+                                        // Masked Effect
+                                        MultiEffect {
+                                            anchors.fill: parent
+                                            source: mediaArtContent
+                                            maskEnabled: true
+                                            maskSource: mediaArtMask
+                                            opacity: (barWindow.displayArtUrl && barWindow.displayArtUrl !== "") ? 1.0 : 0.0
+                                        }
+
+                                        // Border overlay with matching corner radius
+                                        Rectangle {
+                                            anchors.fill: parent
+                                            radius: barWindow.s(8)
+                                            color: "transparent"
+                                            border.width: barWindow.musicData.status === "Playing" ? 1 : 0
+                                            border.color: mocha.mauve
                                         }
                                     }
                                     Column {
