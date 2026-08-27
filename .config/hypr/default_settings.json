@@ -34,6 +34,13 @@
       "dispatcher": "fullscreen"
     },
     {
+      "type": "bind",
+      "mods": "$mainMod",
+      "key": "M",
+      "dispatcher": "fullscreen",
+      "command": "1"
+    },
+    {
       "type": "binde",
       "mods": "$mainMod SHIFT",
       "key": "H",

@@ -13,7 +13,7 @@ hl.config({
         border_size = 2,
         gaps_in = 4,
         gaps_out = 4,
-        float_gaps = 6,
+        float_gaps = { top = 4, right = 0, bottom = 0, left = 0 },
         resize_on_border = true,
         extend_border_grab_area = 30,
         col = {
