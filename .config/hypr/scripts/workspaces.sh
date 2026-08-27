@@ -53,27 +53,23 @@ print_workspaces() {
     if [ -z "$spaces" ] || [ -z "$active" ]; then return; fi
 
     # Generate the JSON and write it atomically to prevent UI flickering
-    echo "$spaces" | jq --unbuffered --argjson a "$active" --arg end "$SEQ_END" -c '
-        # Create a map of workspace ID -> workspace data for easy lookup
-        (map( { (.id|tostring): . } ) | add) as $s
-        |
-        # Iterate from 1 to SEQ_END
-        [range(1; ($end|tonumber) + 1)] | map(
-            . as $i |
-            # Determine state: active -> occupied -> empty
-            (if $i == $a then "active"
-             elif ($s[$i|tostring] != null and $s[$i|tostring].windows > 0) then "occupied"
-             else "empty" end) as $state |
-
-            # Get window title for tooltip (if exists)
-            (if $s[$i|tostring] != null then $s[$i|tostring].lastwindowtitle else "Empty" end) as $win |
-
-            {
-                id: $i,
-                state: $state,
-                tooltip: $win
-            }
-        )
+    echo "$spaces" | jq --unbuffered --argjson a "$active" -c '
+        # 1. Filter out special workspaces (id < 1) and keep only occupied
+        [ .[] | select(.id > 0 and .windows > 0) ] as $occupied |
+        # 2. Ensure the active workspace is included even if it currently has 0 windows
+        (if ($a > 0 and ($occupied | any(.id == $a) | not)) then
+            $occupied + [{ id: $a, windows: 0, lastwindowtitle: "Empty" }]
+         else
+            $occupied
+         end)
+        # 3. Sort numerically by workspace ID
+        | sort_by(.id)
+        # 4. Map into clean object schema for Quickshell
+        | map({
+            id: .id,
+            state: (if .id == $a then "active" else "occupied" end),
+            tooltip: (if .id == $a and .windows == 0 then "Empty" else (.lastwindowtitle // "Empty") end)
+        })
     ' > "$QS_RUN_WORKSPACES/workspaces.tmp"
     
     mv "$QS_RUN_WORKSPACES/workspaces.tmp" "$QS_RUN_WORKSPACES/workspaces.json"
