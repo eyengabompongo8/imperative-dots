@@ -71,7 +71,37 @@ Variants {
             margins { top: 0; bottom: 0; left: 0; right: 0 }
             
             property var hyprMon: Hyprland.monitorFor(barWindow.screen)
-            property bool isWindowFullscreen: (hyprMon && hyprMon.activeWorkspace) ? hyprMon.activeWorkspace.hasFullscreen : false
+            property bool isWindowFullscreen: {
+                if (!hyprMon || !hyprMon.activeWorkspace || !hyprMon.activeWorkspace.hasFullscreen) {
+                    return false;
+                }
+                let tls = hyprMon.activeWorkspace.toplevels ? hyprMon.activeWorkspace.toplevels.values : [];
+                if (!tls || tls.length === 0) {
+                    if (typeof Hyprland !== "undefined" && Hyprland.toplevels) {
+                        let all = Hyprland.toplevels.values || [];
+                        for (let i = 0; i < all.length; i++) {
+                            let t = all[i];
+                            if (t && t.workspace && t.workspace.id === hyprMon.activeWorkspace.id) {
+                                let obj = t.lastIpcObject;
+                                if ((obj && (obj.fullscreen === 2 || obj.fullscreenMode === 2)) || (t.wayland && t.wayland.fullscreen)) {
+                                    return true;
+                                }
+                            }
+                        }
+                    }
+                    return false;
+                }
+                for (let i = 0; i < tls.length; i++) {
+                    let t = tls[i];
+                    if (t) {
+                        let obj = t.lastIpcObject;
+                        if ((obj && (obj.fullscreen === 2 || obj.fullscreenMode === 2)) || (t.wayland && t.wayland.fullscreen)) {
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            }
 
             onIsWindowFullscreenChanged: {
                 if (!isWindowFullscreen) {
@@ -489,25 +519,29 @@ Variants {
                         if (txt !== "") {
                             try { 
                                 let newData = JSON.parse(txt);
+                                let newIds = newData.map(function(d) { return d.id.toString(); });
                                 
-                                while (workspacesModel.count < newData.length) {
-                                    workspacesModel.append({ "wsId": "", "wsState": "" });
-                                }
-                                
-                                while (workspacesModel.count > newData.length) {
-                                    workspacesModel.remove(workspacesModel.count - 1);
-                                }
-                                
-                                let newActive = -1;
-
-                                for (let i = 0; i < newData.length; i++) {
-                                    if (newData[i].state === "active") newActive = i;
-
-                                    if (workspacesModel.get(i).wsState !== newData[i].state) {
-                                        workspacesModel.setProperty(i, "wsState", newData[i].state);
+                                // 1. Remove workspaces no longer present
+                                for (let i = workspacesModel.count - 1; i >= 0; i--) {
+                                    let currentId = workspacesModel.get(i).wsId;
+                                    if (newIds.indexOf(currentId) === -1) {
+                                        workspacesModel.remove(i);
                                     }
-                                    if (workspacesModel.get(i).wsId !== newData[i].id.toString()) {
-                                        workspacesModel.setProperty(i, "wsId", newData[i].id.toString());
+                                }
+                                
+                                // 2. Insert missing workspaces at correct sorted positions and update states
+                                let newActive = -1;
+                                for (let i = 0; i < newData.length; i++) {
+                                    let item = newData[i];
+                                    let idStr = item.id.toString();
+                                    if (item.state === "active") newActive = i;
+
+                                    if (i >= workspacesModel.count || workspacesModel.get(i).wsId !== idStr) {
+                                        workspacesModel.insert(i, { "wsId": idStr, "wsState": item.state });
+                                    } else {
+                                        if (workspacesModel.get(i).wsState !== item.state) {
+                                            workspacesModel.setProperty(i, "wsState", item.state);
+                                        }
                                     }
                                 }
 
