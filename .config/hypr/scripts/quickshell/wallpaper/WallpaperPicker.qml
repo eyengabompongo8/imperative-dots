@@ -249,12 +249,17 @@ Item {
                 echo "" >> ${logFile}
                 echo "[$(date +'%H:%M:%S.%3N')] APPLYING LOCAL VIDEO: ${escOriginal} TO ${escOutputs}" >> ${logFile}
                 
+                # Previous high-quality config (high GPU/VRAM):
+                # mpvpaper -o 'loop --no-audio --hwdec=auto --profile=high-quality --video-sync=display-resample --interpolation --tscale=oversample'
+                # Fast profile config:
+                # mpvpaper -o 'loop --no-audio --hwdec=auto-safe --profile=fast --vo=gpu'
+                
                 if [ "${escOutputs}" = "all" ]; then
-                    mpvpaper -o 'loop --no-audio --hwdec=auto --profile=high-quality --video-sync=display-resample --interpolation --tscale=oversample' '*' "${escOriginal}" >> ${logFile} 2>&1 &
+                    mpvpaper -p -o 'loop --no-audio --hwdec=nvdec --hwdec-extra-frames=1 --vo=gpu --gpu-dumb-mode=yes --scale=bilinear --cscale=bilinear --dscale=bilinear --dither=no --demuxer-max-bytes=10M --demuxer-max-back-bytes=0 --demuxer-readahead-secs=1 --cache=no' '*' "${escOriginal}" >> ${logFile} 2>&1 &
                 else
                     IFS=',' read -ra MON_ARR <<< "${escOutputs}"
                     for mon in "\${MON_ARR[@]}"; do
-                        mpvpaper -o 'loop --no-audio --hwdec=auto --profile=high-quality --video-sync=display-resample --interpolation --tscale=oversample' "\$mon" "${escOriginal}" >> ${logFile} 2>&1 &
+                        mpvpaper -p -o 'loop --no-audio --hwdec=nvdec --hwdec-extra-frames=1 --vo=gpu --gpu-dumb-mode=yes --scale=bilinear --cscale=bilinear --dscale=bilinear --dither=no --demuxer-max-bytes=10M --demuxer-max-back-bytes=0 --demuxer-readahead-secs=1 --cache=no' "\$mon" "${escOriginal}" >> ${logFile} 2>&1 &
                     done
                 fi
             `;
