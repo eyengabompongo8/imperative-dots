@@ -153,7 +153,7 @@ ARCH_PKGS=(
   "bluez" "bluez-utils" "libnotify" "networkmanager" "lm_sensors" "bc"
   "pipewire" "wireplumber" "pipewire-pulse" "pipewire-alsa" "pipewire-jack" "libpulse" "python"
   "imagemagick" "wget" "file" "git" "psmisc"
-  "matugen-bin" "ffmpeg" "quickshell-git" "unzip" "python-websockets" "qt6-websockets"
+  "matugen-bin" "ffmpeg" "quickshell" "unzip" "python-websockets" "qt6-websockets"
   "grim" "playerctl" "satty" "yq" "slurp" "mpvpaper"
   "wmctrl" "power-profiles-daemon" "easyeffects" "swayosd-git" "nautilus" "lsp-plugins" "hyprpolkitagent"
   "qt5-wayland" "qt5-quickcontrols" "qt5-quickcontrols2" "qt5-graphicaleffects" "qt6-wayland"
