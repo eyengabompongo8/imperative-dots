@@ -981,7 +981,7 @@ Variants {
                                     anchors.centerIn: parent
                                     text: "󰋗"
                                     font.family: "SF Pro "; font.pixelSize: barWindow.s(20)
-                                    color: parent.isHovered ? mocha.teal : mocha.text
+                                    color: mocha.text
                                     Behavior on color { ColorAnimation { duration: 200 } }
                                     scale: parent.isHovered ? 1.15 : 1.0
                                     Behavior on scale { NumberAnimation { duration: 250; easing.type: Easing.OutExpo } }
@@ -1006,7 +1006,7 @@ Variants {
                                     anchors.centerIn: parent
                                     text: "󰍉"
                                     font.family: "SF Pro "; font.pixelSize: barWindow.s(20)
-                                    color: parent.isHovered ? mocha.blue : mocha.text
+                                    color: mocha.text
                                     Behavior on color { ColorAnimation { duration: 200 } }
                                     scale: parent.isHovered ? 1.15 : 1.0
                                     Behavior on scale { NumberAnimation { duration: 250; easing.type: Easing.OutExpo } }
@@ -1031,7 +1031,7 @@ Variants {
                                     anchors.centerIn: parent
                                     text: ""
                                     font.family: "SF Pro "; font.pixelSize: barWindow.s(20)
-                                    color: parent.isHovered ? mocha.blue : mocha.text
+                                    color: mocha.text
                                     Behavior on color { ColorAnimation { duration: 200 } }
                                     scale: parent.isHovered ? 1.15 : 1.0
                                     Behavior on scale { NumberAnimation { duration: 250; easing.type: Easing.OutExpo } }
@@ -1047,7 +1047,7 @@ Variants {
                             Rectangle {
                                 id: updateButton
                                 property bool isHovered: updateMouse.containsMouse
-                                color: isHovered ? Qt.rgba(mocha.green.r, mocha.green.g, mocha.green.b, 0.15) : "transparent"
+                                color: isHovered ? Qt.rgba(mocha.blue.r, mocha.blue.g, mocha.blue.b, 0.15) : "transparent"
                                 radius: barWindow.s(10)
                                 
                                 width: barWindow.isUpdateVisible ? barWindow.s(32) : 0
@@ -1066,7 +1066,7 @@ Variants {
                                     width: parent.width
                                     height: parent.height
                                     radius: parent.radius
-                                    color: mocha.green
+                                    color: mocha.mauve
                                     z: -1
                                     
                                     SequentialAnimation on scale {
@@ -1085,7 +1085,7 @@ Variants {
                                     anchors.centerIn: parent
                                     text: "󰚰"
                                     font.family: "SF Pro "; font.pixelSize: barWindow.s(20)
-                                    color: parent.isHovered ? mocha.text : mocha.green
+                                    color: parent.isHovered ? mocha.text : mocha.mauve
                                     Behavior on color { ColorAnimation { duration: 200 } }
                                     
                                     rotation: parent.isHovered ? 360 : 0
@@ -1371,7 +1371,7 @@ Variants {
                                             
                                             Rectangle {
                                                 anchors.fill: parent
-                                                color: Qt.rgba(mocha.mauve.r, mocha.mauve.g, mocha.mauve.b, 0.2)
+                                                color: Qt.rgba(mocha.blue.r, mocha.blue.g, mocha.blue.b, 0.2)
                                             }
                                         }
 
@@ -1390,7 +1390,7 @@ Variants {
                                             radius: barWindow.s(8)
                                             color: "transparent"
                                             border.width: barWindow.musicData.status === "Playing" ? 1 : 0
-                                            border.color: mocha.mauve
+                                            border.color: mocha.blue
                                         }
                                     }
                                     Column {
@@ -1413,7 +1413,7 @@ Variants {
                                             font.family: "SF Pro Text"; 
                                             font.weight: Font.Black; 
                                             font.pixelSize: barWindow.s(9); 
-                                            color: mocha.subtext0;
+                                            color: mocha.text;
                                             width: parent.width
                                             elide: Text.ElideRight; 
                                         }
@@ -1429,7 +1429,7 @@ Variants {
                                     anchors.verticalCenter: parent.verticalCenter
                                     Text { 
                                         anchors.centerIn: parent; text: "󰒮"; font.family: "SF Pro "; font.pixelSize: barWindow.s(22); 
-                                        color: prevMouse.containsMouse ? mocha.text : mocha.overlay2; 
+                                        color: mocha.text; 
                                         Behavior on color { ColorAnimation { duration: 150 } }
                                         scale: prevMouse.containsMouse ? 1.1 : 1.0
                                         Behavior on scale { NumberAnimation { duration: 200; easing.type: Easing.OutBack } }
@@ -1441,7 +1441,7 @@ Variants {
                                     anchors.verticalCenter: parent.verticalCenter
                                     Text { 
                                         anchors.centerIn: parent; text: barWindow.musicData.status === "Playing" ? "󰏤" : "󰐊"; font.family: "SF Pro "; font.pixelSize: barWindow.s(26); 
-                                        color: playMouse.containsMouse ? mocha.green : mocha.text; 
+                                        color: mocha.text; 
                                         Behavior on color { ColorAnimation { duration: 150 } }
                                         scale: playMouse.containsMouse ? 1.15 : 1.0
                                         Behavior on scale { NumberAnimation { duration: 200; easing.type: Easing.OutBack } }
@@ -1453,7 +1453,7 @@ Variants {
                                     anchors.verticalCenter: parent.verticalCenter
                                     Text { 
                                         anchors.centerIn: parent; text: "󰒭"; font.family: "SF Pro "; font.pixelSize: barWindow.s(22); 
-                                        color: nextMouse.containsMouse ? mocha.text : mocha.overlay2; 
+                                        color: mocha.text; 
                                         Behavior on color { ColorAnimation { duration: 150 } }
                                         scale: nextMouse.containsMouse ? 1.1 : 1.0
                                         Behavior on scale { NumberAnimation { duration: 200; easing.type: Easing.OutBack } }
@@ -1725,7 +1725,7 @@ Variants {
                                 anchors.left: parent.left
                                 anchors.leftMargin: barWindow.s(12)
                                 spacing: barWindow.s(8)
-                                Text { anchors.verticalCenter: parent.verticalCenter; text: "󰌌"; font.family: "SF Pro "; font.pixelSize: barWindow.s(16); color: parent.parent.isHovered ? mocha.text : mocha.overlay2 }
+                                Text { anchors.verticalCenter: parent.verticalCenter; text: "󰌌"; font.family: "SF Pro "; font.pixelSize: barWindow.s(16); color: mocha.text }
                                 Text { anchors.verticalCenter: parent.verticalCenter; text: barWindow.kbLayout; font.family: "SF Pro Text"; font.pixelSize: barWindow.s(13); font.weight: Font.Black; color: mocha.text }
                             }
                             MouseArea { id: kbMouse; anchors.fill: parent; hoverEnabled: true; onClicked: Quickshell.execDetached(["hyprctl", "switchxkblayout", "main", "next"]) }
@@ -1745,8 +1745,8 @@ Variants {
                                 Behavior on opacity { NumberAnimation { duration: 300 } }
                                 gradient: Gradient {
                                     orientation: Gradient.Horizontal
-                                    GradientStop { position: 0.0; color: mocha.blue }
-                                    GradientStop { position: 1.0; color: Qt.lighter(mocha.blue, 1.3) }
+                                    GradientStop { position: 0.0; color: mocha.mauve }
+                                    GradientStop { position: 1.0; color: Qt.lighter(mocha.mauve, 1.3) }
                                 }
                             }
 
@@ -1774,7 +1774,7 @@ Variants {
                                     anchors.verticalCenter: parent.verticalCenter; 
                                     text: barWindow.showEthernet ? "󰈀" : barWindow.wifiIcon;
                                     font.family: "SF Pro "; font.pixelSize: barWindow.s(16);
-                                    color: barWindow.showEthernet ? (barWindow.ethStatus === "Connected" ? mocha.crust : mocha.subtext0) : (barWindow.isWifiOn ? mocha.crust : mocha.subtext0)
+                                    color: barWindow.showEthernet ? (barWindow.ethStatus === "Connected" ? mocha.crust : mocha.text) : (barWindow.isWifiOn ? mocha.crust : mocha.text)
                                 }
                                 Text { 
                                     id: wifiText
@@ -1829,7 +1829,7 @@ Variants {
                                 anchors.left: parent.left
                                 anchors.leftMargin: barWindow.s(12)
                                 spacing: barWindow.s(8)
-                                Text { anchors.verticalCenter: parent.verticalCenter; text: barWindow.btIcon; font.family: "SF Pro "; font.pixelSize: barWindow.s(16); color: barWindow.isBtOn ? mocha.crust : mocha.subtext0 }
+                                Text { anchors.verticalCenter: parent.verticalCenter; text: barWindow.btIcon; font.family: "SF Pro "; font.pixelSize: barWindow.s(16); color: barWindow.isBtOn ? mocha.crust : mocha.text }
                                 Text { 
                                     id: btText
                                     anchors.verticalCenter: parent.verticalCenter
@@ -1857,8 +1857,8 @@ Variants {
                                 Behavior on opacity { NumberAnimation { duration: 300 } }
                                 gradient: Gradient {
                                     orientation: Gradient.Horizontal
-                                    GradientStop { position: 0.0; color: mocha.peach }
-                                    GradientStop { position: 1.0; color: Qt.lighter(mocha.peach, 1.3) }
+                                    GradientStop { position: 0.0; color: mocha.mauve }
+                                    GradientStop { position: 1.0; color: Qt.lighter(mocha.mauve, 1.3) }
                                 }
                             }
                             
@@ -1885,7 +1885,7 @@ Variants {
                                 Text { 
                                     anchors.verticalCenter: parent.verticalCenter
                                     text: barWindow.volIcon; font.family: "SF Pro "; font.pixelSize: barWindow.s(16); 
-                                    color: barWindow.isSoundActive ? mocha.crust : mocha.subtext0 
+                                    color: barWindow.isSoundActive ? mocha.crust : mocha.text 
                                 }
                                 Text { 
                                     anchors.verticalCenter: parent.verticalCenter
@@ -1925,7 +1925,7 @@ Variants {
                                     anchors.verticalCenter: parent.verticalCenter
                                     text: "󰍹"
                                     font.family: "SF Pro "; font.pixelSize: barWindow.s(16); 
-                                    color: monMouse.containsMouse ? mocha.text : mocha.overlay2
+                                    color: mocha.text
                                     Behavior on color { ColorAnimation { duration: 200 } }
                                 }
                             }
@@ -1982,7 +1982,7 @@ Variants {
                                         anchors.verticalCenter: parent.verticalCenter
                                         text: "󰂚"
                                         font.family: "SF Pro "; font.pixelSize: barWindow.s(16);
-                                        color: notifMouse.containsMouse ? mocha.text : (notifPillRect.hasUnread ? mocha.mauve : mocha.overlay2)
+                                        color: mocha.text
                                         Behavior on color { ColorAnimation { duration: 200 } }
                                     }
                                     Text { 
@@ -1990,7 +1990,7 @@ Variants {
                                         visible: notifPillItem.unreadNotifCount > 0
                                         text: notifPillItem.unreadNotifCount
                                         font.family: "SF Pro Text"; font.pixelSize: barWindow.s(12); font.weight: Font.Bold
-                                        color: notifMouse.containsMouse ? mocha.text : mocha.mauve
+                                        color: mocha.text
                                         Behavior on color { ColorAnimation { duration: 200 } }
                                     }
                                 }
@@ -2012,8 +2012,8 @@ Variants {
                                 Behavior on opacity { NumberAnimation { duration: 300 } }
                                 gradient: Gradient {
                                     orientation: Gradient.Horizontal
-                                    GradientStop { position: 0.0; color: barWindow.isDesktop ? mocha.red : barWindow.batDynamicColor; Behavior on color { ColorAnimation { duration: 300 } } }
-                                    GradientStop { position: 1.0; color: barWindow.isDesktop ? Qt.lighter(mocha.red, 1.3) : Qt.lighter(barWindow.batDynamicColor, 1.3); Behavior on color { ColorAnimation { duration: 300 } } }
+                                    GradientStop { position: 0.0; color: mocha.mauve; Behavior on color { ColorAnimation { duration: 300 } } }
+                                    GradientStop { position: 1.0; color: Qt.lighter(mocha.mauve, 1.3); Behavior on color { ColorAnimation { duration: 300 } } }
                                 }
                             }
                             
@@ -2085,7 +2085,7 @@ Variants {
                                     text: "" 
                                     font.family: "SF Pro "
                                     font.pixelSize: barWindow.s(16)
-                                    color: hwMouse.containsMouse ? mocha.text : (barWindow.isHwTurboOn ? mocha.peach : mocha.overlay2)
+                                    color: mocha.text
                                     Behavior on color { ColorAnimation { duration: 200 } }
                                 }
                             }

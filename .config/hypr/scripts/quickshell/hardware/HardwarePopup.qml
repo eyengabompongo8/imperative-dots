@@ -336,7 +336,7 @@ Item {
                 x: (parent.width / 2 - width / 2) + Math.cos(window.globalOrbitAngle * 2) * window.s(80)
                 y: (parent.height / 2 - height / 2) + Math.sin(window.globalOrbitAngle * 2) * window.s(60)
                 opacity: 0.05
-                color: window.peach
+                color: window.mauve
             }
             Rectangle {
                 width: parent.width * 0.9; height: width; radius: width / 2
@@ -367,8 +367,8 @@ Item {
                         Rectangle {
                             width: window.s(36); height: window.s(36)
                             radius: window.s(10)
-                            color: Qt.rgba(window.peach.r, window.peach.g, window.peach.b, 0.15)
-                            border.color: Qt.rgba(window.peach.r, window.peach.g, window.peach.b, 0.3)
+                            color: Qt.rgba(window.mauve.r, window.mauve.g, window.mauve.b, 0.15)
+                            border.color: Qt.rgba(window.mauve.r, window.mauve.g, window.mauve.b, 0.3)
                             border.width: 1
 
                             Text {
@@ -376,7 +376,7 @@ Item {
                                 text: "" // Outline Crossed Tools (\uEB6D)
                                 font.family: "SF Pro "
                                 font.pixelSize: window.s(18)
-                                color: window.peach
+                                color: window.mauve
                             }
                         }
 
@@ -462,7 +462,7 @@ Item {
                                 text: "󰂄"
                                 font.family: "SF Pro "
                                 font.pixelSize: window.s(18)
-                                color: window.teal
+                                color: window.mauve
                             }
 
                             ColumnLayout {
@@ -480,7 +480,7 @@ Item {
                                     text: "Current: " + window.currentBatteryThreshold + "%"
                                     font.family: "SF Pro Text"
                                     font.pixelSize: window.s(11)
-                                    color: window.teal
+                                    color: window.mauve
                                 }
                             }
 
@@ -521,7 +521,7 @@ Item {
                                 width: window.s(66); height: window.s(28)
                                 radius: window.s(6)
                                 color: window.mantle
-                                border.color: batteryInput.activeFocus ? window.peach : window.surface1
+                                border.color: batteryInput.activeFocus ? window.mauve : window.surface1
                                 border.width: 1
                                 Behavior on border.color { ColorAnimation { duration: 200 } }
 
@@ -547,11 +547,11 @@ Item {
                                         }
 
                                         onTextEdited: {
-                                            window.userModifiedBat = true;
-                                            let val = parseInt(text);
-                                            if (!isNaN(val) && val >= 50 && val <= 100) {
-                                                window.selectedBatteryThreshold = val;
-                                            }
+                                             window.userModifiedBat = true;
+                                             let val = parseInt(text);
+                                             if (!isNaN(val) && val >= 50 && val <= 100) {
+                                                 window.selectedBatteryThreshold = val;
+                                             }
                                         }
 
                                         onEditingFinished: {
@@ -633,7 +633,7 @@ Item {
                                 text: "󰓅"
                                 font.family: "SF Pro "
                                 font.pixelSize: window.s(18)
-                                color: window.selectedTurboEnabled ? window.peach : window.subtext0
+                                color: window.selectedTurboEnabled ? window.mauve : window.subtext0
                                 Behavior on color { ColorAnimation { duration: 250 } }
                             }
 
@@ -652,7 +652,7 @@ Item {
                                     text: window.selectedTurboEnabled ? "Enabled" : "Disabled"
                                     font.family: "SF Pro Text"
                                     font.pixelSize: window.s(11)
-                                    color: window.selectedTurboEnabled ? window.peach : window.subtext0
+                                    color: window.selectedTurboEnabled ? window.mauve : window.subtext0
                                     Behavior on color { ColorAnimation { duration: 250 } }
                                 }
                             }
@@ -664,7 +664,7 @@ Item {
                                 id: turboSwitch
                                 width: window.s(44); height: window.s(24)
                                 radius: height / 2
-                                color: window.selectedTurboEnabled ? window.peach : window.surface2
+                                color: window.selectedTurboEnabled ? window.mauve : window.surface2
                                 Behavior on color { ColorAnimation { duration: 200 } }
 
                                 Rectangle {
@@ -713,7 +713,7 @@ Item {
                                 height: window.s(34)
                                 radius: window.s(8)
                                 color: window.mantle
-                                border.color: window.showStatus && !window.isStatusSuccess ? window.red : (passInput.activeFocus ? window.peach : window.surface1)
+                                border.color: window.showStatus && !window.isStatusSuccess ? window.red : (passInput.activeFocus ? window.mauve : window.surface1)
                                 border.width: 1
                                 Behavior on border.color { ColorAnimation { duration: 200 } }
 
@@ -727,7 +727,7 @@ Item {
                                         text: window.showStatus ? (window.isStatusSuccess ? "✓" : "✗") : "󰌾"
                                         font.family: "SF Pro "
                                         font.pixelSize: window.s(13)
-                                        color: window.showStatus ? (window.isStatusSuccess ? window.green : window.red) : (passInput.activeFocus ? window.peach : window.overlay1)
+                                        color: window.showStatus ? (window.isStatusSuccess ? window.green : window.red) : (passInput.activeFocus ? window.mauve : window.overlay1)
                                         Behavior on color { ColorAnimation { duration: 200 } }
                                     }
 
@@ -766,7 +766,7 @@ Item {
                                             text: window.showPassword ? "󰈈" : "󰈉"
                                             font.family: "SF Pro "
                                             font.pixelSize: window.s(13)
-                                            color: window.showPassword ? window.peach : window.overlay1
+                                            color: window.showPassword ? window.mauve : window.overlay1
                                         }
 
                                         MouseArea {
@@ -784,7 +784,7 @@ Item {
                                 Layout.preferredWidth: Math.max(window.s(90), applyRow.implicitWidth + window.s(20))
                                 Layout.preferredHeight: window.s(34)
                                 radius: window.s(8)
-                                color: window.showStatus ? (window.isStatusSuccess ? window.green : window.red) : (applyMouse.containsMouse ? Qt.lighter(window.peach, 1.15) : window.peach)
+                                color: window.showStatus ? (window.isStatusSuccess ? window.green : window.red) : (applyMouse.containsMouse ? Qt.lighter(window.mauve, 1.15) : window.mauve)
                                 opacity: window.isApplying ? 0.7 : 1.0
                                 Behavior on color { ColorAnimation { duration: 200 } }
 
