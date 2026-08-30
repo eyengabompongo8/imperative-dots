@@ -187,11 +187,11 @@ Item {
 
     readonly property string scriptsDir: Quickshell.env("HOME") + "/.config/hypr/scripts/quickshell/network"
     
-    readonly property color sharedAccent: Qt.lighter(window.sapphire, 1.15) 
+    readonly property color sharedAccent: window.mauve
     readonly property color btAccent: window.mauve
 
     property string activeMode: "bt"
-    readonly property color activeColor: activeMode === "bt" ? window.btAccent : window.sharedAccent
+    readonly property color activeColor: window.mauve
     readonly property color activeGradientSecondary: Qt.darker(window.activeColor, 1.25)
 
     property var busyTasks: ({})
