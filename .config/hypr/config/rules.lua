@@ -36,3 +36,14 @@ hl.workspace_rule({ workspace = "s[true]", gaps_out = { top = 12, right = 4, bot
 hl.window_rule({ match = { float = false, workspace = "w[tv1]s[false]" }, border_size = 0 })
 hl.window_rule({ match = { float = false, workspace = "f[1]s[false]" }, border_size = 0 })
 
+-- Hide xwaylandvideobridge helper windows
+hl.window_rule({
+  match = { class = "^(xwaylandvideobridge)$" },
+  opacity = "0.0 override",
+  no_anim = true,
+  no_initial_focus = true,
+  max_size = { 1, 1 },
+  no_blur = true,
+  no_focus = true,
+  workspace = "special:silent"
+})
