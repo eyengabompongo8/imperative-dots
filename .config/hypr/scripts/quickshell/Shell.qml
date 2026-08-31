@@ -13,5 +13,6 @@ ShellRoot {
     TopBar {}
     Floating {}
     ScreenCorners {}
+    Osd {}
 }
 
