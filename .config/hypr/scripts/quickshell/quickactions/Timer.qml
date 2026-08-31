@@ -81,10 +81,57 @@ Item {
     property var swLapData: []
 
     // =========================================================
-    // --- NOTIFICATIONS
+    // --- NOTIFICATIONS & SOUNDS
     // =========================================================
     Process {
+        id: soundProc
+    }
+
+    function playSound(filename, maxDurationSec) {
+        stopSound();
+        try {
+            let rawUrl = Qt.resolvedUrl("sounds/" + filename).toString();
+            let cleanPath = rawUrl;
+            if (cleanPath.indexOf("file://") === 0) cleanPath = cleanPath.substring(7);
+            
+            let cmd;
+            if (maxDurationSec && maxDurationSec > 0) {
+                // Loop the sound up to maxDurationSec (e.g. 30 seconds)
+                cmd = "timeout " + maxDurationSec + "s bash -c 'while true; do pw-play \"" + cleanPath + "\" 2>/dev/null || paplay \"" + cleanPath + "\" 2>/dev/null || sleep 1; done'";
+            } else {
+                // Play once
+                cmd = "pw-play '" + cleanPath + "' 2>/dev/null || paplay '" + cleanPath + "' 2>/dev/null || canberra-gtk-play -f '" + cleanPath + "' 2>/dev/null";
+            }
+            soundProc.command = ["sh", "-c", cmd];
+            soundProc.running = true;
+        } catch(e) {}
+    }
+
+    function stopSound() {
+        if (soundProc.running) {
+            soundProc.running = false;
+        }
+        Quickshell.execDetached(["sh", "-c", "killall -9 pw-play paplay 2>/dev/null || true"]);
+    }
+
+    function resetTimer() {
+        stopSound();
+        stateCache.timerTargetEpoch = 0;
+        stateCache.timerRemainingMs = stateCache.timerPresetMs;
+    }
+
+    Process {
         id: notifyProc
+        stdout: StdioCollector {
+            onStreamFinished: {
+                let action = this.text.trim();
+                if (action === "stop" || action === "default") {
+                    root.stopSound();
+                } else if (action === "reset") {
+                    root.resetTimer();
+                }
+            }
+        }
     }
 
     function notify(title, message, icon) {
@@ -93,10 +140,26 @@ Item {
         notifyProc.running = true;
     }
 
+    function notifyTimerFinished(presetMs) {
+        notifyProc.running = false;
+        notifyProc.command = [
+            "notify-send",
+            "-a", "Quickshell Timer",
+            "-i", "preferences-system-time",
+            "-A", "default=Stop Sound",
+            "-A", "stop=Stop Sound",
+            "-A", "reset=Reset Timer",
+            "Timer Finished",
+            "Your timer for " + root.formatTime(presetMs, false) + " has completed."
+        ];
+        notifyProc.running = true;
+    }
+
     // =========================================================
     // --- GLOBAL SHORTCUTS
     // =========================================================
     function toggleActiveTabState() {
+        root.stopSound();
         if (!root.isActiveTab) return;
         let now = Date.now();
         
@@ -174,7 +237,7 @@ Item {
 
         Rectangle {
             anchors.fill: parent
-            color: root.cMantle
+            color: "transparent"
             radius: root.s(10)
             z: -1
         }
@@ -195,7 +258,8 @@ Item {
                     if (rem <= 0) {
                         stateCache.timerRemainingMs = 0;
                         stateCache.timerTargetEpoch = 0;
-                        root.notify("Timer Finished", "Your timer for " + root.formatTime(stateCache.timerPresetMs, false) + " has completed.", "preferences-system-time");
+                        root.playSound("timer_end.wav", 30);
+                        root.notifyTimerFinished(stateCache.timerPresetMs);
                     } else {
                         stateCache.timerRemainingMs = rem;
                     }
@@ -217,8 +281,10 @@ Item {
                         
                         let phase = stateCache.pomoState; // Capture phase before it resets
                         if (phase === 0) {
+                            root.playSound("focus_end.wav");
                             root.notify("Focus Complete", "Great job! Time to take a well-deserved break.", "face-smile");
                         } else {
+                            root.playSound("break_end.wav");
                             root.notify("Break Over", "Break time is up. Let's get back to focus!", "task-due");
                         }
                         
@@ -301,7 +367,10 @@ Item {
                         MouseArea {
                             anchors.fill: parent
                             cursorShape: Qt.PointingHandCursor
-                            onClicked: stateCache.activeMode = index
+                            onClicked: {
+                                root.stopSound();
+                                stateCache.activeMode = index;
+                            }
                         }
                     }
                 }
@@ -521,6 +590,7 @@ Item {
                         MouseArea {
                             anchors.fill: parent; cursorShape: Qt.PointingHandCursor
                             onClicked: { 
+                                root.stopSound();
                                 if (!root.isTimerIdle) {
                                     // Stop and revert to preset
                                     stateCache.timerTargetEpoch = 0; 
