@@ -155,7 +155,7 @@ ARCH_PKGS=(
   "imagemagick" "wget" "file" "git" "psmisc"
   "matugen-bin" "ffmpeg" "quickshell" "unzip" "python-websockets" "qt6-websockets"
   "grim" "playerctl" "satty" "yq" "slurp" "mpvpaper"
-  "wmctrl" "power-profiles-daemon" "easyeffects" "swayosd-git" "nautilus" "lsp-plugins" "hyprpolkitagent"
+  "wmctrl" "power-profiles-daemon" "easyeffects" "nautilus" "lsp-plugins" "hyprpolkitagent"
   "qt5-wayland" "qt5-quickcontrols" "qt5-quickcontrols2" "qt5-graphicaleffects" "qt6-wayland"
   "qt5ct" "qt6ct" "gpu-screen-recorder" "adw-gtk-theme"
 
@@ -1611,9 +1611,7 @@ fi
 sudo systemctl --global enable pipewire wireplumber pipewire-pulse 2>/dev/null || true
 systemctl --user start pipewire wireplumber pipewire-pulse 2>/dev/null || true
 
-# --- Enable SwayOSD libinput backend ---
-sudo systemctl enable --now swayosd-libinput-backend.service 2>/dev/null || true
-printf "  -> SwayOSD libinput backend enabled %-14s ${C_GREEN}[ OK ]${RESET}\n" ""
+
 
 # --- Enable EasyEffects as a user service ---
 if [ -f "$HOME/.config/systemd/user/easyeffects.service" ]; then
