@@ -588,21 +588,28 @@
       "mods": "",
       "key": "Caps_Lock",
       "dispatcher": "exec",
-      "command": "sleep 0.1 && swayosd-client --caps-lock"
+      "command": "~/.config/hypr/scripts/osd.sh caps"
+    },
+    {
+      "type": "bindl",
+      "mods": "",
+      "key": "Num_Lock",
+      "dispatcher": "exec",
+      "command": "~/.config/hypr/scripts/osd.sh num"
     },
     {
       "type": "bindl",
       "mods": "",
       "key": "XF86MonBrightnessDown",
       "dispatcher": "exec",
-      "command": "swayosd-client --brightness lower"
+      "command": "~/.config/hypr/scripts/osd.sh brightness lower"
     },
     {
       "type": "bindl",
       "mods": "",
       "key": "XF86MonBrightnessUp",
       "dispatcher": "exec",
-      "command": "swayosd-client --brightness raise"
+      "command": "~/.config/hypr/scripts/osd.sh brightness raise"
     },
     {
       "type": "bindl",
@@ -644,28 +651,28 @@
       "mods": "",
       "key": "xf86AudioMicMute",
       "dispatcher": "exec",
-      "command": "swayosd-client --input-volume mute-toggle"
+      "command": "~/.config/hypr/scripts/osd.sh mic mute-toggle"
     },
     {
       "type": "bindl",
       "mods": "",
       "key": "xf86audiomute",
       "dispatcher": "exec",
-      "command": "swayosd-client --output-volume mute-toggle"
+      "command": "~/.config/hypr/scripts/osd.sh volume mute-toggle"
     },
     {
       "type": "bindel",
       "mods": "",
       "key": "xf86audiolowervolume",
       "dispatcher": "exec",
-      "command": "swayosd-client --output-volume lower"
+      "command": "~/.config/hypr/scripts/osd.sh volume lower"
     },
     {
       "type": "bindel",
       "mods": "",
       "key": "xf86audioraisevolume",
       "dispatcher": "exec",
-      "command": "swayosd-client --output-volume raise"
+      "command": "~/.config/hypr/scripts/osd.sh volume raise"
     },
     {
       "type": "bind",
@@ -673,6 +680,13 @@
       "key": "TAB",
       "dispatcher": "exec",
       "command": "~/.config/hypr/scripts/focus_next_monitor.sh"
+    },
+    {
+      "type": "bindl",
+      "mods": "",
+      "key": "XF86WebCam",
+      "dispatcher": "exec",
+      "command": "~/.config/hypr/scripts/osd.sh camera toggle"
     }
   ],
   "startup": [
@@ -701,16 +715,10 @@
       "command": "playerctld"
     },
     {
-      "command": "swayosd-server --top-margin 0.9 --style \"$HOME/.config/swayosd/style.css\""
-    },
-    {
       "command": "wl-paste --type text --watch cliphist store"
     },
     {
       "command": "wl-paste --type image --watch cliphist store"
-    },
-    {
-      "command": "~/.config/hypr/scripts/volume_listener.sh"
     },
     {
       "command": "[workspace special:monitoring silent] kitty btop"
