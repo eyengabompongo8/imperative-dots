@@ -31,12 +31,12 @@ hl.window_rule({ match = { title = "(?i)^(spotify.*)$" }, workspace = "special:s
 
 -- Smart Gaps (Keeps a clean matching top gap under the top bar, removes left/right/bottom gaps and borders)
 hl.workspace_rule({ workspace = "w[tv1]s[false]", gaps_out = { top = 4, right = 0, bottom = 0, left = 0 }, gaps_in = 0 })
-hl.workspace_rule({ workspace = "f[1]s[false]", gaps_out = 0, gaps_in = 0 })
+hl.workspace_rule({ workspace = "f[1]s[false]", gaps_out = { top = 4, right = 0, bottom = 0, left = 0 }, gaps_in = 0 })
 hl.workspace_rule({ workspace = "s[true]", gaps_out = { top = 12, right = 4, bottom = 4, left = 4 } })
-hl.window_rule({ match = { float = false, workspace = "w[tv1]s[false]" }, border_size = 0 })
-hl.window_rule({ match = { float = false, workspace = "f[1]s[false]" }, border_size = 0 })
+hl.window_rule({ match = { workspace = "w[tv1]s[false]" }, border_size = 0 })
+hl.window_rule({ match = { workspace = "f[1]s[false]" }, border_size = 0 })
 
--- Hide xwaylandvideobridge helper windows
+ -- Hide xwaylandvideobridge helper windows
 hl.window_rule({
   match = { class = "^(xwaylandvideobridge)$" },
   opacity = "0.0 override",
