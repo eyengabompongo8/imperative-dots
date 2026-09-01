@@ -179,9 +179,13 @@ if [[ "$ACTION" == "open" || "$ACTION" == "toggle" ]]; then
             handle_network_prep
             [[ -n "$SUBTARGET" ]] && echo "$SUBTARGET" > "$NETWORK_MODE_FILE"
         fi
+        timeout 0.3s quickshell -p "$SHELL_QML_PATH" ipc call main handleCommand "close" "" "" >/dev/null 2>&1
         timeout 0.3s quickshell -p "$SHELL_QML_PATH" ipc call topbar handleRightPanel "$ACTION" "$TARGET" >/dev/null 2>&1
         exit 0
     fi
+
+    # Opening a main widget automatically closes any active right-panel widget
+    timeout 0.3s quickshell -p "$SHELL_QML_PATH" ipc call topbar handleRightPanel "close" "" >/dev/null 2>&1
 
     if [[ "$TARGET" == "wallpaper" ]]; then
         handle_wallpaper_prep

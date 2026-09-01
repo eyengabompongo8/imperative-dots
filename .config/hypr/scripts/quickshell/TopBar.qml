@@ -65,6 +65,8 @@ Variants {
             WlrLayershell.namespace: "qs-topbar"
             WlrLayershell.layer: WlrLayer.Overlay
 
+            focusable: barWindow.rightPanelOpen
+
             anchors {
                 top: true
                 left: true
@@ -110,11 +112,18 @@ Variants {
             property real latchedWidgetH: 0
             property string latchedWidget: ""
 
+            Shortcut {
+                sequence: "Escape"
+                enabled: barWindow.rightPanelOpen
+                onActivated: barWindow.rightPanelWidget = ""
+            }
+
             onRightPanelWidgetChanged: {
                 if (rightPanelWidget !== "") {
                     latchedWidget = rightPanelWidget;
                     latchedWidgetW = getRightPanelTargetWidth(rightPanelWidget);
                     latchedWidgetH = getRightPanelTargetHeight(rightPanelWidget);
+                    Quickshell.execDetached(["quickshell", "-p", paths.runDir + "/Shell.qml", "ipc", "call", "main", "handleCommand", "close", "", ""]);
                 }
             }
 
@@ -187,19 +196,11 @@ Variants {
             color: "transparent"
 
             mask: Region {
-                // 1. Non-fullscreen: Top Bar area is always active
+                // 1. Non-fullscreen: Top Bar area is always active; expands to full screen when right panel is open to capture clicks outside
                 Region {
                     x: 0; y: 0
                     width: !barWindow.isWindowFullscreen ? barWindow.width : 0
-                    height: !barWindow.isWindowFullscreen ? (barWindow.barHeight + barWindow.s(16)) : 0
-                }
-
-                // 2. Non-fullscreen: Right Dropdown Widget is active when open
-                Region {
-                    x: (!barWindow.isWindowFullscreen && barWindow.rightPanelOpen) ? Math.max(0, rightBox.x - barWindow.s(10)) : 0
-                    y: (!barWindow.isWindowFullscreen && barWindow.rightPanelOpen) ? barWindow.barHeight : 0
-                    width: (!barWindow.isWindowFullscreen && barWindow.rightPanelOpen) ? (rightBox.width + barWindow.s(20)) : 0
-                    height: (!barWindow.isWindowFullscreen && barWindow.rightPanelOpen) ? (rightBox.height - barWindow.barHeight + barWindow.s(20)) : 0
+                    height: !barWindow.isWindowFullscreen ? (barWindow.rightPanelOpen ? barWindow.height : (barWindow.barHeight + barWindow.s(16))) : 0
                 }
 
                 // 3. Fullscreen trigger edges

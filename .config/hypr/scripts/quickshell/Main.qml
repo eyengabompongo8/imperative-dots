@@ -626,6 +626,7 @@ PanelWindow {
         }
 
         masterWindow.isVisible = true;
+        Quickshell.execDetached(["quickshell", "-p", paths.runDir + "/Shell.qml", "ipc", "call", "topbar", "handleRightPanel", "close", ""]);
     }
 
     Timer {
