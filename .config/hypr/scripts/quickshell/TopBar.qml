@@ -500,7 +500,7 @@ Variants {
             property color batDynamicColor: {
                 if (isCharging) return mocha.green;
                 if (batCap <= 20) return mocha.red;
-                return mocha.text; 
+                return mocha.mauve; 
             }
 
             Process {
@@ -2012,8 +2012,8 @@ Variants {
                                 Behavior on opacity { NumberAnimation { duration: 300 } }
                                 gradient: Gradient {
                                     orientation: Gradient.Horizontal
-                                    GradientStop { position: 0.0; color: mocha.mauve; Behavior on color { ColorAnimation { duration: 300 } } }
-                                    GradientStop { position: 1.0; color: Qt.lighter(mocha.mauve, 1.3); Behavior on color { ColorAnimation { duration: 300 } } }
+                                    GradientStop { position: 0.0; color: barWindow.isDesktop ? mocha.mauve : barWindow.batDynamicColor; Behavior on color { ColorAnimation { duration: 300 } } }
+                                    GradientStop { position: 1.0; color: barWindow.isDesktop ? Qt.lighter(mocha.mauve, 1.3) : Qt.lighter(barWindow.batDynamicColor, 1.3); Behavior on color { ColorAnimation { duration: 300 } } }
                                 }
                             }
                             
