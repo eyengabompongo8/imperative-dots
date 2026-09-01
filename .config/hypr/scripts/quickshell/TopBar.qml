@@ -40,6 +40,9 @@ Variants {
                 function toggleUpdate() {
                     barWindow.forceUpdateShow = !barWindow.forceUpdateShow
                 }
+                function cancelCenterClose(): void {
+                    barWindow.centerHoverCloseTimer.stop();
+                }
                 function handleRightPanel(cmd: string, widget: string): void {
                     if (cmd === "close" || widget === "") {
                         barWindow.rightPanelWidget = "";
@@ -56,6 +59,44 @@ Variants {
                     if (cmd === "open") {
                         barWindow.rightPanelWidget = widget;
                     }
+                }
+            }
+
+            property string pendingCenterHover: ""
+
+            Timer {
+                id: centerHoverOpenTimer
+                interval: 120
+                repeat: false
+                onTriggered: {
+                    if (barWindow.pendingCenterHover !== "") {
+                        Quickshell.execDetached(["quickshell", "-p", paths.shellQmlPath, "ipc", "call", "main", "handleCommand", "open", barWindow.pendingCenterHover, ""]);
+                    }
+                }
+            }
+
+            Timer {
+                id: centerHoverCloseTimer
+                interval: 250
+                repeat: false
+                onTriggered: {
+                    if (!centerHoverTracker.hovered) {
+                        Quickshell.execDetached(["quickshell", "-p", paths.shellQmlPath, "ipc", "call", "main", "handleCommand", "close", "", ""]);
+                    }
+                }
+            }
+
+            function handleCenterHover(wName, isHovered) {
+                if (isHovered) {
+                    centerHoverCloseTimer.stop();
+                    pendingCenterHover = wName;
+                    centerHoverOpenTimer.restart();
+                } else {
+                    if (pendingCenterHover === wName) {
+                        pendingCenterHover = "";
+                        centerHoverOpenTimer.stop();
+                    }
+                    centerHoverCloseTimer.restart();
                 }
             }
 
@@ -123,7 +164,7 @@ Variants {
                     latchedWidget = rightPanelWidget;
                     latchedWidgetW = getRightPanelTargetWidth(rightPanelWidget);
                     latchedWidgetH = getRightPanelTargetHeight(rightPanelWidget);
-                    Quickshell.execDetached(["quickshell", "-p", paths.runDir + "/Shell.qml", "ipc", "call", "main", "handleCommand", "close", "", ""]);
+                    Quickshell.execDetached(["quickshell", "-p", paths.shellQmlPath, "ipc", "call", "main", "handleCommand", "close", "", ""]);
                 }
             }
 
@@ -1324,9 +1365,11 @@ Variants {
                         id: centerHoverTracker
                         onHoveredChanged: {
                             if (hovered) {
+                                barWindow.centerHoverCloseTimer.stop();
                                 barWindow.useCenterGraceTimer = false;
                                 centerHideTimer.stop();
                             } else {
+                                barWindow.centerHoverCloseTimer.restart();
                                 barWindow.kickCenterTimer();
                             }
                         }
@@ -1340,10 +1383,14 @@ Variants {
                         acceptedButtons: Qt.NoButton
                         z: -1
                         onEntered: {
+                            barWindow.centerHoverCloseTimer.stop();
                             barWindow.useCenterGraceTimer = false;
                             centerHideTimer.stop();
                         }
-                        onExited: barWindow.kickCenterTimer()
+                        onExited: {
+                            barWindow.centerHoverCloseTimer.restart();
+                            barWindow.kickCenterTimer();
+                        }
                     }
 
                     IslandBackground {
@@ -1398,6 +1445,8 @@ Variants {
                                 width: infoLayout.width
                                 height: barWindow.barHeight
                                 hoverEnabled: true
+                                onEntered: barWindow.handleCenterHover("music", true)
+                                onExited: barWindow.handleCenterHover("music", false)
                                 onClicked: Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/qs_manager.sh toggle music"])
                                 
                                 Row {
@@ -1553,6 +1602,8 @@ Variants {
                                 id: centerMouse
                                 anchors.fill: parent
                                 hoverEnabled: true
+                                onEntered: barWindow.handleCenterHover("calendar", true)
+                                onExited: barWindow.handleCenterHover("calendar", false)
                                 onClicked: Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/qs_manager.sh toggle calendar"])
                             }
 
@@ -1721,13 +1772,57 @@ Variants {
                     width: basePillWidth + animProgress * (fullTargetW - basePillWidth)
                     height: barWindow.barHeight + animProgress * (fullTargetH - barWindow.barHeight)
 
+                    property string pendingHoverWidget: ""
+
+                    Timer {
+                        id: hoverOpenTimer
+                        interval: barWindow.rightPanelOpen ? 40 : 120
+                        repeat: false
+                        onTriggered: {
+                            if (rightBox.pendingHoverWidget !== "") {
+                                barWindow.rightPanelWidget = rightBox.pendingHoverWidget;
+                            }
+                        }
+                    }
+
+                    Timer {
+                        id: hoverCloseTimer
+                        interval: 250
+                        repeat: false
+                        onTriggered: {
+                            if (!rightHoverTracker.hovered && !(typeof rightPanelHoverTracker !== "undefined" && rightPanelHoverTracker.hovered)) {
+                                barWindow.rightPanelWidget = "";
+                            }
+                        }
+                    }
+
+                    function handlePillHover(wName, isHovered) {
+                        if (isHovered) {
+                            hoverCloseTimer.stop();
+                            pendingHoverWidget = wName;
+                            hoverOpenTimer.restart();
+                        } else {
+                            if (pendingHoverWidget === wName) {
+                                pendingHoverWidget = "";
+                                hoverOpenTimer.stop();
+                            }
+                            if (barWindow.rightPanelOpen) {
+                                hoverCloseTimer.restart();
+                            }
+                        }
+                    }
+
                     HoverHandler {
                         id: rightHoverTracker
                         onHoveredChanged: {
                             if (hovered) {
+                                hoverCloseTimer.stop();
                                 barWindow.useRightGraceTimer = false;
                                 rightHideTimer.stop();
                             } else {
+                                if (barWindow.rightPanelOpen) {
+                                    hoverCloseTimer.restart();
+                                }
                                 barWindow.kickRightTimer();
                             }
                         }
@@ -1741,10 +1836,16 @@ Variants {
                         acceptedButtons: Qt.NoButton
                         z: -1
                         onEntered: {
+                            hoverCloseTimer.stop();
                             barWindow.useRightGraceTimer = false;
                             rightHideTimer.stop();
                         }
-                        onExited: barWindow.kickRightTimer()
+                        onExited: {
+                            if (barWindow.rightPanelOpen) {
+                                hoverCloseTimer.restart();
+                            }
+                            barWindow.kickRightTimer();
+                        }
                     }
 
                     // Single Living Dynamic Island Background
@@ -1878,7 +1979,12 @@ Variants {
                                     width: Math.min(implicitWidth, barWindow.s(100)); elide: Text.ElideRight 
                                 }
                             }
-                            MouseArea { id: wifiMouse; hoverEnabled: true; anchors.fill: parent; onClicked: Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/qs_manager.sh toggle network wifi"]) }
+                            MouseArea { 
+                                id: wifiMouse; hoverEnabled: true; anchors.fill: parent; 
+                                onEntered: rightBox.handlePillHover("network", true);
+                                onExited: rightBox.handlePillHover("network", false);
+                                onClicked: Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/qs_manager.sh toggle network wifi"]) 
+                            }
                         }
 
                         Rectangle {
@@ -1932,7 +2038,12 @@ Variants {
                                     width: Math.min(implicitWidth, barWindow.s(100)); elide: Text.ElideRight 
                                 }
                             }
-                            MouseArea { id: btMouse; hoverEnabled: true; anchors.fill: parent; onClicked: Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/qs_manager.sh toggle network bt"]) }
+                            MouseArea { 
+                                id: btMouse; hoverEnabled: true; anchors.fill: parent; 
+                                onEntered: rightBox.handlePillHover("network", true);
+                                onExited: rightBox.handlePillHover("network", false);
+                                onClicked: Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/qs_manager.sh toggle network bt"]) 
+                            }
                         }
 
                         Rectangle {
@@ -1986,7 +2097,12 @@ Variants {
                                     color: barWindow.isSoundActive ? mocha.crust : mocha.text; 
                                 }
                             }
-                            MouseArea { id: volMouse; hoverEnabled: true; anchors.fill: parent; onClicked: Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/qs_manager.sh toggle volume"]) }
+                            MouseArea { 
+                                id: volMouse; hoverEnabled: true; anchors.fill: parent; 
+                                onEntered: rightBox.handlePillHover("volume", true);
+                                onExited: rightBox.handlePillHover("volume", false);
+                                onClicked: Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/qs_manager.sh toggle volume"]) 
+                            }
                         }
 
                         Rectangle {
@@ -2086,7 +2202,12 @@ Variants {
                                         Behavior on color { ColorAnimation { duration: 200 } }
                                     }
                                 }
-                                MouseArea { id: notifMouse; hoverEnabled: true; anchors.fill: parent; onClicked: Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/qs_manager.sh toggle notifications"]) }
+                                MouseArea { 
+                                    id: notifMouse; hoverEnabled: true; anchors.fill: parent; 
+                                    onEntered: rightBox.handlePillHover("notifications", true);
+                                    onExited: rightBox.handlePillHover("notifications", false);
+                                    onClicked: Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/qs_manager.sh toggle notifications"]) 
+                                }
                             }
                         }
 
@@ -2142,7 +2263,12 @@ Variants {
                                     Behavior on color { ColorAnimation { duration: 300 } }
                                 }
                             }
-                            MouseArea { id: batMouse; hoverEnabled: true; anchors.fill: parent; onClicked: Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/qs_manager.sh toggle battery"]) }
+                            MouseArea { 
+                                id: batMouse; hoverEnabled: true; anchors.fill: parent; 
+                                onEntered: rightBox.handlePillHover("battery", true);
+                                onExited: rightBox.handlePillHover("battery", false);
+                                onClicked: Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/qs_manager.sh toggle battery"]) 
+                            }
                         }
 
                         // Hardware / Power Settings Pill
@@ -2185,6 +2311,8 @@ Variants {
                                 id: hwMouse
                                 hoverEnabled: true
                                 anchors.fill: parent
+                                onEntered: rightBox.handlePillHover("hardware", true)
+                                onExited: rightBox.handlePillHover("hardware", false)
                                 onClicked: Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/qs_manager.sh toggle hardware"])
                             }
                         }
@@ -2260,6 +2388,19 @@ Variants {
                         scale: barWindow.rightPanelOpen ? 1.0 : 0.94
                         opacity: barWindow.rightPanelOpen ? 1.0 : 0.0
                         visible: opacity > 0.001
+
+                        HoverHandler {
+                            id: rightPanelHoverTracker
+                            onHoveredChanged: {
+                                if (hovered) {
+                                    rightBox.hoverCloseTimer.stop();
+                                } else {
+                                    if (barWindow.rightPanelOpen) {
+                                        rightBox.hoverCloseTimer.restart();
+                                    }
+                                }
+                            }
+                        }
 
                         transform: Translate {
                             x: barWindow.rightPanelOpen ? 0 : barWindow.s(16)

@@ -6,6 +6,9 @@ QtObject {
     readonly property string home: Quickshell.env("HOME")
     readonly property string xdgRuntimeDir: Quickshell.env("XDG_RUNTIME_DIR")
     
+    readonly property string shellQmlPath: home + "/.config/hypr/scripts/quickshell/Shell.qml"
+    readonly property string qsManagerPath: home + "/.config/hypr/scripts/qs_manager.sh"
+    
     // Persistent data on disk
     readonly property string cacheDir: home + "/.cache/quickshell"
     readonly property string stateDir: home + "/.local/state/quickshell"

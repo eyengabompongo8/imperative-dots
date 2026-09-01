@@ -461,6 +461,31 @@ PanelWindow {
 
         MouseArea { anchors.fill: parent }
 
+        HoverHandler {
+            id: mainMorphHoverTracker
+            onHoveredChanged: {
+                if (hovered) {
+                    autoCloseGraceTimer.stop();
+                    Quickshell.execDetached(["quickshell", "-p", paths.shellQmlPath, "ipc", "call", "topbar", "cancelCenterClose", ""]);
+                } else {
+                    if (masterWindow.isVisible && (masterWindow.currentActive === "music" || masterWindow.currentActive === "calendar")) {
+                        autoCloseGraceTimer.restart();
+                    }
+                }
+            }
+        }
+
+        Timer {
+            id: autoCloseGraceTimer
+            interval: 250
+            repeat: false
+            onTriggered: {
+                if (!mainMorphHoverTracker.hovered && masterWindow.isVisible && (masterWindow.currentActive === "music" || masterWindow.currentActive === "calendar")) {
+                    switchWidget("hidden", "");
+                }
+            }
+        }
+
         Item {
             anchors.fill: parent
 
@@ -626,7 +651,7 @@ PanelWindow {
         }
 
         masterWindow.isVisible = true;
-        Quickshell.execDetached(["quickshell", "-p", paths.runDir + "/Shell.qml", "ipc", "call", "topbar", "handleRightPanel", "close", ""]);
+        Quickshell.execDetached(["quickshell", "-p", paths.shellQmlPath, "ipc", "call", "topbar", "handleRightPanel", "close", ""]);
     }
 
     Timer {
