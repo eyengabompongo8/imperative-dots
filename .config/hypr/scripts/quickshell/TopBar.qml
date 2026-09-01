@@ -1704,19 +1704,21 @@ Variants {
                     readonly property real islandPad: barWindow.s(10)
                     readonly property real basePillWidth: sysLayout.implicitWidth + barWindow.s(22)
 
-                    readonly property real targetBoxW: barWindow.rightPanelOpen
-                        ? Math.max(basePillWidth, barWindow.latchedWidgetW + 2 * islandPad)
-                        : basePillWidth
+                    property real animWidgetW: barWindow.latchedWidgetW + 2 * islandPad
+                    property real animWidgetH: barWindow.latchedWidgetH + 2 * islandPad
+                    Behavior on animWidgetW { NumberAnimation { duration: 280; easing.type: Easing.OutExpo } }
+                    Behavior on animWidgetH { NumberAnimation { duration: 280; easing.type: Easing.OutExpo } }
 
-                    readonly property real targetBoxH: barWindow.rightPanelOpen
-                        ? (barWindow.barHeight + barWindow.latchedWidgetH + 2 * islandPad)
-                        : barWindow.barHeight
+                    readonly property real fullTargetW: Math.max(basePillWidth, animWidgetW)
+                    readonly property real fullTargetH: barWindow.barHeight + animWidgetH
 
-                    width: targetBoxW
-                    height: targetBoxH
+                    property real animProgress: barWindow.rightPanelOpen ? 1.0 : 0.0
+                    Behavior on animProgress {
+                        NumberAnimation { duration: 280; easing.type: barWindow.rightPanelOpen ? Easing.OutExpo : Easing.InCubic }
+                    }
 
-                    Behavior on width { NumberAnimation { duration: 260; easing.type: Easing.OutExpo } }
-                    Behavior on height { NumberAnimation { duration: 280; easing.type: Easing.OutExpo } }
+                    width: basePillWidth + animProgress * (fullTargetW - basePillWidth)
+                    height: barWindow.barHeight + animProgress * (fullTargetH - barWindow.barHeight)
 
                     HoverHandler {
                         id: rightHoverTracker
@@ -1748,8 +1750,8 @@ Variants {
                     LivingRightIslandBackground {
                         pillWidth: rightBox.basePillWidth
                         topBarHeight: barWindow.barHeight
-                        widgetWidth: barWindow.latchedWidgetW + 2 * rightBox.islandPad
-                        widgetHeight: barWindow.latchedWidgetH + 2 * rightBox.islandPad
+                        widgetWidth: rightBox.animWidgetW
+                        widgetHeight: rightBox.animWidgetH
                         isOpen: barWindow.rightPanelOpen
                         earRadius: barWindow.s(14)
                         bottomRadius: barWindow.s(14)
@@ -2248,9 +2250,9 @@ Variants {
                         id: rightPanelContainer
                         anchors.right: parent.right
                         anchors.rightMargin: rightBox.islandPad
-                        width: barWindow.latchedWidgetW
+                        width: rightBox.animWidgetW - 2 * rightBox.islandPad
                         y: barWindow.barHeight + rightBox.islandPad
-                        height: barWindow.latchedWidgetH
+                        height: rightBox.animWidgetH - 2 * rightBox.islandPad
                         clip: true
 
                         transformOrigin: Item.TopRight
