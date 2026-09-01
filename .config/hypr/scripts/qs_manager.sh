@@ -151,7 +151,9 @@ handle_network_prep() {
 # IPC ROUTING
 # -----------------------------------------------------------------------------
 if [[ "$ACTION" == "close" ]]; then
+    # Close both main widgets and right-panel widgets (Step 9)
     quickshell -p "$SHELL_QML_PATH" ipc call main handleCommand "close" "" "" >/dev/null 2>&1
+    timeout 0.3s quickshell -p "$SHELL_QML_PATH" ipc call topbar handleRightPanel "close" "" >/dev/null 2>&1
     if [[ "$TARGET" == "network" || "$TARGET" == "all" || -z "$TARGET" ]]; then
         if [ -f "$BT_PID_FILE" ]; then
             kill $(cat "$BT_PID_FILE") 2>/dev/null
@@ -163,10 +165,21 @@ if [[ "$ACTION" == "close" ]]; then
 fi
 
 if [[ "$ACTION" == "open" || "$ACTION" == "toggle" ]]; then
-    if [[ "$TARGET" == "network" ]]; then
-        handle_network_prep
-        [[ -n "$SUBTARGET" ]] && echo "$SUBTARGET" > "$NETWORK_MODE_FILE"
-        quickshell -p "$SHELL_QML_PATH" ipc call main handleCommand "$ACTION" "$TARGET" "$SUBTARGET" >/dev/null 2>&1
+
+    # Right-panel widgets go directly to the topbar IPC handler (Step 8)
+    RIGHT_PANEL_WIDGETS=("volume" "battery" "hardware" "notifications" "network")
+    IS_RIGHT_PANEL=false
+    for w in "${RIGHT_PANEL_WIDGETS[@]}"; do
+        [[ "$TARGET" == "$w" ]] && IS_RIGHT_PANEL=true && break
+    done
+
+    if [[ "$IS_RIGHT_PANEL" == "true" ]]; then
+        # Special prep for network
+        if [[ "$TARGET" == "network" ]]; then
+            handle_network_prep
+            [[ -n "$SUBTARGET" ]] && echo "$SUBTARGET" > "$NETWORK_MODE_FILE"
+        fi
+        timeout 0.3s quickshell -p "$SHELL_QML_PATH" ipc call topbar handleRightPanel "$ACTION" "$TARGET" >/dev/null 2>&1
         exit 0
     fi
 
@@ -186,9 +199,9 @@ if [[ "$ACTION" == "open" || "$ACTION" == "toggle" ]]; then
             [[ "${EXT,,}" =~ ^(mp4|mkv|mov|webm)$ ]] && TARGET_THUMB="000_$BASE" || TARGET_THUMB="$BASE"
         fi
 
-        quickshell -p "$SHELL_QML_PATH" ipc call main handleCommand "$ACTION" "$TARGET" "$TARGET_THUMB" >/dev/null 2>&1
+        timeout 0.3s quickshell -p "$SHELL_QML_PATH" ipc call main handleCommand "$ACTION" "$TARGET" "$TARGET_THUMB" >/dev/null 2>&1
     else
-        quickshell -p "$SHELL_QML_PATH" ipc call main handleCommand "$ACTION" "$TARGET" "$SUBTARGET" >/dev/null 2>&1
+        timeout 0.3s quickshell -p "$SHELL_QML_PATH" ipc call main handleCommand "$ACTION" "$TARGET" "$SUBTARGET" >/dev/null 2>&1
     fi
     exit 0
 fi

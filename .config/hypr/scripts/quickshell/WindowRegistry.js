@@ -32,11 +32,11 @@ function getLayout(name, mx, my, mw, mh, userScale) {
 
     let base = {
         // --- Top Right Popups ---
-        "notifications": { w: s(400, scale), h: s(760, scale), rx: mw - s(414, scale), ry: s(60, scale), comp: "notifications/NotificationsPopup.qml" },
-        "battery":   { w: s(480, scale), h: s(760, scale), rx: mw - s(494, scale), ry: s(60, scale), comp: "battery/BatteryPopup.qml" },
-        "hardware":  { w: s(420, scale), h: s(285, scale), rx: mw - s(434, scale), ry: s(60, scale), comp: "hardware/HardwarePopup.qml" },
-        "network":   { w: s(900, scale), h: s(700, scale), rx: mw - s(914, scale), ry: s(60, scale), comp: "network/NetworkPopup.qml" },
-        "volume":    { w: s(450, scale), h: s(700, scale), rx: mw - s(464, scale), ry: s(60, scale), comp: "volume/VolumePopup.qml" },
+        "notifications": { w: s(400, scale), h: s(760, scale), rx: mw - s(414, scale), ry: s(60, scale), comp: "notifications/NotificationsPopup.qml", topbarOnly: true },
+        "battery":   { w: s(480, scale), h: s(760, scale), rx: mw - s(494, scale), ry: s(60, scale), comp: "battery/BatteryPopup.qml",      topbarOnly: true },
+        "hardware":  { w: s(420, scale), h: s(285, scale), rx: mw - s(434, scale), ry: s(60, scale), comp: "hardware/HardwarePopup.qml",     topbarOnly: true },
+        "network":   { w: s(900, scale), h: s(700, scale), rx: mw - s(914, scale), ry: s(60, scale), comp: "network/NetworkPopup.qml",       topbarOnly: true },
+        "volume":    { w: s(450, scale), h: s(700, scale), rx: mw - s(464, scale), ry: s(60, scale), comp: "volume/VolumePopup.qml",         topbarOnly: true },
         
         // --- Central Standard Tools ---
         "applauncher": { w: s(800, scale), h: s(700, scale), rx: Math.floor((mw/2)-(s(800, scale)/2)), ry: Math.floor((mh/2)-(s(700, scale)/2)), comp: "applauncher/appLauncher.qml" },

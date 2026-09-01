@@ -63,6 +63,12 @@ PanelWindow {
             targetWidget = targetWidget || "";
             arg = arg || "";
 
+            // Guard: right-panel widgets are handled by TopBar, not Main (Step 7)
+            let topbarWidgets = ["volume", "battery", "hardware", "notifications", "network"];
+            if (topbarWidgets.indexOf(targetWidget) !== -1) {
+                return;  // ignore — qs_manager.sh sends a parallel IPC call to topbar
+            }
+
             let isClosing = (masterWindow.currentActive !== "hidden" && !masterWindow.isVisible);
             let effectivelyActive = isClosing ? "hidden" : masterWindow.currentActive;
 

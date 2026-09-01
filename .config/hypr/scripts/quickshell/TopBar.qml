@@ -40,6 +40,23 @@ Variants {
                 function toggleUpdate() {
                     barWindow.forceUpdateShow = !barWindow.forceUpdateShow
                 }
+                function handleRightPanel(cmd: string, widget: string): void {
+                    if (cmd === "close" || widget === "") {
+                        barWindow.rightPanelWidget = "";
+                        return;
+                    }
+                    if (cmd === "toggle") {
+                        if (barWindow.rightPanelWidget === widget) {
+                            barWindow.rightPanelWidget = "";
+                        } else {
+                            barWindow.rightPanelWidget = widget;
+                        }
+                        return;
+                    }
+                    if (cmd === "open") {
+                        barWindow.rightPanelWidget = widget;
+                    }
+                }
             }
 
             required property var modelData
@@ -67,7 +84,43 @@ Variants {
 
             property int barHeight: s(44)
 
-            implicitHeight: barHeight + s(16)
+            function getRightPanelTargetWidth(widget) {
+                switch (widget) {
+                    case "volume":        return barWindow.s(450);
+                    case "battery":       return barWindow.s(480);
+                    case "hardware":      return barWindow.s(420);
+                    case "network":       return barWindow.s(900);
+                    case "notifications": return barWindow.s(400);
+                    default:              return (typeof rightBox !== "undefined" && rightBox) ? rightBox.width : 0;
+                }
+            }
+
+            function getRightPanelTargetHeight(widget) {
+                switch (widget) {
+                    case "volume":        return barWindow.s(700);
+                    case "battery":       return barWindow.s(760);
+                    case "hardware":      return barWindow.s(285);
+                    case "network":       return barWindow.s(700);
+                    case "notifications": return barWindow.s(760);
+                    default:              return 0;
+                }
+            }
+
+            property real latchedWidgetW: 0
+            property real latchedWidgetH: 0
+            property string latchedWidget: ""
+
+            onRightPanelWidgetChanged: {
+                if (rightPanelWidget !== "") {
+                    latchedWidget = rightPanelWidget;
+                    latchedWidgetW = getRightPanelTargetWidth(rightPanelWidget);
+                    latchedWidgetH = getRightPanelTargetHeight(rightPanelWidget);
+                }
+            }
+
+            implicitWidth: barWindow.screen.width
+            implicitHeight: barWindow.screen.height
+
             margins { top: 0; bottom: 0; left: 0; right: 0 }
             
             property var hyprMon: Hyprland.monitorFor(barWindow.screen)
@@ -117,9 +170,13 @@ Variants {
             property string activeWidget: "" 
             property bool isSettingsOpen: activeWidget === "settings"
 
+            // --- Right Panel State ---
+            property string rightPanelWidget: ""   // which right widget is open, or ""
+            property bool   rightPanelOpen: rightPanelWidget !== ""
+
             readonly property bool isLeftWidgetOpen: isSettingsOpen || activeWidget === "guide" || activeWidget === "help" || activeWidget === "applauncher" || activeWidget === "search" || activeWidget === "updater"
             readonly property bool isCenterWidgetOpen: activeWidget === "music" || activeWidget === "calendar"
-            readonly property bool isRightWidgetOpen: activeWidget === "network" || activeWidget === "volume" || activeWidget === "monitors" || activeWidget === "notifications" || activeWidget === "battery" || activeWidget === "hardware"
+            readonly property bool isRightWidgetOpen: rightPanelOpen || activeWidget === "monitors"
 
             readonly property bool isLeftHidden: isWindowFullscreen && !isLeftRevealed && !isLeftWidgetOpen
             readonly property bool isCenterHidden: isWindowFullscreen && !isCenterRevealed && !isCenterWidgetOpen
@@ -130,12 +187,22 @@ Variants {
             color: "transparent"
 
             mask: Region {
+                // 1. Non-fullscreen: Top Bar area is always active
                 Region {
                     x: 0; y: 0
                     width: !barWindow.isWindowFullscreen ? barWindow.width : 0
-                    height: !barWindow.isWindowFullscreen ? barWindow.height : 0
+                    height: !barWindow.isWindowFullscreen ? (barWindow.barHeight + barWindow.s(16)) : 0
                 }
 
+                // 2. Non-fullscreen: Right Dropdown Widget is active when open
+                Region {
+                    x: (!barWindow.isWindowFullscreen && barWindow.rightPanelOpen) ? Math.max(0, rightBox.x - barWindow.s(10)) : 0
+                    y: (!barWindow.isWindowFullscreen && barWindow.rightPanelOpen) ? barWindow.barHeight : 0
+                    width: (!barWindow.isWindowFullscreen && barWindow.rightPanelOpen) ? (rightBox.width + barWindow.s(20)) : 0
+                    height: (!barWindow.isWindowFullscreen && barWindow.rightPanelOpen) ? (rightBox.height - barWindow.barHeight + barWindow.s(20)) : 0
+                }
+
+                // 3. Fullscreen trigger edges
                 Region {
                     x: 0; y: 0
                     width: barWindow.isWindowFullscreen ? Math.floor(barWindow.width / 3) : 0
@@ -154,6 +221,7 @@ Variants {
                     height: barWindow.isWindowFullscreen ? barWindow.s(6) : 0
                 }
 
+                // 4. Fullscreen revealed islands
                 Region {
                     x: (barWindow.isWindowFullscreen && (barWindow.isLeftRevealed || barWindow.isLeftWidgetOpen)) ? Math.max(0, leftBox.x - barWindow.s(10)) : 0
                     y: (barWindow.isWindowFullscreen && (barWindow.isLeftRevealed || barWindow.isLeftWidgetOpen)) ? 0 : 0
@@ -170,7 +238,9 @@ Variants {
                     x: (barWindow.isWindowFullscreen && (barWindow.isRightRevealed || barWindow.isRightWidgetOpen)) ? Math.max(0, rightBox.x - barWindow.s(10)) : 0
                     y: (barWindow.isWindowFullscreen && (barWindow.isRightRevealed || barWindow.isRightWidgetOpen)) ? 0 : 0
                     width: (barWindow.isWindowFullscreen && (barWindow.isRightRevealed || barWindow.isRightWidgetOpen)) ? (rightBox.width + barWindow.s(20)) : 0
-                    height: (barWindow.isWindowFullscreen && (barWindow.isRightRevealed || barWindow.isRightWidgetOpen)) ? (barWindow.barHeight + barWindow.s(16)) : 0
+                    height: (barWindow.isWindowFullscreen && (barWindow.isRightRevealed || barWindow.isRightWidgetOpen))
+                        ? (barWindow.barHeight + rightBox.height + barWindow.s(16))
+                        : 0
                 }
             }
 
@@ -1630,9 +1700,23 @@ Variants {
                     id: rightBox
                     anchors.right: parent.right
                     y: 0
-                    height: barWindow.barHeight
-                    width: sysLayout.implicitWidth + barWindow.s(22)
-                    Behavior on width { NumberAnimation { duration: 400; easing.type: Easing.OutExpo } }
+
+                    readonly property real islandPad: barWindow.s(10)
+                    readonly property real basePillWidth: sysLayout.implicitWidth + barWindow.s(22)
+
+                    readonly property real targetBoxW: barWindow.rightPanelOpen
+                        ? Math.max(basePillWidth, barWindow.latchedWidgetW + 2 * islandPad)
+                        : basePillWidth
+
+                    readonly property real targetBoxH: barWindow.rightPanelOpen
+                        ? (barWindow.barHeight + barWindow.latchedWidgetH + 2 * islandPad)
+                        : barWindow.barHeight
+
+                    width: targetBoxW
+                    height: targetBoxH
+
+                    Behavior on width { NumberAnimation { duration: 260; easing.type: Easing.OutExpo } }
+                    Behavior on height { NumberAnimation { duration: 280; easing.type: Easing.OutExpo } }
 
                     HoverHandler {
                         id: rightHoverTracker
@@ -1660,16 +1744,18 @@ Variants {
                         onExited: barWindow.kickRightTimer()
                     }
 
-                    IslandBackground {
-                        hasTopLeftEar: true
-                        hasTopRightEar: false
-                        hasBottomRightEar: true
-                        hasBottomLeftRadius: true
-                        hasBottomRightRadius: false
+                    // Single Living Dynamic Island Background
+                    LivingRightIslandBackground {
+                        pillWidth: rightBox.basePillWidth
+                        topBarHeight: barWindow.barHeight
+                        widgetWidth: barWindow.latchedWidgetW + 2 * rightBox.islandPad
+                        widgetHeight: barWindow.latchedWidgetH + 2 * rightBox.islandPad
+                        isOpen: barWindow.rightPanelOpen
                         earRadius: barWindow.s(14)
                         bottomRadius: barWindow.s(14)
                         fillColor: barWindow.isWindowFullscreen ? "#000000" : Qt.rgba(mocha.base.r, mocha.base.g, mocha.base.b, 0.75)
                         strokeColor: barWindow.isWindowFullscreen ? Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.15) : Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.12)
+                        strokeWidth: 1.2
                         Behavior on fillColor { ColorAnimation { duration: 200 } }
                         Behavior on strokeColor { ColorAnimation { duration: 200 } }
                     }
@@ -1679,7 +1765,7 @@ Variants {
                     transform: Translate {
                         x: barWindow.isRightHidden ? (rightBox.width + barWindow.s(20)) : (rightBox.showLayout ? 0 : barWindow.s(30))
                         y: barWindow.isRightHidden ? -(barWindow.barHeight + barWindow.s(20)) : 0
-                        Behavior on x { NumberAnimation { duration: 300; easing.type: barWindow.isRightHidden ? Easing.InCubic : Easing.OutCubic } }
+                        Behavior on x { enabled: barWindow.isRightHidden || !rightBox.showLayout; NumberAnimation { duration: 300; easing.type: barWindow.isRightHidden ? Easing.InCubic : Easing.OutCubic } }
                         Behavior on y { NumberAnimation { duration: 300; easing.type: barWindow.isRightHidden ? Easing.InCubic : Easing.OutCubic } }
                     }
                     
@@ -1693,7 +1779,10 @@ Variants {
 
                     Row {
                         id: sysLayout
-                        anchors.centerIn: parent
+                        anchors.top: parent.top
+                        anchors.topMargin: (barWindow.barHeight - pillHeight) / 2
+                        anchors.right: parent.right
+                        anchors.rightMargin: barWindow.s(11)
                         spacing: barWindow.s(8) 
 
                         property int pillHeight: barWindow.s(32)
@@ -2153,6 +2242,70 @@ Variants {
                             }
                         }
                     }
+
+                    // Dropdown Widget Loader inside the living dynamic island
+                    Item {
+                        id: rightPanelContainer
+                        anchors.right: parent.right
+                        anchors.rightMargin: rightBox.islandPad
+                        width: barWindow.latchedWidgetW
+                        y: barWindow.barHeight + rightBox.islandPad
+                        height: barWindow.latchedWidgetH
+                        clip: true
+
+                        transformOrigin: Item.TopRight
+                        scale: barWindow.rightPanelOpen ? 1.0 : 0.94
+                        opacity: barWindow.rightPanelOpen ? 1.0 : 0.0
+                        visible: opacity > 0.001
+
+                        transform: Translate {
+                            x: barWindow.rightPanelOpen ? 0 : barWindow.s(16)
+                            y: barWindow.rightPanelOpen ? 0 : barWindow.s(16)
+
+                            Behavior on x {
+                                NumberAnimation { duration: 260; easing.type: barWindow.rightPanelOpen ? Easing.OutExpo : Easing.InCubic }
+                            }
+                            Behavior on y {
+                                NumberAnimation { duration: 260; easing.type: barWindow.rightPanelOpen ? Easing.OutExpo : Easing.InCubic }
+                            }
+                        }
+
+                        Behavior on scale {
+                            NumberAnimation { duration: 260; easing.type: barWindow.rightPanelOpen ? Easing.OutExpo : Easing.InCubic }
+                        }
+                        Behavior on opacity {
+                            NumberAnimation { duration: barWindow.rightPanelOpen ? 200 : 160; easing.type: barWindow.rightPanelOpen ? Easing.OutCubic : Easing.InCubic }
+                        }
+
+                        Loader {
+                            id: rightPanelLoader
+                            anchors.fill: parent
+                            active: barWindow.rightPanelOpen || rightPanelContainer.opacity > 0.01
+                            visible: true
+
+                            source: {
+                                let w = barWindow.rightPanelOpen ? barWindow.rightPanelWidget : barWindow.latchedWidget;
+                                switch (w) {
+                                    case "volume":        return "volume/VolumePopup.qml";
+                                    case "battery":       return "battery/BatteryPopup.qml";
+                                    case "hardware":      return "hardware/HardwarePopup.qml";
+                                    case "notifications": return "notifications/NotificationsPopup.qml";
+                                    case "network":       return "network/NetworkPopup.qml";
+                                    default:              return "";
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Dismiss panel when clicking outside
+                MouseArea {
+                    parent: barWindow.contentItem
+                    anchors.fill: parent
+                    z: -100
+                    enabled: barWindow.rightPanelOpen
+                    acceptedButtons: Qt.LeftButton
+                    onClicked: barWindow.rightPanelWidget = ""
                 }
             }
         }
