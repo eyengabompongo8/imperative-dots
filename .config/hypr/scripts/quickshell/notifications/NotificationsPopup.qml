@@ -94,15 +94,42 @@ Item {
 
     // --- Group Collapse State ---
     property var collapsedGroups: ({})
+    property var viewedUids: ({})
 
     function isCollapsed(groupName) {
         return !!collapsedGroups[groupName];
     }
 
+    function recordExpandedGroupsAsViewed() {
+        if (!window.notifModel) return;
+        let copy = Object.assign({}, viewedUids);
+        for (let i = 0; i < window.notifModel.count; i++) {
+            let item = window.notifModel.get(i);
+            if (item && !window.isCollapsed(item.appName)) {
+                copy[item.uid] = true;
+            }
+        }
+        viewedUids = copy;
+    }
+
+    Component.onCompleted: {
+        recordExpandedGroupsAsViewed();
+    }
+
+    Component.onDestruction: {
+        for (let uid in viewedUids) {
+            NotificationService.markAsSeen(parseInt(uid));
+        }
+    }
+
     function toggleGroup(groupName) {
         let copy = Object.assign({}, collapsedGroups);
+        let willBeExpanded = !!copy[groupName];
         copy[groupName] = !copy[groupName];
         collapsedGroups = copy;
+        if (willBeExpanded) {
+            recordExpandedGroupsAsViewed();
+        }
     }
 
     function syncNotifCount() {
@@ -122,8 +149,8 @@ Item {
     }
 
     // --- Window Focus Dispatcher ---
-    function focusApp(appName, desktopEntry) {
-        NotificationService.focusApp(appName, desktopEntry);
+    function focusApp(appName, desktopEntry, senderPid, summary) {
+        NotificationService.focusApp(appName, desktopEntry, senderPid, summary);
     }
 
     // --- Time Format Helper ---
@@ -324,8 +351,10 @@ Item {
                 section.property: "appName"
                 section.criteria: ViewSection.FullString
                 section.delegate: Item {
+                    id: secDelegate
                     width: ListView.view.width
                     height: window.s(36)
+                    property bool groupHasUnseen: NotificationService.getGroupUnseenCount(section) > 0
 
                     Rectangle {
                         anchors.fill: parent
@@ -356,8 +385,9 @@ Item {
                                     Text {
                                         font.family: "SF Pro "
                                         font.pixelSize: window.s(12)
-                                        color: window.mauve
+                                        color: secDelegate.groupHasUnseen ? window.mauve : window.subtext0
                                         text: window.isCollapsed(section) ? "󰅂" : "󰅀"
+                                        Behavior on color { ColorAnimation { duration: 200 } }
                                     }
 
                                     Text {
@@ -365,20 +395,22 @@ Item {
                                         font.family: "SF Pro Text"
                                         font.weight: Font.Black
                                         font.pixelSize: window.s(11)
-                                        color: window.subtext0
+                                        color: secDelegate.groupHasUnseen ? window.mauve : window.subtext0
+                                        Behavior on color { ColorAnimation { duration: 200 } }
                                     }
 
                                     // Group count badge
                                     Rectangle {
                                         property int grpCount: {
-                                            let _d = window.notifModel ? window.notifModel.count : 0;
+                                             let _d = window.notifModel ? window.notifModel.count : 0;
                                             return window.getGroupCount(section);
                                         }
                                         visible: grpCount > 0
                                         Layout.preferredHeight: window.s(16)
                                         Layout.preferredWidth: Math.max(window.s(16), grpCountText.implicitWidth + window.s(8))
                                         radius: height / 2
-                                        color: window.surface2
+                                        color: secDelegate.groupHasUnseen ? Qt.alpha(window.mauve, 0.25) : window.surface2
+                                        Behavior on color { ColorAnimation { duration: 200 } }
 
                                         Text {
                                             id: grpCountText
@@ -387,7 +419,8 @@ Item {
                                             font.family: "SF Pro Text"
                                             font.weight: Font.Bold
                                             font.pixelSize: window.s(9)
-                                            color: window.subtext0
+                                            color: secDelegate.groupHasUnseen ? window.mauve : window.subtext0
+                                            Behavior on color { ColorAnimation { duration: 200 } }
                                         }
                                     }
 
@@ -462,7 +495,7 @@ Item {
                         clip: true
 
                         Behavior on color { ColorAnimation { duration: 150 } }
-                        Behavior on border.color { ColorAnimation { duration: 150 } }
+                        Behavior on border.color { ColorAnimation { duration: 250 } }
 
                         // Main Card Interaction (Click & Middle Click)
                         MouseArea {
@@ -488,7 +521,7 @@ Item {
                                     }
                                 }
 
-                                window.focusApp(model.appName, model.desktopEntry);
+                                window.focusApp(model.appName, model.desktopEntry, model.senderPid || 0, model.summary || "");
                                 delegateWrapper.removeThisNotif();
                             }
                         }
@@ -502,7 +535,7 @@ Item {
                             anchors.leftMargin: window.s(10)
                             spacing: window.s(4)
 
-                            // Header Line: Icon, AppName, Timestamp, Dismiss
+                            // Header Line: Icon, AppName, Unread Dot, Timestamp, Dismiss
                             RowLayout {
                                 Layout.fillWidth: true
                                 spacing: window.s(6)
@@ -521,6 +554,16 @@ Item {
                                     font.weight: Font.Bold
                                     font.pixelSize: window.s(11)
                                     color: window.subtext0
+                                }
+
+                                Rectangle {
+                                    visible: !model.seen
+                                    Layout.alignment: Qt.AlignVCenter
+                                    Layout.preferredWidth: window.s(6)
+                                    Layout.preferredHeight: window.s(6)
+                                    radius: window.s(3)
+                                    color: window.mauve
+                                    Behavior on opacity { NumberAnimation { duration: 200 } }
                                 }
 
                                 Text {
@@ -646,7 +689,7 @@ Item {
 
                                             onClicked: {
                                                 NotificationService.invokeAction(model.uid, modelData.id || modelData.identifier);
-                                                NotificationService.focusApp(model.appName, model.desktopEntry);
+                                                NotificationService.focusApp(model.appName, model.desktopEntry, model.senderPid || 0, model.summary || "");
                                                 NotificationService.removeHistory(model.uid);
                                             }
                                         }

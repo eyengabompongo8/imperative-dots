@@ -52,8 +52,8 @@ Item {
         NotificationService.invokeAction(uid, actionId);
     }
 
-    function activateCard(appName, desktopEntry, uid) {
-        NotificationService.activateCard(appName, desktopEntry, uid);
+    function activateCard(appName, desktopEntry, uid, senderPid, summary) {
+        NotificationService.activateCard(appName, desktopEntry, uid, senderPid, summary);
     }
 
     ListView {
@@ -138,7 +138,7 @@ Item {
                         toastRoot.removeToast(cardDelegate.popupUid);
                         return;
                     }
-                    toastRoot.activateCard(model.appName, model.desktopEntry, cardDelegate.popupUid);
+                    toastRoot.activateCard(model.appName, model.desktopEntry, cardDelegate.popupUid, model.senderPid || 0, cardDelegate.fullSummary || "");
                 }
             }
 

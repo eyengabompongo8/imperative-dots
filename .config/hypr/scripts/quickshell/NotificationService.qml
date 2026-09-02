@@ -101,6 +101,7 @@ Item {
                     "iconPath": item.iconPath,
                     "imagePath": item.imagePath,
                     "desktopEntry": item.desktopEntry,
+                    "senderPid": item.senderPid !== undefined ? item.senderPid : 0,
                     "urgency": item.urgency,
                     "timestamp": item.timestamp,
                     "actionsJson": item.actionsJson,
@@ -164,10 +165,13 @@ Item {
         return count;
     }
 
-    function focusApp(appName, desktopEntry) {
-        let target = (desktopEntry || appName || "").trim();
-        if (!target) return;
-        Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/focus_app.sh '" + target.replace(/'/g, "") + "'"]);
+    function focusApp(appName, desktopEntry, senderPid, summary) {
+        let app = (appName || "").trim();
+        let entry = (desktopEntry || "").trim();
+        let pid = senderPid ? String(senderPid) : "0";
+        let sum = (summary || "").trim();
+        if (!app && !entry && pid === "0") return;
+        Quickshell.execDetached(["bash", paths.home + "/.config/hypr/scripts/focus_app.sh", app, entry, pid, sum]);
     }
 
     function invokeAction(uid, actionId) {
@@ -186,7 +190,7 @@ Item {
         removeToast(uid);
     }
 
-    function activateCard(appName, desktopEntry, uid) {
+    function activateCard(appName, desktopEntry, uid, senderPid, summary) {
         markAsSeen(uid);
         let n = liveNotifs[uid];
         if (n && n.actions) {
@@ -199,7 +203,7 @@ Item {
                 }
             }
         }
-        focusApp(appName, desktopEntry);
+        focusApp(appName, desktopEntry, senderPid, summary);
         removeToast(uid);
     }
 
@@ -242,6 +246,7 @@ Item {
 
             let hints = n.hints || {};
             let desktopEntry = hints["desktop-entry"] || "";
+            let senderPid = hints["sender-pid"] || hints["pid"] || hints["x-kde-originating-pid"] || 0;
             let urgencyVal = hints["urgency"] !== undefined ? hints["urgency"] : 1;
             let imgPath = hints["image-path"] || hints["image_path"] || hints["image_data"] || "";
             if (imgPath === "" && n.image !== undefined && n.image !== null) imgPath = n.image;
@@ -258,6 +263,7 @@ Item {
                 "iconPath":     n.appIcon  !== "" ? n.appIcon  : "",
                 "imagePath":    imgPath,
                 "desktopEntry": desktopEntry,
+                "senderPid":    senderPid,
                 "urgency":      urgencyVal,
                 "timestamp":    Date.now(),
                 "actionsJson":  JSON.stringify(extractedActions),

@@ -67,8 +67,8 @@ PanelWindow {
         NotificationService.invokeAction(uid, actionId);
     }
 
-    function activateCard(appName, desktopEntry, uid) {
-        NotificationService.activateCard(appName, desktopEntry, uid);
+    function activateCard(appName, desktopEntry, uid, senderPid, summary) {
+        NotificationService.activateCard(appName, desktopEntry, uid, senderPid, summary);
     }
 
     function formatTime(timestamp) {
@@ -186,7 +186,7 @@ PanelWindow {
                                 popupWindow.removeToast(delegateRoot.popupUid);
                                 return;
                             }
-                            popupWindow.activateCard(model.appName, model.desktopEntry, delegateRoot.popupUid);
+                            popupWindow.activateCard(model.appName, model.desktopEntry, delegateRoot.popupUid, model.senderPid || 0, delegateRoot.fullSummary || "");
                         }
                     }
 
