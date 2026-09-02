@@ -92,7 +92,8 @@ Item {
         Quickshell.execDetached(["bash", "-c", "mkdir -p '" + paths.getCacheDir("dnd") + "' && echo '" + newState + "' > '" + paths.getCacheDir("dnd") + "/state'"]);
     }
 
-    // --- Group Collapse State ---
+    // --- Group Collapse & Grouping State ---
+    readonly property bool groupByApp: NotificationService.groupByApp
     property var collapsedGroups: ({})
     property var viewedUids: ({})
 
@@ -105,11 +106,35 @@ Item {
         let copy = Object.assign({}, viewedUids);
         for (let i = 0; i < window.notifModel.count; i++) {
             let item = window.notifModel.get(i);
-            if (item && !window.isCollapsed(item.appName)) {
+            if (item && (!window.groupByApp || !window.isCollapsed(item.appName))) {
                 copy[item.uid] = true;
             }
         }
         viewedUids = copy;
+    }
+
+    Connections {
+        target: NotificationService
+        function onInPlaceNotificationReceived(uid, appName) {
+            if (window.isCollapsed(appName)) {
+                let copy = Object.assign({}, window.collapsedGroups);
+                copy[appName] = false;
+                window.collapsedGroups = copy;
+            }
+            window.recordExpandedGroupsAsViewed();
+            if (notifListView) {
+                notifListView.smoothScrollToTop();
+            }
+        }
+    }
+
+    property bool isInitialLoadComplete: false
+    Timer {
+        id: initLoadTimer
+        interval: 120
+        running: true
+        repeat: false
+        onTriggered: window.isInitialLoadComplete = true
     }
 
     Component.onCompleted: {
@@ -210,13 +235,15 @@ Item {
                     color: window.text
                 }
 
-                // Unread Count Badge
+                // Total Notifications Badge (Highlighted when has unread)
                 Rectangle {
+                    property bool hasUnread: NotificationService.unseenCount > 0
                     visible: notifModel && notifModel.count > 0
                     Layout.preferredHeight: window.s(18)
                     Layout.preferredWidth: Math.max(window.s(18), countText.implicitWidth + window.s(10))
                     radius: height / 2
-                    color: window.mauve
+                    color: hasUnread ? window.mauve : window.surface2
+                    Behavior on color { ColorAnimation { duration: 200 } }
 
                     Text {
                         id: countText
@@ -225,26 +252,68 @@ Item {
                         font.family: "SF Pro Text"
                         font.weight: Font.Bold
                         font.pixelSize: window.s(10)
-                        color: window.crust
+                        color: parent.hasUnread ? window.crust : window.subtext0
+                        Behavior on color { ColorAnimation { duration: 200 } }
                     }
                 }
 
                 Item { Layout.fillWidth: true }
+
+                // Group by App Toggle Button
+                Rectangle {
+                    Layout.preferredWidth: window.s(32)
+                    Layout.preferredHeight: window.s(32)
+                    radius: window.s(16)
+                    color: groupMa.containsMouse ? window.surface2 : "transparent"
+                    scale: groupMa.pressed ? 0.88 : 1.0
+                    Behavior on color { ColorAnimation { duration: 150 } }
+                    Behavior on scale { NumberAnimation { duration: 120; easing.type: Easing.OutQuad } }
+
+                    Text {
+                        id: groupIconText
+                        anchors.centerIn: parent
+                        font.family: "SF Pro "
+                        font.pixelSize: window.s(16)
+                        color: groupMa.containsMouse ? window.mauve : window.subtext0
+                        text: window.groupByApp ? "󰕰" : "󰋚"
+                        rotation: window.groupByApp ? 0 : -180
+                        Behavior on rotation { NumberAnimation { duration: 180; easing.type: Easing.OutBack } }
+                        Behavior on color { ColorAnimation { duration: 120 } }
+                    }
+
+                    MouseArea {
+                        id: groupMa
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            if (notifListView) {
+                                notifListView.scrollToTopAndToggle();
+                            } else {
+                                NotificationService.toggleGroupByApp();
+                                window.recordExpandedGroupsAsViewed();
+                            }
+                        }
+                    }
+                }
 
                 // DND Toggle Button
                 Rectangle {
                     Layout.preferredWidth: window.s(32)
                     Layout.preferredHeight: window.s(32)
                     radius: window.s(16)
-                    color: window.dndEnabled ? window.mauve : (dndMa.containsMouse ? window.surface2 : window.surface1)
+                    color: dndMa.containsMouse ? window.surface2 : "transparent"
+                    scale: dndMa.pressed ? 0.88 : 1.0
                     Behavior on color { ColorAnimation { duration: 150 } }
+                    Behavior on scale { NumberAnimation { duration: 120; easing.type: Easing.OutQuad } }
 
                     Text {
                         anchors.centerIn: parent
                         font.family: "SF Pro "
                         font.pixelSize: window.s(16)
-                        color: window.dndEnabled ? window.crust : (window.dndEnabled ? window.mauve : window.subtext0)
+                        color: window.dndEnabled ? window.mauve : (dndMa.containsMouse ? window.text : window.subtext0)
                         text: window.dndEnabled ? "󰂛" : "󰂚"
+                        Behavior on color { ColorAnimation { duration: 150 } }
                     }
 
                     MouseArea {
@@ -262,8 +331,10 @@ Item {
                     Layout.preferredWidth: window.s(32)
                     Layout.preferredHeight: window.s(32)
                     radius: window.s(16)
-                    color: clearAllMa.containsMouse ? Qt.alpha(window.red, 0.2) : window.surface1
+                    color: clearAllMa.containsMouse ? Qt.alpha(window.red, 0.2) : "transparent"
+                    scale: clearAllMa.pressed ? 0.88 : 1.0
                     Behavior on color { ColorAnimation { duration: 150 } }
+                    Behavior on scale { NumberAnimation { duration: 120; easing.type: Easing.OutQuad } }
 
                     Text {
                         anchors.centerIn: parent
@@ -271,6 +342,7 @@ Item {
                         font.pixelSize: window.s(15)
                         color: clearAllMa.containsMouse ? window.red : window.subtext0
                         text: "󰅖"
+                        Behavior on color { ColorAnimation { duration: 150 } }
                     }
 
                     MouseArea {
@@ -323,6 +395,49 @@ Item {
                 interactive: contentHeight > height
                 clip: true
 
+                property bool isToggleScroll: false
+
+                NumberAnimation {
+                    id: scrollUpAnim
+                    target: notifListView
+                    property: "contentY"
+                    duration: 130
+                    easing.type: Easing.OutCubic
+                    onFinished: {
+                        notifListView.positionViewAtBeginning();
+                        if (notifListView.isToggleScroll) {
+                            notifListView.isToggleScroll = false;
+                            NotificationService.toggleGroupByApp();
+                            window.recordExpandedGroupsAsViewed();
+                        }
+                    }
+                }
+
+                function scrollToTopAndToggle() {
+                    if (notifListView.contentY > 15) {
+                        notifListView.isToggleScroll = true;
+                        scrollUpAnim.stop();
+                        scrollUpAnim.from = notifListView.contentY;
+                        scrollUpAnim.to = 0;
+                        scrollUpAnim.restart();
+                    } else {
+                        NotificationService.toggleGroupByApp();
+                        window.recordExpandedGroupsAsViewed();
+                    }
+                }
+
+                function smoothScrollToTop() {
+                    if (notifListView.contentY > 15) {
+                        notifListView.isToggleScroll = false;
+                        scrollUpAnim.stop();
+                        scrollUpAnim.from = notifListView.contentY;
+                        scrollUpAnim.to = 0;
+                        scrollUpAnim.restart();
+                    } else {
+                        notifListView.positionViewAtBeginning();
+                    }
+                }
+
                 ScrollBar.vertical: ScrollBar {
                     active: notifListView.moving || notifListView.movingVertically
                     width: window.s(4)
@@ -330,30 +445,49 @@ Item {
                     contentItem: Rectangle { implicitWidth: window.s(4); radius: window.s(2); color: window.surface2 }
                 }
 
-                // Fluid Add / Remove Transitions
-                add: Transition {
+                // Fluid Add / Remove / Displaced Transitions
+                Transition {
+                    id: addCardTransition
                     ParallelAnimation {
-                        NumberAnimation { property: "opacity"; from: 0.0; to: 1.0; duration: 250; easing.type: Easing.OutCubic }
-                        NumberAnimation { property: "scale"; from: 0.95; to: 1.0; duration: 250; easing.type: Easing.OutBack }
+                        NumberAnimation { property: "opacity"; from: 0.0; to: 1.0; duration: 180; easing.type: Easing.OutCubic }
+                        NumberAnimation { property: "x"; from: notifListView.width * 0.35; to: 0; duration: 180; easing.type: Easing.OutCubic }
+                        NumberAnimation { property: "scale"; from: 0.9; to: 1.0; duration: 180; easing.type: Easing.OutCubic }
                     }
                 }
+
+                add: window.isInitialLoadComplete ? addCardTransition : null
+
                 remove: Transition {
                     ParallelAnimation {
-                        NumberAnimation { property: "opacity"; to: 0.0; duration: 200; easing.type: Easing.InCubic }
-                        NumberAnimation { property: "scale"; to: 0.9; duration: 200; easing.type: Easing.InCubic }
+                        NumberAnimation { property: "opacity"; to: 0.0; duration: 150; easing.type: Easing.InCubic }
+                        NumberAnimation { property: "x"; to: notifListView.width * 0.35; duration: 150; easing.type: Easing.InCubic }
+                        NumberAnimation { property: "scale"; to: 0.9; duration: 150; easing.type: Easing.InCubic }
                     }
                 }
+
+                move: Transition {
+                    NumberAnimation { property: "y"; duration: 160; easing.type: Easing.OutCubic }
+                }
+
+                moveDisplaced: Transition {
+                    NumberAnimation { property: "y"; duration: 160; easing.type: Easing.OutCubic }
+                }
+
                 displaced: Transition {
-                    NumberAnimation { properties: "y"; duration: 250; easing.type: Easing.OutCubic }
+                    NumberAnimation { property: "y"; duration: 160; easing.type: Easing.OutCubic }
                 }
 
                 // --- App Grouping Header ---
-                section.property: "appName"
+                section.property: window.groupByApp ? "appName" : ""
                 section.criteria: ViewSection.FullString
                 section.delegate: Item {
                     id: secDelegate
-                    width: ListView.view.width
+                    width: ListView.view ? ListView.view.width : 0
                     height: window.s(36)
+                    visible: window.groupByApp
+                    opacity: 1.0
+                    clip: true
+
                     property bool groupHasUnseen: NotificationService.getGroupUnseenCount(section) > 0
 
                     Rectangle {
@@ -459,15 +593,17 @@ Item {
                 // --- Individual Notification Card Delegate ---
                 delegate: Item {
                     id: delegateWrapper
-                    width: ListView.view.width
-                    property bool isHidden: window.isCollapsed(model.appName)
+                    width: ListView.view ? ListView.view.width : 0
+                    z: ListView.view ? (ListView.view.count - index) : 0
+                    property bool isHidden: window.groupByApp && window.isCollapsed(model.appName)
                     height: isHidden ? 0 : cardRect.height + window.s(8)
                     visible: height > 0
-                    opacity: isHidden ? 0 : 1
-                    clip: true
+                    clip: false
 
-                    Behavior on height { NumberAnimation { duration: 250; easing.type: Easing.OutCubic } }
-                    Behavior on opacity { NumberAnimation { duration: 200 } }
+                    Behavior on height {
+                        enabled: window.isInitialLoadComplete
+                        NumberAnimation { duration: 250; easing.type: Easing.OutCubic }
+                    }
 
                     property var realNotif: window.liveNotifs ? window.liveNotifs[model.uid] : null
 
@@ -487,7 +623,7 @@ Item {
                         id: cardRect
                         anchors.top: parent.top
                         width: parent.width
-                        height: colLayout.height + window.s(20)
+                        height: colLayout.implicitHeight + window.s(20)
                         radius: window.s(12)
                         color: cardMa.containsMouse ? window.surface2 : window.surface1
                         border.color: model.urgency === 2 ? window.red : (cardMa.containsMouse ? Qt.rgba(window.text.r, window.text.g, window.text.b, 0.25) : Qt.rgba(window.text.r, window.text.g, window.text.b, 0.12))

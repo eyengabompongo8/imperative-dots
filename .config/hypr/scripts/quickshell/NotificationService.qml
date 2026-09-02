@@ -17,12 +17,20 @@ Item {
     property bool isStartup: true
 
     property bool isRightWidgetOpen: false
+    property bool isNotifWidgetOpen: false
     property real rightIslandBottomY: 54
 
     readonly property alias history: historyModel
     readonly property alias toasts: toastModel
     property int unseenCount: 0
     readonly property int unreadCount: unseenCount
+
+    signal newToastReceived(int uid)
+    signal inPlaceNotificationReceived(int uid, string appName)
+
+    function dismissAllToasts() {
+        toastModel.clear();
+    }
 
     function recountUnseen() {
         let count = 0;
@@ -88,32 +96,126 @@ Item {
         return count;
     }
 
-    function addHistory(notifData) {
-        let app = notifData.appName;
-        let sameApp = [];
-        for (let i = historyModel.count - 1; i >= 0; i--) {
-            let item = historyModel.get(i);
-            if (item.appName === app) {
-                sameApp.unshift({
-                    "appName": item.appName,
-                    "summary": item.summary,
-                    "body": item.body,
-                    "iconPath": item.iconPath,
-                    "imagePath": item.imagePath,
-                    "desktopEntry": item.desktopEntry,
-                    "senderPid": item.senderPid !== undefined ? item.senderPid : 0,
-                    "urgency": item.urgency,
-                    "timestamp": item.timestamp,
-                    "actionsJson": item.actionsJson,
-                    "uid": item.uid,
-                    "seen": item.seen !== undefined ? item.seen : false
-                });
-                historyModel.remove(i);
+    property bool groupByApp: true
+
+    Process {
+        id: groupByAppPoller
+        command: ["bash", "-c", "cat '" + paths.getCacheDir("notifications") + "/group_by_app' 2>/dev/null || echo '1'"]
+        running: true
+        stdout: StdioCollector {
+            onStreamFinished: {
+                let val = this.text.trim();
+                let enabled = (val !== "0");
+                if (root.groupByApp !== enabled) {
+                    root.groupByApp = enabled;
+                    root.reorderHistory(enabled);
+                }
             }
         }
-        historyModel.insert(0, notifData);
-        for (let j = 0; j < sameApp.length; j++) {
-            historyModel.insert(j + 1, sameApp[j]);
+    }
+
+    function toggleGroupByApp() {
+        setGroupByApp(!root.groupByApp);
+    }
+
+    function setGroupByApp(enabled) {
+        if (root.groupByApp === enabled) return;
+        root.groupByApp = enabled;
+        reorderHistory(enabled);
+        Quickshell.execDetached(["bash", "-c", "mkdir -p '" + paths.getCacheDir("notifications") + "' && echo '" + (enabled ? "1" : "0") + "' > '" + paths.getCacheDir("notifications") + "/group_by_app'"]);
+    }
+
+    function reorderHistory(isGrouped) {
+        if (historyModel.count <= 1) return;
+
+        let items = [];
+        for (let i = 0; i < historyModel.count; i++) {
+            items.push(historyModel.get(i));
+        }
+
+        let targetUids = [];
+        if (!isGrouped) {
+            items.sort(function(a, b) {
+                return (b.timestamp || 0) - (a.timestamp || 0);
+            });
+            targetUids = items.map(function(item) { return item.uid; });
+        } else {
+            let groups = {};
+            let groupNames = [];
+            for (let i = 0; i < items.length; i++) {
+                let item = items[i];
+                let app = item.appName || "System";
+                if (!groups[app]) {
+                    groups[app] = [];
+                    groupNames.push(app);
+                }
+                groups[app].push(item);
+            }
+
+            for (let app in groups) {
+                groups[app].sort(function(a, b) {
+                    return (b.timestamp || 0) - (a.timestamp || 0);
+                });
+            }
+
+            groupNames.sort(function(a, b) {
+                let latestA = groups[a][0] ? (groups[a][0].timestamp || 0) : 0;
+                let latestB = groups[b][0] ? (groups[b][0].timestamp || 0) : 0;
+                return latestB - latestA;
+            });
+
+            for (let i = 0; i < groupNames.length; i++) {
+                let grp = groups[groupNames[i]];
+                for (let j = 0; j < grp.length; j++) {
+                    targetUids.push(grp[j].uid);
+                }
+            }
+        }
+
+        for (let targetIdx = 0; targetIdx < targetUids.length; targetIdx++) {
+            let desiredUid = targetUids[targetIdx];
+            if (historyModel.get(targetIdx).uid !== desiredUid) {
+                for (let curIdx = targetIdx + 1; curIdx < historyModel.count; curIdx++) {
+                    if (historyModel.get(curIdx).uid === desiredUid) {
+                        historyModel.move(curIdx, targetIdx, 1);
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    function addHistory(notifData) {
+        if (!root.groupByApp) {
+            historyModel.insert(0, notifData);
+        } else {
+            let app = notifData.appName;
+            let indices = [];
+
+            for (let i = 0; i < historyModel.count; i++) {
+                let item = historyModel.get(i);
+                if (item && item.appName === app) {
+                    indices.push(i);
+                }
+            }
+
+            if (indices.length > 0) {
+                let alreadyAtTop = true;
+                for (let k = 0; k < indices.length; k++) {
+                    if (indices[k] !== k) {
+                        alreadyAtTop = false;
+                        break;
+                    }
+                }
+
+                if (!alreadyAtTop) {
+                    for (let k = 0; k < indices.length; k++) {
+                        historyModel.move(indices[k], k, 1);
+                    }
+                }
+            }
+
+            historyModel.insert(0, notifData);
         }
         recountUnseen();
         updateNotifCountFile();
@@ -274,13 +376,15 @@ Item {
             // Always add to history (grouped by application)
             root.addHistory(notifData);
 
-            // If past startup, always route to toastModel and notify dynamic island
+            // If past startup, route to toastModel if widget is closed, or notify open widget in-place
             if (!root.isStartup) {
-                toastModel.insert(0, notifData);
-                root.newToastReceived(currentUid);
+                if (!root.isNotifWidgetOpen) {
+                    toastModel.insert(0, notifData);
+                    root.newToastReceived(currentUid);
+                } else {
+                    root.inPlaceNotificationReceived(currentUid, notifData.appName);
+                }
             }
         }
     }
-
-    signal newToastReceived(int uid)
 }
