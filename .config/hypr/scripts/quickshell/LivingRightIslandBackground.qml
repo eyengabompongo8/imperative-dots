@@ -7,7 +7,9 @@ Item {
     property real pillWidth: 350
     property real topBarHeight: 44
     property real widgetWidth: 450
-    property real widgetHeight: 700
+    property real widgetHeight: 0
+    property real toastWidth: 380
+    property real toastHeight: 0
     property bool isOpen: false
 
     property real earRadius: 14
@@ -17,27 +19,23 @@ Item {
     property color strokeColor: Qt.rgba(1, 1, 1, 0.12)
     property real strokeWidth: 1.2
 
-    // Unified diagonal animation progress from (xRight, topBarHeight)
-    property real animProgress: root.isOpen ? 1.0 : 0.0
-    Behavior on animProgress {
-        NumberAnimation { duration: 280; easing.type: root.isOpen ? Easing.OutExpo : Easing.InCubic }
-    }
-
-    readonly property real animDropdownW: animProgress * widgetWidth
-    readonly property real animDropdownH: animProgress * widgetHeight
-
     // Geometry anchors
     readonly property real currentBoxW: parent ? parent.width : pillWidth
     readonly property real currentBoxH: parent ? parent.height : topBarHeight
 
     readonly property real xRight: currentBoxW
     readonly property real xPillLeft: Math.max(0, currentBoxW - pillWidth)
-    readonly property real xDropLeft: Math.max(0, currentBoxW - animDropdownW)
-    readonly property real yBottom: topBarHeight + animDropdownH
+    readonly property real xWidgetLeft: Math.max(0, currentBoxW - widgetWidth)
+    readonly property real xToastLeft: Math.max(0, currentBoxW - toastWidth)
 
-    readonly property bool isWider: (root.isOpen || root.animDropdownW > 1) && (animDropdownW > (pillWidth + 4))
-    readonly property bool isNarrower: (root.isOpen || root.animDropdownH > 1) && !isWider
-    readonly property bool isCollapsed: !root.isOpen && root.animDropdownH <= 1 && root.animDropdownW <= 1
+    readonly property real yWidgetBottom: topBarHeight + widgetHeight
+    readonly property real yToastBottom: yWidgetBottom + toastHeight
+
+    // Continuous mode determination
+    readonly property bool hasSteppedToast: (widgetHeight > 4 && toastHeight > 4 && widgetWidth > (toastWidth + 10))
+    readonly property bool isWider: !hasSteppedToast && (widgetHeight > 4) && (widgetWidth > (pillWidth + 4))
+    readonly property bool isNarrower: !hasSteppedToast && !isWider && (widgetHeight > 4)
+    readonly property bool isCollapsed: !hasSteppedToast && !isWider && !isNarrower
 
     anchors.top: parent ? parent.top : undefined
     anchors.bottom: parent ? parent.bottom : undefined
@@ -152,15 +150,15 @@ Item {
                 direction: PathArc.Counterclockwise
             }
 
-            // 4. Pill bottom horizontal edge to transition point at xDropLeft
+            // 4. Pill bottom horizontal edge to transition point at xWidgetLeft
             PathLine {
-                x: Math.min(root.xRight, Math.max(root.xPillLeft + root.earRadius + root.bottomRadius, root.xDropLeft))
+                x: Math.min(root.xRight, Math.max(root.xPillLeft + root.earRadius + root.bottomRadius, root.xWidgetLeft))
                 y: root.topBarHeight
             }
 
             // 5. Widget top-left concave transition ear
             PathArc {
-                x: Math.min(root.xRight, Math.max(root.xPillLeft + root.earRadius, root.xDropLeft + root.earRadius))
+                x: Math.min(root.xRight, Math.max(root.xPillLeft + root.earRadius, root.xWidgetLeft + root.earRadius))
                 y: root.topBarHeight + root.earRadius
                 radiusX: root.earRadius
                 radiusY: root.earRadius
@@ -169,14 +167,14 @@ Item {
 
             // 6. Widget left vertical wall
             PathLine {
-                x: Math.min(root.xRight, Math.max(root.xPillLeft + root.earRadius, root.xDropLeft + root.earRadius))
-                y: Math.max(root.topBarHeight + root.earRadius, root.yBottom - root.bottomRadius)
+                x: Math.min(root.xRight, Math.max(root.xPillLeft + root.earRadius, root.xWidgetLeft + root.earRadius))
+                y: Math.max(root.topBarHeight + root.earRadius, root.yWidgetBottom - root.bottomRadius)
             }
 
             // 7. Widget bottom-left convex corner
             PathArc {
-                x: Math.min(root.xRight, Math.max(root.xPillLeft + root.earRadius + root.bottomRadius, root.xDropLeft + root.earRadius + root.bottomRadius))
-                y: root.yBottom
+                x: Math.min(root.xRight, Math.max(root.xPillLeft + root.earRadius + root.bottomRadius, root.xWidgetLeft + root.earRadius + root.bottomRadius))
+                y: root.yWidgetBottom
                 radiusX: root.bottomRadius
                 radiusY: root.bottomRadius
                 direction: PathArc.Counterclockwise
@@ -185,13 +183,13 @@ Item {
             // 8. Widget bottom horizontal edge
             PathLine {
                 x: root.xRight
-                y: root.yBottom
+                y: root.yWidgetBottom
             }
 
             // 9. Widget bottom-right concave ear into right bezel
             PathArc {
                 x: root.xRight + root.earRadius
-                y: root.yBottom + root.earRadius
+                y: root.yWidgetBottom + root.earRadius
                 radiusX: root.earRadius
                 radiusY: root.earRadius
                 direction: PathArc.Clockwise
@@ -211,7 +209,7 @@ Item {
         }
 
         // -------------------------------------------------------------
-        // 3. CASE B FILL: Wider Widget (W_anim > W_pill)
+        // 3. CASE B FILL: Wider Single-Tier Widget (W_anim > W_pill)
         // -------------------------------------------------------------
         ShapePath {
             fillColor: root.isWider ? root.fillColor : "transparent"
@@ -245,15 +243,15 @@ Item {
                 direction: PathArc.Clockwise
             }
 
-            // 4. Widget top roof extending left to xDropLeft + Re + Rb
+            // 4. Widget top roof extending left to xWidgetLeft + Re + Rb
             PathLine {
-                x: root.xDropLeft + root.earRadius + root.bottomRadius
+                x: root.xWidgetLeft + root.earRadius + root.bottomRadius
                 y: root.topBarHeight
             }
 
             // 5. Widget top-left convex corner
             PathArc {
-                x: root.xDropLeft + root.earRadius
+                x: root.xWidgetLeft + root.earRadius
                 y: root.topBarHeight + root.bottomRadius
                 radiusX: root.bottomRadius
                 radiusY: root.bottomRadius
@@ -262,14 +260,14 @@ Item {
 
             // 6. Widget left vertical wall
             PathLine {
-                x: root.xDropLeft + root.earRadius
-                y: Math.max(root.topBarHeight + root.bottomRadius, root.yBottom - root.bottomRadius)
+                x: root.xWidgetLeft + root.earRadius
+                y: Math.max(root.topBarHeight + root.bottomRadius, root.yWidgetBottom - root.bottomRadius)
             }
 
             // 7. Widget bottom-left convex corner
             PathArc {
-                x: root.xDropLeft + root.earRadius + root.bottomRadius
-                y: root.yBottom
+                x: root.xWidgetLeft + root.earRadius + root.bottomRadius
+                y: root.yWidgetBottom
                 radiusX: root.bottomRadius
                 radiusY: root.bottomRadius
                 direction: PathArc.Counterclockwise
@@ -278,13 +276,13 @@ Item {
             // 8. Widget bottom horizontal edge
             PathLine {
                 x: root.xRight
-                y: root.yBottom
+                y: root.yWidgetBottom
             }
 
             // 9. Widget bottom-right concave ear into right bezel
             PathArc {
                 x: root.xRight + root.earRadius
-                y: root.yBottom + root.earRadius
+                y: root.yWidgetBottom + root.earRadius
                 radiusX: root.earRadius
                 radiusY: root.earRadius
                 direction: PathArc.Clockwise
@@ -297,6 +295,129 @@ Item {
             }
 
             // 11. Close along top screen bezel
+            PathLine {
+                x: root.xPillLeft
+                y: 0
+            }
+        }
+
+        // -------------------------------------------------------------
+        // 4. CASE C FILL: Stepped Multi-Tier (Wide Widget + Narrow Toast)
+        // -------------------------------------------------------------
+        ShapePath {
+            fillColor: root.hasSteppedToast ? root.fillColor : "transparent"
+            strokeColor: "transparent"
+            strokeWidth: 0
+
+            startX: root.xPillLeft
+            startY: 0
+
+            // 1. Pill top-left concave ear
+            PathArc {
+                x: root.xPillLeft + root.earRadius
+                y: root.earRadius
+                radiusX: root.earRadius
+                radiusY: root.earRadius
+                direction: PathArc.Clockwise
+            }
+
+            // 2. Pill left vertical wall
+            PathLine {
+                x: root.xPillLeft + root.earRadius
+                y: Math.max(root.earRadius, root.topBarHeight - root.earRadius)
+            }
+
+            // 3. Junction concave ear curving left into widget roof
+            PathArc {
+                x: root.xPillLeft
+                y: root.topBarHeight
+                radiusX: root.earRadius
+                radiusY: root.earRadius
+                direction: PathArc.Clockwise
+            }
+
+            // 4. Widget top roof extending left
+            PathLine {
+                x: root.xWidgetLeft + root.earRadius + root.bottomRadius
+                y: root.topBarHeight
+            }
+
+            // 5. Widget top-left convex corner
+            PathArc {
+                x: root.xWidgetLeft + root.earRadius
+                y: root.topBarHeight + root.bottomRadius
+                radiusX: root.bottomRadius
+                radiusY: root.bottomRadius
+                direction: PathArc.Counterclockwise
+            }
+
+            // 6. Widget left vertical wall
+            PathLine {
+                x: root.xWidgetLeft + root.earRadius
+                y: Math.max(root.topBarHeight + root.bottomRadius, root.yWidgetBottom - root.bottomRadius)
+            }
+
+            // 7. Widget bottom-left convex corner
+            PathArc {
+                x: root.xWidgetLeft + root.earRadius + root.bottomRadius
+                y: root.yWidgetBottom
+                radiusX: root.bottomRadius
+                radiusY: root.bottomRadius
+                direction: PathArc.Counterclockwise
+            }
+
+            // 8. Inward step horizontal shelf to xToastLeft
+            PathLine {
+                x: Math.min(root.xRight, Math.max(root.xWidgetLeft + root.earRadius + root.bottomRadius, root.xToastLeft))
+                y: root.yWidgetBottom
+            }
+
+            // 9. Inward step concave transition ear curving down into toast
+            PathArc {
+                x: Math.min(root.xRight, Math.max(root.xWidgetLeft + root.earRadius, root.xToastLeft + root.earRadius))
+                y: root.yWidgetBottom + root.earRadius
+                radiusX: root.earRadius
+                radiusY: root.earRadius
+                direction: PathArc.Clockwise
+            }
+
+            // 10. Toast left vertical wall
+            PathLine {
+                x: Math.min(root.xRight, Math.max(root.xWidgetLeft + root.earRadius, root.xToastLeft + root.earRadius))
+                y: Math.max(root.yWidgetBottom + root.earRadius, root.yToastBottom - root.bottomRadius)
+            }
+
+            // 11. Toast bottom-left convex corner
+            PathArc {
+                x: Math.min(root.xRight, Math.max(root.xWidgetLeft + root.earRadius + root.bottomRadius, root.xToastLeft + root.earRadius + root.bottomRadius))
+                y: root.yToastBottom
+                radiusX: root.bottomRadius
+                radiusY: root.bottomRadius
+                direction: PathArc.Counterclockwise
+            }
+
+            // 12. Toast bottom horizontal edge
+            PathLine {
+                x: root.xRight
+                y: root.yToastBottom
+            }
+
+            // 13. Toast bottom-right concave ear into right bezel
+            PathArc {
+                x: root.xRight + root.earRadius
+                y: root.yToastBottom + root.earRadius
+                radiusX: root.earRadius
+                radiusY: root.earRadius
+                direction: PathArc.Clockwise
+            }
+
+            // 14. Right vertical bezel edge
+            PathLine {
+                x: root.xRight + root.earRadius
+                y: 0
+            }
+
+            // 15. Close along top screen bezel
             PathLine {
                 x: root.xPillLeft
                 y: 0
@@ -398,15 +519,15 @@ Item {
                 direction: PathArc.Counterclockwise
             }
 
-            // 4. Pill bottom horizontal edge to transition point at xDropLeft
+            // 4. Pill bottom horizontal edge
             PathLine {
-                x: Math.min(root.xRight, Math.max(root.xPillLeft + root.earRadius + root.bottomRadius, root.xDropLeft))
+                x: Math.min(root.xRight, Math.max(root.xPillLeft + root.earRadius + root.bottomRadius, root.xWidgetLeft))
                 y: root.topBarHeight
             }
 
             // 5. Widget top-left concave transition ear
             PathArc {
-                x: Math.min(root.xRight, Math.max(root.xPillLeft + root.earRadius, root.xDropLeft + root.earRadius))
+                x: Math.min(root.xRight, Math.max(root.xPillLeft + root.earRadius, root.xWidgetLeft + root.earRadius))
                 y: root.topBarHeight + root.earRadius
                 radiusX: root.earRadius
                 radiusY: root.earRadius
@@ -415,14 +536,14 @@ Item {
 
             // 6. Widget left vertical wall
             PathLine {
-                x: Math.min(root.xRight, Math.max(root.xPillLeft + root.earRadius, root.xDropLeft + root.earRadius))
-                y: Math.max(root.topBarHeight + root.earRadius, root.yBottom - root.bottomRadius)
+                x: Math.min(root.xRight, Math.max(root.xPillLeft + root.earRadius, root.xWidgetLeft + root.earRadius))
+                y: Math.max(root.topBarHeight + root.earRadius, root.yWidgetBottom - root.bottomRadius)
             }
 
             // 7. Widget bottom-left convex corner
             PathArc {
-                x: Math.min(root.xRight, Math.max(root.xPillLeft + root.earRadius + root.bottomRadius, root.xDropLeft + root.earRadius + root.bottomRadius))
-                y: root.yBottom
+                x: Math.min(root.xRight, Math.max(root.xPillLeft + root.earRadius + root.bottomRadius, root.xWidgetLeft + root.earRadius + root.bottomRadius))
+                y: root.yWidgetBottom
                 radiusX: root.bottomRadius
                 radiusY: root.bottomRadius
                 direction: PathArc.Counterclockwise
@@ -431,13 +552,13 @@ Item {
             // 8. Widget bottom horizontal edge
             PathLine {
                 x: root.xRight
-                y: root.yBottom
+                y: root.yWidgetBottom
             }
 
             // 9. Widget bottom-right concave ear into right bezel
             PathArc {
                 x: root.xRight + root.earRadius
-                y: root.yBottom + root.earRadius
+                y: root.yWidgetBottom + root.earRadius
                 radiusX: root.earRadius
                 radiusY: root.earRadius
                 direction: PathArc.Clockwise
@@ -482,13 +603,13 @@ Item {
 
             // 4. Widget top roof
             PathLine {
-                x: root.xDropLeft + root.earRadius + root.bottomRadius
+                x: root.xWidgetLeft + root.earRadius + root.bottomRadius
                 y: root.topBarHeight
             }
 
             // 5. Widget top-left convex corner
             PathArc {
-                x: root.xDropLeft + root.earRadius
+                x: root.xWidgetLeft + root.earRadius
                 y: root.topBarHeight + root.bottomRadius
                 radiusX: root.bottomRadius
                 radiusY: root.bottomRadius
@@ -497,14 +618,14 @@ Item {
 
             // 6. Widget left vertical wall
             PathLine {
-                x: root.xDropLeft + root.earRadius
-                y: Math.max(root.topBarHeight + root.bottomRadius, root.yBottom - root.bottomRadius)
+                x: root.xWidgetLeft + root.earRadius
+                y: Math.max(root.topBarHeight + root.bottomRadius, root.yWidgetBottom - root.bottomRadius)
             }
 
             // 7. Widget bottom-left convex corner
             PathArc {
-                x: root.xDropLeft + root.earRadius + root.bottomRadius
-                y: root.yBottom
+                x: root.xWidgetLeft + root.earRadius + root.bottomRadius
+                y: root.yWidgetBottom
                 radiusX: root.bottomRadius
                 radiusY: root.bottomRadius
                 direction: PathArc.Counterclockwise
@@ -513,13 +634,125 @@ Item {
             // 8. Widget bottom horizontal edge
             PathLine {
                 x: root.xRight
-                y: root.yBottom
+                y: root.yWidgetBottom
             }
 
             // 9. Widget bottom-right concave ear into right bezel
             PathArc {
                 x: root.xRight + root.earRadius
-                y: root.yBottom + root.earRadius
+                y: root.yWidgetBottom + root.earRadius
+                radiusX: root.earRadius
+                radiusY: root.earRadius
+                direction: PathArc.Clockwise
+            }
+        }
+
+        // -------------------------------------------------------------
+        // 4. CASE C STROKE: Stepped Multi-Tier (Wide Widget + Narrow Toast)
+        // -------------------------------------------------------------
+        ShapePath {
+            fillColor: "transparent"
+            strokeColor: root.hasSteppedToast ? root.strokeColor : "transparent"
+            strokeWidth: root.strokeWidth
+            capStyle: ShapePath.RoundCap
+
+            startX: root.xPillLeft
+            startY: 0
+
+            // 1. Pill top-left concave ear
+            PathArc {
+                x: root.xPillLeft + root.earRadius
+                y: root.earRadius
+                radiusX: root.earRadius
+                radiusY: root.earRadius
+                direction: PathArc.Clockwise
+            }
+
+            // 2. Pill left vertical wall
+            PathLine {
+                x: root.xPillLeft + root.earRadius
+                y: Math.max(root.earRadius, root.topBarHeight - root.earRadius)
+            }
+
+            // 3. Junction concave ear
+            PathArc {
+                x: root.xPillLeft
+                y: root.topBarHeight
+                radiusX: root.earRadius
+                radiusY: root.earRadius
+                direction: PathArc.Clockwise
+            }
+
+            // 4. Widget top roof
+            PathLine {
+                x: root.xWidgetLeft + root.earRadius + root.bottomRadius
+                y: root.topBarHeight
+            }
+
+            // 5. Widget top-left convex corner
+            PathArc {
+                x: root.xWidgetLeft + root.earRadius
+                y: root.topBarHeight + root.bottomRadius
+                radiusX: root.bottomRadius
+                radiusY: root.bottomRadius
+                direction: PathArc.Counterclockwise
+            }
+
+            // 6. Widget left vertical wall
+            PathLine {
+                x: root.xWidgetLeft + root.earRadius
+                y: Math.max(root.topBarHeight + root.bottomRadius, root.yWidgetBottom - root.bottomRadius)
+            }
+
+            // 7. Widget bottom-left convex corner
+            PathArc {
+                x: root.xWidgetLeft + root.earRadius + root.bottomRadius
+                y: root.yWidgetBottom
+                radiusX: root.bottomRadius
+                radiusY: root.bottomRadius
+                direction: PathArc.Counterclockwise
+            }
+
+            // 8. Inward step horizontal shelf to xToastLeft
+            PathLine {
+                x: Math.min(root.xRight, Math.max(root.xWidgetLeft + root.earRadius + root.bottomRadius, root.xToastLeft))
+                y: root.yWidgetBottom
+            }
+
+            // 9. Inward step concave transition ear curving down into toast
+            PathArc {
+                x: Math.min(root.xRight, Math.max(root.xWidgetLeft + root.earRadius, root.xToastLeft + root.earRadius))
+                y: root.yWidgetBottom + root.earRadius
+                radiusX: root.earRadius
+                radiusY: root.earRadius
+                direction: PathArc.Clockwise
+            }
+
+            // 10. Toast left vertical wall
+            PathLine {
+                x: Math.min(root.xRight, Math.max(root.xWidgetLeft + root.earRadius, root.xToastLeft + root.earRadius))
+                y: Math.max(root.yWidgetBottom + root.earRadius, root.yToastBottom - root.bottomRadius)
+            }
+
+            // 11. Toast bottom-left convex corner
+            PathArc {
+                x: Math.min(root.xRight, Math.max(root.xWidgetLeft + root.earRadius + root.bottomRadius, root.xToastLeft + root.earRadius + root.bottomRadius))
+                y: root.yToastBottom
+                radiusX: root.bottomRadius
+                radiusY: root.bottomRadius
+                direction: PathArc.Counterclockwise
+            }
+
+            // 12. Toast bottom horizontal edge
+            PathLine {
+                x: root.xRight
+                y: root.yToastBottom
+            }
+
+            // 13. Toast bottom-right concave ear into right bezel
+            PathArc {
+                x: root.xRight + root.earRadius
+                y: root.yToastBottom + root.earRadius
                 radiusX: root.earRadius
                 radiusY: root.earRadius
                 direction: PathArc.Clockwise
@@ -527,3 +760,4 @@ Item {
         }
     }
 }
+

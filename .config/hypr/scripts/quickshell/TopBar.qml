@@ -106,7 +106,7 @@ Variants {
             WlrLayershell.namespace: "qs-topbar"
             WlrLayershell.layer: WlrLayer.Overlay
 
-            focusable: barWindow.rightPanelOpen
+            focusable: barWindow.rightPanelWidget !== ""
 
             anchors {
                 top: true
@@ -127,43 +127,83 @@ Variants {
 
             property int barHeight: s(44)
 
+            // Standardized paddings
+            readonly property real padSide: barWindow.s(8)
+            readonly property real padTop: barWindow.s(6)
+            readonly property real padBottom: barWindow.s(6)
+            readonly property real itemGap: barWindow.s(6)
+
+            property real toastDynamicHeight: 0
+            property real toastDynamicWidth: barWindow.s(380)
+
+            readonly property real targetToastHeight: hasActiveToast ? (toastDynamicHeight > 0 ? toastDynamicHeight : barWindow.s(80)) : 0
+            readonly property real targetToastWidth: hasActiveToast ? (toastDynamicWidth > 0 ? toastDynamicWidth : barWindow.s(380)) : 0
+
+            property real panelDynamicHeight: 0
+            property real panelDynamicWidth: 0
+
             function getRightPanelTargetWidth(widget) {
                 switch (widget) {
-                    case "volume":        return barWindow.s(450);
-                    case "battery":       return barWindow.s(480);
-                    case "hardware":      return barWindow.s(420);
-                    case "network":       return barWindow.s(900);
-                    case "notifications": return barWindow.s(400);
-                    default:              return (typeof rightBox !== "undefined" && rightBox) ? rightBox.width : 0;
+                    case "volume":              return barWindow.s(450);
+                    case "battery":             return barWindow.s(480);
+                    case "hardware":            return barWindow.s(420);
+                    case "network":             return barWindow.s(900);
+                    case "notifications":       return barWindow.s(400);
+                    default:                    return 0;
                 }
             }
 
             function getRightPanelTargetHeight(widget) {
                 switch (widget) {
-                    case "volume":        return barWindow.s(700);
-                    case "battery":       return barWindow.s(760);
-                    case "hardware":      return barWindow.s(285);
-                    case "network":       return barWindow.s(700);
-                    case "notifications": return barWindow.s(760);
-                    default:              return 0;
+                    case "volume":              return barWindow.s(700);
+                    case "battery":             return barWindow.s(760);
+                    case "hardware": {
+                        let count = (barWindow.hasHwBatteryThreshold ? 1 : 0) + (barWindow.hasHwTurbo ? 1 : 0);
+                        if (count >= 2) return barWindow.s(275);
+                        if (count === 1) return barWindow.s(205);
+                        return barWindow.s(155);
+                    }
+                    case "network":             return barWindow.s(700);
+                    case "notifications":       return barWindow.s(760);
+                    default:                    return 0;
                 }
             }
 
-            property real latchedWidgetW: 0
-            property real latchedWidgetH: 0
-            property string latchedWidget: ""
+            readonly property real targetPanelHeight: rightPanelWidget !== "" ? (panelDynamicHeight > 0 ? panelDynamicHeight : getRightPanelTargetHeight(rightPanelWidget)) : 0
+            readonly property real targetPanelWidth: rightPanelWidget !== "" ? (panelDynamicWidth > 0 ? panelDynamicWidth : getRightPanelTargetWidth(rightPanelWidget)) : 0
+
+            // Smooth animated dimensions
+            property real animPanelHeight: targetPanelHeight
+            property real animPanelWidth: targetPanelWidth
+            property real animToastHeight: targetToastHeight
+            property real animToastWidth: targetToastWidth
+
+            Behavior on animPanelHeight {
+                NumberAnimation { duration: 160; easing.type: barWindow.targetPanelHeight > 0 ? Easing.OutExpo : Easing.InCubic }
+            }
+            Behavior on animPanelWidth {
+                NumberAnimation { duration: 160; easing.type: barWindow.targetPanelWidth > 0 ? Easing.OutExpo : Easing.InCubic }
+            }
+            Behavior on animToastHeight {
+                NumberAnimation { duration: 160; easing.type: barWindow.targetToastHeight > 0 ? Easing.OutExpo : Easing.InCubic }
+            }
+            Behavior on animToastWidth {
+                NumberAnimation { duration: 160; easing.type: barWindow.targetToastWidth > 0 ? Easing.OutExpo : Easing.InCubic }
+            }
+
+            property string latchedWidgetSource: ""
 
             Shortcut {
                 sequence: "Escape"
-                enabled: barWindow.rightPanelOpen
+                enabled: barWindow.rightPanelWidget !== ""
                 onActivated: barWindow.rightPanelWidget = ""
             }
 
             onRightPanelWidgetChanged: {
                 if (rightPanelWidget !== "") {
-                    latchedWidget = rightPanelWidget;
-                    latchedWidgetW = getRightPanelTargetWidth(rightPanelWidget);
-                    latchedWidgetH = getRightPanelTargetHeight(rightPanelWidget);
+                    latchedWidgetSource = rightPanelWidget;
+                    panelDynamicHeight = 0;
+                    panelDynamicWidth = 0;
                     Quickshell.execDetached(["quickshell", "-p", paths.shellQmlPath, "ipc", "call", "main", "handleCommand", "close", "", ""]);
                 }
             }
@@ -222,7 +262,8 @@ Variants {
 
             // --- Right Panel State ---
             property string rightPanelWidget: ""   // which right widget is open, or ""
-            property bool   rightPanelOpen: rightPanelWidget !== ""
+            readonly property bool hasActiveToast: NotificationService.toasts.count > 0
+            readonly property bool rightPanelOpen: rightPanelWidget !== "" || hasActiveToast
 
             readonly property bool isLeftWidgetOpen: isSettingsOpen || activeWidget === "guide" || activeWidget === "help" || activeWidget === "applauncher" || activeWidget === "search" || activeWidget === "updater"
             readonly property bool isCenterWidgetOpen: activeWidget === "music" || activeWidget === "calendar"
@@ -237,11 +278,29 @@ Variants {
             color: "transparent"
 
             mask: Region {
-                // 1. Non-fullscreen: Top Bar area is always active; expands to full screen when right panel is open to capture clicks outside
+                // 1. Non-fullscreen: Top Bar horizontal strip
                 Region {
                     x: 0; y: 0
                     width: !barWindow.isWindowFullscreen ? barWindow.width : 0
-                    height: !barWindow.isWindowFullscreen ? (barWindow.rightPanelOpen ? barWindow.height : (barWindow.barHeight + barWindow.s(16))) : 0
+                    height: !barWindow.isWindowFullscreen ? (barWindow.barHeight + barWindow.s(16)) : 0
+                }
+
+                // 2. Non-fullscreen: Expanded right dynamic island area
+                Region {
+                    x: (!barWindow.isWindowFullscreen && (barWindow.rightPanelOpen || barWindow.animPanelHeight > 2 || barWindow.animToastHeight > 2) && typeof rightBox !== "undefined" && rightBox)
+                        ? Math.max(0, rightBox.x - barWindow.s(10)) : 0
+                    y: 0
+                    width: (!barWindow.isWindowFullscreen && (barWindow.rightPanelOpen || barWindow.animPanelHeight > 2 || barWindow.animToastHeight > 2) && typeof rightBox !== "undefined" && rightBox)
+                        ? (rightBox.width + barWindow.s(20)) : 0
+                    height: (!barWindow.isWindowFullscreen && (barWindow.rightPanelOpen || barWindow.animPanelHeight > 2 || barWindow.animToastHeight > 2) && typeof rightBox !== "undefined" && rightBox)
+                        ? (rightBox.height + barWindow.s(10)) : 0
+                }
+
+                // 3. Non-fullscreen: Fullscreen outside click catcher ONLY when an interactive panel widget is open
+                Region {
+                    x: 0; y: 0
+                    width: !barWindow.isWindowFullscreen ? barWindow.width : 0
+                    height: (!barWindow.isWindowFullscreen && barWindow.rightPanelWidget !== "") ? barWindow.height : 0
                 }
 
                 // 3. Fullscreen trigger edges
@@ -281,7 +340,7 @@ Variants {
                     y: (barWindow.isWindowFullscreen && (barWindow.isRightRevealed || barWindow.isRightWidgetOpen)) ? 0 : 0
                     width: (barWindow.isWindowFullscreen && (barWindow.isRightRevealed || barWindow.isRightWidgetOpen)) ? (rightBox.width + barWindow.s(20)) : 0
                     height: (barWindow.isWindowFullscreen && (barWindow.isRightRevealed || barWindow.isRightWidgetOpen))
-                        ? (barWindow.barHeight + rightBox.height + barWindow.s(16))
+                        ? (rightBox.height + barWindow.s(10))
                         : 0
                 }
             }
@@ -407,6 +466,8 @@ Variants {
             property int workspaceCount: 8
             
             property bool hasHwFeatures: false
+            property bool hasHwBatteryThreshold: false
+            property bool hasHwTurbo: false
             property bool isHwTurboOn: false
 
             property real settingsSlideProgress: isSettingsOpen ? 1.0 : 0.0
@@ -896,6 +957,8 @@ Variants {
                         try {
                             if (this.text && this.text.trim().length > 0) {
                                 let d = JSON.parse(this.text);
+                                barWindow.hasHwBatteryThreshold = !!d.hasBatteryThreshold;
+                                barWindow.hasHwTurbo = !!d.hasTurbo;
                                 barWindow.hasHwFeatures = (d.hasBatteryThreshold || d.hasTurbo);
                                 barWindow.isHwTurboOn = (d.turbo === "on");
                             }
@@ -1753,24 +1816,28 @@ Variants {
                     anchors.right: parent.right
                     y: 0
 
-                    readonly property real islandPad: barWindow.s(10)
+                    readonly property real padSide: barWindow.padSide
+                    readonly property real padTop: barWindow.padTop
+                    readonly property real padBottom: barWindow.padBottom
+                    readonly property real itemGap: barWindow.itemGap
                     readonly property real basePillWidth: sysLayout.implicitWidth + barWindow.s(22)
 
-                    property real animWidgetW: barWindow.latchedWidgetW + 2 * islandPad
-                    property real animWidgetH: barWindow.latchedWidgetH + 2 * islandPad
-                    Behavior on animWidgetW { NumberAnimation { duration: 280; easing.type: Easing.OutExpo } }
-                    Behavior on animWidgetH { NumberAnimation { duration: 280; easing.type: Easing.OutExpo } }
+                    readonly property real currentPanelW: barWindow.animPanelWidth + 2 * padSide
+                    readonly property real currentToastW: barWindow.animToastWidth + 2 * padSide
+                    readonly property real islandTargetW: Math.max(basePillWidth, Math.max(barWindow.animPanelHeight > 2 ? currentPanelW : 0, barWindow.animToastHeight > 2 ? currentToastW : 0))
 
-                    readonly property real fullTargetW: Math.max(basePillWidth, animWidgetW)
-                    readonly property real fullTargetH: barWindow.barHeight + animWidgetH
+                    readonly property real currentPanelH: barWindow.animPanelHeight > 2 ? (barWindow.animPanelHeight + padTop + padBottom) : 0
+                    readonly property real currentToastH: barWindow.animToastHeight > 2 ? (barWindow.animToastHeight + (barWindow.animPanelHeight > 2 ? itemGap : (padTop + padBottom))) : 0
+                    readonly property real islandTargetH: barWindow.barHeight + currentPanelH + (barWindow.animPanelHeight > 2 ? currentToastH : (barWindow.animToastHeight > 2 ? currentToastH : 0))
 
-                    property real animProgress: barWindow.rightPanelOpen ? 1.0 : 0.0
-                    Behavior on animProgress {
-                        NumberAnimation { duration: 280; easing.type: barWindow.rightPanelOpen ? Easing.OutExpo : Easing.InCubic }
+                    width: islandTargetW
+                    height: islandTargetH
+
+                    readonly property real rightIslandBottomY: islandTargetH + barWindow.s(6)
+
+                    onRightIslandBottomYChanged: {
+                        NotificationService.rightIslandBottomY = rightIslandBottomY;
                     }
-
-                    width: basePillWidth + animProgress * (fullTargetW - basePillWidth)
-                    height: barWindow.barHeight + animProgress * (fullTargetH - barWindow.barHeight)
 
                     property string pendingHoverWidget: ""
 
@@ -1852,9 +1919,19 @@ Variants {
                     LivingRightIslandBackground {
                         pillWidth: rightBox.basePillWidth
                         topBarHeight: barWindow.barHeight
-                        widgetWidth: rightBox.animWidgetW
-                        widgetHeight: rightBox.animWidgetH
-                        isOpen: barWindow.rightPanelOpen
+                        widgetWidth: (barWindow.animPanelHeight > 2)
+                            ? (barWindow.animPanelWidth + 2 * rightBox.padSide)
+                            : ((barWindow.animToastHeight > 2) ? (barWindow.animToastWidth + 2 * rightBox.padSide) : rightBox.basePillWidth)
+                        widgetHeight: (barWindow.animPanelHeight > 2)
+                            ? (barWindow.animPanelHeight + rightBox.padTop + rightBox.padBottom)
+                            : ((barWindow.animToastHeight > 2) ? (barWindow.animToastHeight + rightBox.padTop + rightBox.padBottom) : 0)
+                        toastWidth: (barWindow.animPanelHeight > 2 && barWindow.animToastHeight > 2)
+                            ? (barWindow.animToastWidth + 2 * rightBox.padSide)
+                            : 0
+                        toastHeight: (barWindow.animPanelHeight > 2 && barWindow.animToastHeight > 2)
+                            ? (barWindow.animToastHeight + rightBox.itemGap)
+                            : 0
+                        isOpen: barWindow.rightPanelOpen || barWindow.animPanelHeight > 2 || barWindow.animToastHeight > 2
                         earRadius: barWindow.s(14)
                         bottomRadius: barWindow.s(14)
                         fillColor: barWindow.isWindowFullscreen ? "#000000" : Qt.rgba(mocha.base.r, mocha.base.g, mocha.base.b, 0.75)
@@ -2143,21 +2220,9 @@ Variants {
                         // Notification Pill
                         Item {
                             id: notifPillItem
-                            property int unreadNotifCount: 0
+                            property int unreadNotifCount: NotificationService.unreadCount
                             width: notifPillRect.width
                             height: sysLayout.pillHeight
-
-                            Process {
-                                id: notifCountPoller
-                                command: ["bash", "-c", "cat " + paths.runDir + "/notif_count 2>/dev/null || echo '0'"]
-                                stdout: StdioCollector {
-                                    onStreamFinished: notifPillItem.unreadNotifCount = parseInt(this.text.trim()) || 0
-                                }
-                            }
-                            Timer {
-                                interval: 500; running: true; repeat: true; triggeredOnStart: true
-                                onTriggered: notifCountPoller.running = true
-                            }
 
                             Rectangle {
                                 id: notifPillRect
@@ -2378,64 +2443,142 @@ Variants {
                     Item {
                         id: rightPanelContainer
                         anchors.right: parent.right
-                        anchors.rightMargin: rightBox.islandPad
-                        width: rightBox.animWidgetW - 2 * rightBox.islandPad
-                        y: barWindow.barHeight + rightBox.islandPad
-                        height: rightBox.animWidgetH - 2 * rightBox.islandPad
+                        anchors.rightMargin: rightBox.padSide
+                        width: Math.max(barWindow.animPanelWidth, barWindow.animToastWidth)
+                        y: barWindow.barHeight + rightBox.padTop
+                        height: Math.max(0, rightBox.height - barWindow.barHeight - rightBox.padTop - rightBox.padBottom)
                         clip: true
 
-                        transformOrigin: Item.TopRight
-                        scale: barWindow.rightPanelOpen ? 1.0 : 0.94
-                        opacity: barWindow.rightPanelOpen ? 1.0 : 0.0
-                        visible: opacity > 0.001
+                        visible: barWindow.animPanelHeight > 1 || barWindow.animToastHeight > 1
 
                         HoverHandler {
                             id: rightPanelHoverTracker
                             onHoveredChanged: {
                                 if (hovered) {
-                                    rightBox.hoverCloseTimer.stop();
+                                    if (typeof hoverCloseTimer !== "undefined" && hoverCloseTimer) {
+                                        hoverCloseTimer.stop();
+                                    }
                                 } else {
                                     if (barWindow.rightPanelOpen) {
-                                        rightBox.hoverCloseTimer.restart();
+                                        if (typeof hoverCloseTimer !== "undefined" && hoverCloseTimer) {
+                                            hoverCloseTimer.restart();
+                                        }
                                     }
                                 }
                             }
                         }
 
-                        transform: Translate {
-                            x: barWindow.rightPanelOpen ? 0 : barWindow.s(16)
-                            y: barWindow.rightPanelOpen ? 0 : barWindow.s(16)
+                        // 1. Panel Widget Section (Volume, Battery, Network, etc.)
+                        Item {
+                            id: panelSection
+                            anchors.top: parent.top
+                            anchors.right: parent.right
+                            width: barWindow.animPanelWidth > 0 ? barWindow.animPanelWidth : parent.width
+                            height: barWindow.animPanelHeight
+                            visible: barWindow.animPanelHeight > 1
+                            clip: true
+                            opacity: Math.max(0, Math.min(1.0, barWindow.animPanelHeight / barWindow.s(50)))
 
-                            Behavior on x {
-                                NumberAnimation { duration: 260; easing.type: barWindow.rightPanelOpen ? Easing.OutExpo : Easing.InCubic }
+                            Loader {
+                                id: panelWidgetLoader
+                                anchors.fill: parent
+                                active: barWindow.rightPanelWidget !== "" || barWindow.animPanelHeight > 2
+                                source: {
+                                    let w = barWindow.rightPanelWidget !== "" ? barWindow.rightPanelWidget : barWindow.latchedWidgetSource;
+                                    switch (w) {
+                                        case "volume":        return "volume/VolumePopup.qml";
+                                        case "battery":       return "battery/BatteryPopup.qml";
+                                        case "hardware":      return "hardware/HardwarePopup.qml";
+                                        case "notifications": return "notifications/NotificationsPopup.qml";
+                                        case "network":       return "network/NetworkPopup.qml";
+                                        default:              return "";
+                                    }
+                                }
+
+                                onLoaded: {
+                                    if (item && item.uiScale !== undefined) {
+                                        item.uiScale = barWindow.baseScale;
+                                    }
+                                    if (item && item.targetMasterHeight !== undefined && item.targetMasterHeight > 0) {
+                                        barWindow.panelDynamicHeight = item.targetMasterHeight;
+                                    }
+                                    if (item && item.targetMasterWidth !== undefined && item.targetMasterWidth > 0) {
+                                        barWindow.panelDynamicWidth = item.targetMasterWidth;
+                                    }
+                                }
                             }
-                            Behavior on y {
-                                NumberAnimation { duration: 260; easing.type: barWindow.rightPanelOpen ? Easing.OutExpo : Easing.InCubic }
+
+                            Connections {
+                                target: panelWidgetLoader.item
+                                ignoreUnknownSignals: true
+                                function onTargetMasterHeightChanged() {
+                                    if (panelWidgetLoader.item && panelWidgetLoader.item.targetMasterHeight > 0) {
+                                        barWindow.panelDynamicHeight = panelWidgetLoader.item.targetMasterHeight;
+                                    }
+                                }
+                                function onTargetMasterWidthChanged() {
+                                    if (panelWidgetLoader.item && panelWidgetLoader.item.targetMasterWidth > 0) {
+                                        barWindow.panelDynamicWidth = panelWidgetLoader.item.targetMasterWidth;
+                                    }
+                                }
                             }
                         }
 
-                        Behavior on scale {
-                            NumberAnimation { duration: 260; easing.type: barWindow.rightPanelOpen ? Easing.OutExpo : Easing.InCubic }
-                        }
-                        Behavior on opacity {
-                            NumberAnimation { duration: barWindow.rightPanelOpen ? 200 : 160; easing.type: barWindow.rightPanelOpen ? Easing.OutCubic : Easing.InCubic }
+                        // 2. Subtle Divider between panel widget and toast if both are active
+                        Rectangle {
+                            anchors.right: parent.right
+                            anchors.rightMargin: barWindow.s(8)
+                            y: barWindow.animPanelHeight + rightBox.padBottom + rightBox.itemGap / 2 - 1
+                            width: Math.min(barWindow.animToastWidth, parent.width) - barWindow.s(16)
+                            height: 1
+                            color: Qt.rgba(1, 1, 1, 0.1)
+                            visible: barWindow.animPanelHeight > 10 && barWindow.animToastHeight > 10
+                            opacity: Math.min(1.0, Math.min(barWindow.animPanelHeight / 50, barWindow.animToastHeight / 50))
                         }
 
-                        Loader {
-                            id: rightPanelLoader
-                            anchors.fill: parent
-                            active: barWindow.rightPanelOpen || rightPanelContainer.opacity > 0.01
-                            visible: true
+                        // 3. Toast Notification Section (Glides vertically as animPanelHeight changes)
+                        Item {
+                            id: toastSection
+                            anchors.right: parent.right
+                            y: barWindow.animPanelHeight > 2
+                                ? (barWindow.animPanelHeight + rightBox.padBottom + rightBox.itemGap)
+                                : 0
+                            width: barWindow.animToastWidth > 0 ? barWindow.animToastWidth : barWindow.s(380)
+                            height: barWindow.animToastHeight
+                            visible: barWindow.animToastHeight > 1
+                            clip: true
+                            opacity: Math.max(0, Math.min(1.0, barWindow.animToastHeight / barWindow.s(30)))
 
-                            source: {
-                                let w = barWindow.rightPanelOpen ? barWindow.rightPanelWidget : barWindow.latchedWidget;
-                                switch (w) {
-                                    case "volume":        return "volume/VolumePopup.qml";
-                                    case "battery":       return "battery/BatteryPopup.qml";
-                                    case "hardware":      return "hardware/HardwarePopup.qml";
-                                    case "notifications": return "notifications/NotificationsPopup.qml";
-                                    case "network":       return "network/NetworkPopup.qml";
-                                    default:              return "";
+                            Loader {
+                                id: toastLoader
+                                anchors.fill: parent
+                                active: barWindow.hasActiveToast || barWindow.animToastHeight > 2
+                                source: "notifications/NotificationToastWidget.qml"
+                                onLoaded: {
+                                    if (item && item.uiScale !== undefined) {
+                                        item.uiScale = barWindow.baseScale;
+                                    }
+                                    if (item && item.targetMasterHeight !== undefined && item.targetMasterHeight > 0) {
+                                        barWindow.toastDynamicHeight = item.targetMasterHeight;
+                                    }
+                                    if (item && item.targetMasterWidth !== undefined && item.targetMasterWidth > 0) {
+                                        barWindow.toastDynamicWidth = item.targetMasterWidth;
+                                    }
+                                }
+                            }
+
+                            Connections {
+                                target: toastLoader.item
+                                ignoreUnknownSignals: true
+                                function onTargetMasterHeightChanged() {
+                                    if (toastLoader.item && toastLoader.item.targetMasterHeight > 0) {
+                                        barWindow.toastDynamicHeight = toastLoader.item.targetMasterHeight;
+                                    }
+                                }
+                                function onTargetMasterWidthChanged() {
+                                    if (toastLoader.item && toastLoader.item.targetMasterWidth > 0) {
+                                        barWindow.toastDynamicWidth = toastLoader.item.targetMasterWidth;
+                                    }
                                 }
                             }
                         }
@@ -2447,7 +2590,7 @@ Variants {
                     parent: barWindow.contentItem
                     anchors.fill: parent
                     z: -100
-                    enabled: barWindow.rightPanelOpen
+                    enabled: barWindow.rightPanelWidget !== ""
                     acceptedButtons: Qt.LeftButton
                     onClicked: barWindow.rightPanelWidget = ""
                 }

@@ -81,11 +81,11 @@ function getPopupLayout(mw, mh, userScale) {
     
     let scale = getScale(mw, mh, userScale);
     return {
-        w: s(350, scale),
-        marginTop: s(60, scale),
-        marginRight: s(14, scale),
-        spacing: s(12, scale),
-        radius: s(14, scale),
+        w: s(380, scale),
+        marginTop: s(54, scale),
+        marginRight: s(10, scale),
+        spacing: s(10, scale),
+        radius: s(12, scale),
         padding: s(12, scale)
     };
 }
