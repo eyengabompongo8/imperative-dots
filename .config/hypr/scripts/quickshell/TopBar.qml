@@ -200,6 +200,13 @@ Variants {
             }
 
             onRightPanelWidgetChanged: {
+                if (rightPanelWidget === "notifications") {
+                    NotificationService.isNotifWidgetOpen = true;
+                    NotificationService.dismissAllToasts();
+                } else {
+                    NotificationService.isNotifWidgetOpen = false;
+                }
+
                 if (rightPanelWidget !== "") {
                     latchedWidgetSource = rightPanelWidget;
                     panelDynamicHeight = 0;
@@ -262,7 +269,7 @@ Variants {
 
             // --- Right Panel State ---
             property string rightPanelWidget: ""   // which right widget is open, or ""
-            readonly property bool hasActiveToast: NotificationService.toasts.count > 0
+            readonly property bool hasActiveToast: NotificationService.toasts.count > 0 && rightPanelWidget !== "notifications"
             readonly property bool rightPanelOpen: rightPanelWidget !== "" || hasActiveToast
 
             readonly property bool isLeftWidgetOpen: isSettingsOpen || activeWidget === "guide" || activeWidget === "help" || activeWidget === "applauncher" || activeWidget === "search" || activeWidget === "updater"
