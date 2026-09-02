@@ -25,19 +25,23 @@ Item {
     function formatTime(timestamp) {
         if (!timestamp) return "Just now";
         let date = new Date(timestamp);
-        let now = new Date();
-        let diffMs = now - date;
-        let diffMins = Math.floor(diffMs / 60000);
-        let diffHours = Math.floor(diffMins / 60);
+        let h = date.getHours().toString().padStart(2, '0');
+        let m = date.getMinutes().toString().padStart(2, '0');
+        let timeStr = h + ":" + m;
 
-        if (diffMins < 1) return "Just now";
-        if (diffMins < 60) return diffMins + "m ago";
-        if (diffHours < 24) {
-            let h = date.getHours().toString().padStart(2, '0');
-            let m = date.getMinutes().toString().padStart(2, '0');
-            return h + ":" + m;
+        let diffMs = Date.now() - timestamp;
+        let sec = Math.floor(diffMs / 1000);
+        let relStr = "Just now";
+        if (sec >= 60) {
+            let min = Math.floor(sec / 60);
+            if (min < 60) relStr = min + "m ago";
+            else {
+                let hrs = Math.floor(min / 60);
+                if (hrs < 24) relStr = hrs + "h ago";
+                else relStr = Math.floor(hrs / 24) + "d ago";
+            }
         }
-        return (date.getMonth() + 1) + "/" + date.getDate();
+        return relStr + " • " + timeStr;
     }
 
     function removeToast(uid) {
@@ -102,35 +106,15 @@ Item {
                 return 5000;
             }
 
-            // Divider between stacked notifications
-            Rectangle {
-                anchors.top: parent.top
-                anchors.left: parent.left
-                anchors.right: parent.right
-                anchors.leftMargin: s(8)
-                anchors.rightMargin: s(8)
-                height: 1
-                color: Qt.rgba(1, 1, 1, 0.08)
-                visible: index > 0
-            }
-
-            // Subtle interactive hover backdrop
+            // Card backdrop with border
             Rectangle {
                 anchors.fill: parent
-                radius: s(10)
-                color: cardMouse.containsMouse ? Qt.rgba(_theme.surface1.r, _theme.surface1.g, _theme.surface1.b, 0.25) : "transparent"
+                radius: s(12)
+                color: cardMouse.containsMouse ? _theme.surface2 : _theme.surface1
+                border.color: cardDelegate.urgencyVal === 2 ? _theme.red : (cardMouse.containsMouse ? Qt.rgba(_theme.text.r, _theme.text.g, _theme.text.b, 0.25) : Qt.rgba(_theme.text.r, _theme.text.g, _theme.text.b, 0.12))
+                border.width: 1
                 Behavior on color { ColorAnimation { duration: 150 } }
-            }
-
-            // Left Accent Pill (Red for Critical, Mauve for Normal)
-            Rectangle {
-                width: s(3)
-                height: Math.max(s(20), cardContentCol.implicitHeight - s(6))
-                anchors.left: parent.left
-                anchors.leftMargin: s(2)
-                anchors.verticalCenter: parent.verticalCenter
-                radius: s(1.5)
-                color: cardDelegate.urgencyVal === 2 ? _theme.red : _theme.mauve
+                Behavior on border.color { ColorAnimation { duration: 150 } }
             }
 
             // Auto-Dismiss Timer — Pauses on hover
@@ -163,7 +147,7 @@ Item {
                 anchors.left: parent.left
                 anchors.right: parent.right
                 anchors.top: parent.top
-                anchors.leftMargin: s(14)
+                anchors.leftMargin: s(10)
                 anchors.rightMargin: s(8)
                 anchors.topMargin: s(7)
                 spacing: s(4)

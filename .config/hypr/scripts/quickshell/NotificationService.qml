@@ -38,6 +38,34 @@ Item {
         }
     }
 
+    function addHistory(notifData) {
+        let app = notifData.appName;
+        let sameApp = [];
+        for (let i = historyModel.count - 1; i >= 0; i--) {
+            let item = historyModel.get(i);
+            if (item.appName === app) {
+                sameApp.unshift({
+                    "appName": item.appName,
+                    "summary": item.summary,
+                    "body": item.body,
+                    "iconPath": item.iconPath,
+                    "imagePath": item.imagePath,
+                    "desktopEntry": item.desktopEntry,
+                    "urgency": item.urgency,
+                    "timestamp": item.timestamp,
+                    "actionsJson": item.actionsJson,
+                    "uid": item.uid
+                });
+                historyModel.remove(i);
+            }
+        }
+        historyModel.insert(0, notifData);
+        for (let j = 0; j < sameApp.length; j++) {
+            historyModel.insert(j + 1, sameApp[j]);
+        }
+        updateNotifCountFile();
+    }
+
     function removeHistory(uid) {
         for (let i = 0; i < historyModel.count; i++) {
             if (historyModel.get(i).uid === uid) {
@@ -71,6 +99,14 @@ Item {
             }
         }
         updateNotifCountFile();
+    }
+
+    function getGroupCount(appName) {
+        let count = 0;
+        for (let i = 0; i < historyModel.count; i++) {
+            if (historyModel.get(i).appName === appName) count++;
+        }
+        return count;
     }
 
     function focusApp(appName, desktopEntry) {
@@ -171,9 +207,8 @@ Item {
                 "uid":          currentUid
             };
 
-            // Always add to history
-            historyModel.insert(0, notifData);
-            updateNotifCountFile();
+            // Always add to history (grouped by application)
+            root.addHistory(notifData);
 
             // If past startup, always route to toastModel and notify dynamic island
             if (!root.isStartup) {

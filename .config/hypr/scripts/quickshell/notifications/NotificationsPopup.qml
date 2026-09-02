@@ -26,6 +26,26 @@ Item {
         return scaler.s(val);
     }
 
+    // --- Dynamic Sizing for Living Island / Right Panel ---
+    readonly property real targetMasterWidth: window.s(400)
+    readonly property real maxPanelHeight: window.s(760)
+
+    readonly property real calculatedContentHeight: {
+        let pad = window.s(32);
+        let headerH = window.s(32);
+        let spacing = window.s(12);
+        if (!notifModel || notifModel.count === 0) {
+            return window.s(180);
+        }
+        let listH = notifListView ? notifListView.contentHeight : 0;
+        if (listH <= 0) {
+            return window.s(760);
+        }
+        return pad + headerH + spacing + listH;
+    }
+
+    readonly property real targetMasterHeight: Math.max(window.s(160), Math.min(maxPanelHeight, calculatedContentHeight))
+
     // --- Dynamic Matugen Palette ---
     MatugenColors { id: _theme }
     readonly property color base: _theme.base
@@ -97,22 +117,44 @@ Item {
         NotificationService.clearAllHistory();
     }
 
+    function getGroupCount(appName) {
+        return NotificationService.getGroupCount(appName);
+    }
+
     // --- Window Focus Dispatcher ---
     function focusApp(appName, desktopEntry) {
         NotificationService.focusApp(appName, desktopEntry);
     }
 
     // --- Time Format Helper ---
+    property double currentTime: Date.now()
+    Timer {
+        interval: 30000
+        running: true
+        repeat: true
+        onTriggered: window.currentTime = Date.now()
+    }
+
     function formatTime(timestamp) {
         if (!timestamp) return "";
-        let diffMs = Date.now() - timestamp;
+        let date = new Date(timestamp);
+        let h = date.getHours().toString().padStart(2, '0');
+        let m = date.getMinutes().toString().padStart(2, '0');
+        let timeStr = h + ":" + m;
+
+        let diffMs = window.currentTime - timestamp;
         let sec = Math.floor(diffMs / 1000);
-        if (sec < 60) return "Just now";
-        let min = Math.floor(sec / 60);
-        if (min < 60) return min + "m ago";
-        let hrs = Math.floor(min / 60);
-        if (hrs < 24) return hrs + "h ago";
-        return Math.floor(hrs / 24) + "d ago";
+        let relStr = "Just now";
+        if (sec >= 60) {
+            let min = Math.floor(sec / 60);
+            if (min < 60) relStr = min + "m ago";
+            else {
+                let hrs = Math.floor(min / 60);
+                if (hrs < 24) relStr = hrs + "h ago";
+                else relStr = Math.floor(hrs / 24) + "d ago";
+            }
+        }
+        return relStr + " • " + timeStr;
     }
 
     // Root Panel Container
@@ -144,12 +186,13 @@ Item {
                 // Unread Count Badge
                 Rectangle {
                     visible: notifModel && notifModel.count > 0
-                    Layout.preferredWidth: window.s(20)
-                    Layout.preferredHeight: window.s(20)
-                    radius: window.s(10)
+                    Layout.preferredHeight: window.s(18)
+                    Layout.preferredWidth: Math.max(window.s(18), countText.implicitWidth + window.s(10))
+                    radius: height / 2
                     color: window.mauve
 
                     Text {
+                        id: countText
                         anchors.centerIn: parent
                         text: notifModel ? notifModel.count : "0"
                         font.family: "SF Pro Text"
@@ -249,7 +292,8 @@ Item {
                 Layout.fillHeight: true
                 visible: notifModel && notifModel.count > 0
                 model: window.notifModel
-                spacing: window.s(8)
+                spacing: 0
+                interactive: contentHeight > height
                 clip: true
 
                 ScrollBar.vertical: ScrollBar {
@@ -322,8 +366,32 @@ Item {
                                         font.weight: Font.Black
                                         font.pixelSize: window.s(11)
                                         color: window.subtext0
-                                        Layout.fillWidth: true
                                     }
+
+                                    // Group count badge
+                                    Rectangle {
+                                        property int grpCount: {
+                                            let _d = window.notifModel ? window.notifModel.count : 0;
+                                            return window.getGroupCount(section);
+                                        }
+                                        visible: grpCount > 0
+                                        Layout.preferredHeight: window.s(16)
+                                        Layout.preferredWidth: Math.max(window.s(16), grpCountText.implicitWidth + window.s(8))
+                                        radius: height / 2
+                                        color: window.surface2
+
+                                        Text {
+                                            id: grpCountText
+                                            anchors.centerIn: parent
+                                            text: parent.grpCount
+                                            font.family: "SF Pro Text"
+                                            font.weight: Font.Bold
+                                            font.pixelSize: window.s(9)
+                                            color: window.subtext0
+                                        }
+                                    }
+
+                                    Item { Layout.fillWidth: true }
                                 }
                             }
 
@@ -360,7 +428,7 @@ Item {
                     id: delegateWrapper
                     width: ListView.view.width
                     property bool isHidden: window.isCollapsed(model.appName)
-                    height: isHidden ? 0 : cardRect.height + window.s(4)
+                    height: isHidden ? 0 : cardRect.height + window.s(8)
                     visible: height > 0
                     opacity: isHidden ? 0 : 1
                     clip: true
@@ -384,24 +452,17 @@ Item {
 
                     Rectangle {
                         id: cardRect
+                        anchors.top: parent.top
                         width: parent.width
                         height: colLayout.height + window.s(20)
                         radius: window.s(12)
-                        color: cardMa.containsMouse ? window.surface1 : window.surface0
-                        border.color: model.urgency === 2 ? window.red : (cardMa.containsMouse ? window.surface2 : "transparent")
+                        color: cardMa.containsMouse ? window.surface2 : window.surface1
+                        border.color: model.urgency === 2 ? window.red : (cardMa.containsMouse ? Qt.rgba(window.text.r, window.text.g, window.text.b, 0.25) : Qt.rgba(window.text.r, window.text.g, window.text.b, 0.12))
                         border.width: 1
                         clip: true
 
                         Behavior on color { ColorAnimation { duration: 150 } }
                         Behavior on border.color { ColorAnimation { duration: 150 } }
-
-                        // Left Accent Stripe (Red for Critical, Mauve for Normal)
-                        Rectangle {
-                            width: window.s(4)
-                            height: parent.height
-                            anchors.left: parent.left
-                            color: model.urgency === 2 ? window.red : window.mauve
-                        }
 
                         // Main Card Interaction (Click & Middle Click)
                         MouseArea {
@@ -438,7 +499,7 @@ Item {
                             anchors.right: parent.right
                             anchors.top: parent.top
                             anchors.margins: window.s(10)
-                            anchors.leftMargin: window.s(14)
+                            anchors.leftMargin: window.s(10)
                             spacing: window.s(4)
 
                             // Header Line: Icon, AppName, Timestamp, Dismiss
