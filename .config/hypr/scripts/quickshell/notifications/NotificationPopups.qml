@@ -140,6 +140,8 @@ PanelWindow {
                 property string fullBody: model.body || ""
                 property int popupUid: model.uid
                 property int urgencyVal: model.urgency !== undefined ? model.urgency : 1
+                property bool isActivating: false
+                property bool isDismissing: false
 
                 property var actionArray: {
                     try {
@@ -154,22 +156,76 @@ PanelWindow {
                     return 5000;
                 }
 
+                SequentialAnimation {
+                    id: dismissPopupAnim
+                    ParallelAnimation {
+                        NumberAnimation { target: popupCard; property: "scale"; to: 0.88; duration: 140; easing.type: Easing.InQuad }
+                        NumberAnimation { target: popupCard; property: "opacity"; to: 0.0; duration: 140; easing.type: Easing.InQuad }
+                        NumberAnimation { target: popupCard; property: "x"; to: popupWindow.width * 0.15; duration: 140; easing.type: Easing.InQuad }
+                    }
+                    ScriptAction {
+                        script: {
+                            popupWindow.removeToast(delegateRoot.popupUid);
+                        }
+                    }
+                }
+
+                function startDismissPopup() {
+                    if (delegateRoot.isDismissing || delegateRoot.isActivating) return;
+                    delegateRoot.isDismissing = true;
+                    dismissPopupAnim.start();
+                }
+
+                SequentialAnimation {
+                    id: activateAnim
+                    ParallelAnimation {
+                        NumberAnimation { target: popupCard; property: "scale"; to: 0.94; duration: 80; easing.type: Easing.OutQuad }
+                        NumberAnimation { target: clickFlash; property: "opacity"; from: 0.0; to: 0.28; duration: 80; easing.type: Easing.OutQuad }
+                    }
+                    ParallelAnimation {
+                        NumberAnimation { target: popupCard; property: "x"; to: popupWindow.width * 0.22; duration: 120; easing.type: Easing.InCubic }
+                        NumberAnimation { target: popupCard; property: "opacity"; to: 0.0; duration: 120; easing.type: Easing.InCubic }
+                        NumberAnimation { target: popupCard; property: "scale"; to: 0.88; duration: 120; easing.type: Easing.InCubic }
+                        NumberAnimation { target: clickFlash; property: "opacity"; to: 0.0; duration: 120; easing.type: Easing.InCubic }
+                    }
+                    ScriptAction {
+                        script: {
+                            popupWindow.activateCard(model.appName, model.desktopEntry, delegateRoot.popupUid, model.senderPid || 0, delegateRoot.fullSummary || "");
+                        }
+                    }
+                }
+
                 Rectangle {
                     id: popupCard
                     anchors.fill: parent
                     radius: 12 * popupWindow.uiScale
+                    transformOrigin: Item.Center
+                    scale: (delegateRoot.isActivating || delegateRoot.isDismissing) ? 0.94 : (cardMouseArea.pressed ? 0.97 : 1.0)
                     color: cardMouseArea.containsMouse ? _theme.surface2 : _theme.surface1
                     border.color: urgencyVal === 2 ? _theme.red : (cardMouseArea.containsMouse ? Qt.rgba(_theme.text.r, _theme.text.g, _theme.text.b, 0.25) : Qt.rgba(_theme.text.r, _theme.text.g, _theme.text.b, 0.12))
                     border.width: 1
                     clip: true
 
+                    Behavior on scale {
+                        enabled: !activateAnim.running && !dismissPopupAnim.running
+                        NumberAnimation { duration: 120; easing.type: Easing.OutQuad }
+                    }
                     Behavior on color { ColorAnimation { duration: 150 } }
                     Behavior on border.color { ColorAnimation { duration: 150 } }
 
-                    // Auto-Dismiss Timer — PAUSES ON MOUSE HOVER
+                    // Subtle Accent Flash Overlay on Click
+                    Rectangle {
+                        id: clickFlash
+                        anchors.fill: parent
+                        radius: 12 * popupWindow.uiScale
+                        color: _theme.blue ? _theme.blue : _theme.mauve
+                        opacity: 0.0
+                    }
+
+                    // Auto-Dismiss Timer — PAUSES ON MOUSE HOVER OR ACTIVATION
                     Timer {
                         interval: delegateRoot.effectiveTimeout > 0 ? delegateRoot.effectiveTimeout : 5000
-                        running: delegateRoot.effectiveTimeout > 0 && !cardMouseArea.containsMouse
+                        running: delegateRoot.effectiveTimeout > 0 && !cardMouseArea.containsMouse && !delegateRoot.isActivating && !delegateRoot.isDismissing
                         onTriggered: popupWindow.removeToast(delegateRoot.popupUid)
                     }
 
@@ -182,11 +238,13 @@ PanelWindow {
                         cursorShape: Qt.PointingHandCursor
 
                         onClicked: (mouse) => {
+                            if (delegateRoot.isActivating || delegateRoot.isDismissing) return;
                             if (mouse.button === Qt.MiddleButton) {
-                                popupWindow.removeToast(delegateRoot.popupUid);
+                                delegateRoot.startDismissPopup();
                                 return;
                             }
-                            popupWindow.activateCard(model.appName, model.desktopEntry, delegateRoot.popupUid, model.senderPid || 0, delegateRoot.fullSummary || "");
+                            delegateRoot.isActivating = true;
+                            activateAnim.start();
                         }
                     }
 
@@ -235,25 +293,27 @@ PanelWindow {
                                 Layout.preferredHeight: 20 * popupWindow.uiScale
                                 radius: 10 * popupWindow.uiScale
                                 color: itemDismissMa.containsMouse ? Qt.alpha(_theme.red, 0.25) : "transparent"
+                                scale: itemDismissMa.pressed ? 0.85 : 1.0
                                 Behavior on color { ColorAnimation { duration: 150 } }
+                                Behavior on scale { NumberAnimation { duration: 120; easing.type: Easing.OutQuad } }
 
-                                Text {
-                                    anchors.centerIn: parent
-                                    font.family: "SF Pro "
-                                    font.pixelSize: 10 * popupWindow.uiScale
-                                    color: itemDismissMa.containsMouse ? _theme.red : _theme.overlay0
-                                    text: "󰅖"
-                                }
+                            Text {
+                                anchors.centerIn: parent
+                                font.family: "SF Pro "
+                                font.pixelSize: 10 * popupWindow.uiScale
+                                color: itemDismissMa.containsMouse ? _theme.red : _theme.overlay0
+                                text: "󰅖"
+                            }
 
-                                MouseArea {
-                                    id: itemDismissMa
-                                    anchors.fill: parent
-                                    hoverEnabled: true
-                                    cursorShape: Qt.PointingHandCursor
-                                    onClicked: popupWindow.removeToast(delegateRoot.popupUid)
-                                }
+                            MouseArea {
+                                id: itemDismissMa
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: delegateRoot.startDismissPopup()
                             }
                         }
+                    }
 
                         // Summary Title
                         Text {
@@ -313,6 +373,7 @@ PanelWindow {
                                     width: Math.min(btnTextToast.implicitWidth + (16 * popupWindow.uiScale), popupCard.width - (28 * popupWindow.uiScale))
                                     height: 26 * popupWindow.uiScale
                                     radius: 6 * popupWindow.uiScale
+                                    scale: actionMouseArea.pressed ? 0.94 : 1.0
 
                                     property bool isPrimary: index === 0
 
@@ -329,6 +390,7 @@ PanelWindow {
                                     border.width: 1
 
                                     Behavior on color { ColorAnimation { duration: 150 } }
+                                    Behavior on scale { NumberAnimation { duration: 120; easing.type: Easing.OutQuad } }
 
                                     Text {
                                         id: btnTextToast

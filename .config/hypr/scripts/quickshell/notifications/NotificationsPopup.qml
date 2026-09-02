@@ -457,24 +457,23 @@ Item {
 
                 add: window.isInitialLoadComplete ? addCardTransition : null
 
+                // Keep remove transition minimal — card visuals are animated by
+                // dismissItemAnim / activateAnim on cardRect before model removal.
+                // This just ensures the wrapper collapses cleanly afterward.
                 remove: Transition {
-                    ParallelAnimation {
-                        NumberAnimation { property: "opacity"; to: 0.0; duration: 150; easing.type: Easing.InCubic }
-                        NumberAnimation { property: "x"; to: notifListView.width * 0.35; duration: 150; easing.type: Easing.InCubic }
-                        NumberAnimation { property: "scale"; to: 0.9; duration: 150; easing.type: Easing.InCubic }
-                    }
+                    NumberAnimation { property: "opacity"; to: 0.0; duration: 1 }
                 }
 
                 move: Transition {
-                    NumberAnimation { property: "y"; duration: 160; easing.type: Easing.OutCubic }
+                    NumberAnimation { property: "y"; duration: 180; easing.type: Easing.OutCubic }
                 }
 
                 moveDisplaced: Transition {
-                    NumberAnimation { property: "y"; duration: 160; easing.type: Easing.OutCubic }
+                    NumberAnimation { property: "y"; duration: 200; easing.type: Easing.OutCubic }
                 }
 
                 displaced: Transition {
-                    NumberAnimation { property: "y"; duration: 160; easing.type: Easing.OutCubic }
+                    NumberAnimation { property: "y"; duration: 200; easing.type: Easing.OutCubic }
                 }
 
                 // --- App Grouping Header ---
@@ -485,106 +484,128 @@ Item {
                     width: ListView.view ? ListView.view.width : 0
                     height: window.s(36)
                     visible: window.groupByApp
-                    opacity: 1.0
                     clip: true
 
-                    property bool groupHasUnseen: NotificationService.getGroupUnseenCount(section) > 0
+                    // Inner container that we animate on clear
+                    Item {
+                        id: secInner
+                        width: parent.width
+                        height: parent.height
+                        transformOrigin: Item.Center
 
-                    Rectangle {
-                        anchors.fill: parent
-                        anchors.topMargin: window.s(4)
-                        anchors.bottomMargin: window.s(2)
-                        color: groupHeaderMa.containsMouse ? window.surface1 : "transparent"
-                        radius: window.s(6)
-                        Behavior on color { ColorAnimation { duration: 150 } }
+                        property bool groupHasUnseen: NotificationService.getGroupUnseenCount(section) > 0
 
-                        RowLayout {
+                        Rectangle {
                             anchors.fill: parent
-                            anchors.leftMargin: window.s(6)
-                            anchors.rightMargin: window.s(6)
-                            spacing: window.s(6)
+                            anchors.topMargin: window.s(4)
+                            anchors.bottomMargin: window.s(2)
+                            color: groupHeaderMa.containsMouse ? window.surface1 : "transparent"
+                            radius: window.s(6)
+                            Behavior on color { ColorAnimation { duration: 150 } }
 
-                            MouseArea {
-                                id: groupHeaderMa
-                                Layout.fillWidth: true
-                                Layout.fillHeight: true
-                                hoverEnabled: true
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: window.toggleGroup(section)
-
-                                RowLayout {
-                                    anchors.fill: parent
-                                    spacing: window.s(6)
-
-                                    Text {
-                                        font.family: "SF Pro "
-                                        font.pixelSize: window.s(12)
-                                        color: secDelegate.groupHasUnseen ? window.mauve : window.subtext0
-                                        text: window.isCollapsed(section) ? "󰅂" : "󰅀"
-                                        Behavior on color { ColorAnimation { duration: 200 } }
-                                    }
-
-                                    Text {
-                                        text: section.toUpperCase()
-                                        font.family: "SF Pro Text"
-                                        font.weight: Font.Black
-                                        font.pixelSize: window.s(11)
-                                        color: secDelegate.groupHasUnseen ? window.mauve : window.subtext0
-                                        Behavior on color { ColorAnimation { duration: 200 } }
-                                    }
-
-                                    // Group count badge
-                                    Rectangle {
-                                        property int grpCount: {
-                                             let _d = window.notifModel ? window.notifModel.count : 0;
-                                            return window.getGroupCount(section);
-                                        }
-                                        visible: grpCount > 0
-                                        Layout.preferredHeight: window.s(16)
-                                        Layout.preferredWidth: Math.max(window.s(16), grpCountText.implicitWidth + window.s(8))
-                                        radius: height / 2
-                                        color: secDelegate.groupHasUnseen ? Qt.alpha(window.mauve, 0.25) : window.surface2
-                                        Behavior on color { ColorAnimation { duration: 200 } }
-
-                                        Text {
-                                            id: grpCountText
-                                            anchors.centerIn: parent
-                                            text: parent.grpCount
-                                            font.family: "SF Pro Text"
-                                            font.weight: Font.Bold
-                                            font.pixelSize: window.s(9)
-                                            color: secDelegate.groupHasUnseen ? window.mauve : window.subtext0
-                                            Behavior on color { ColorAnimation { duration: 200 } }
-                                        }
-                                    }
-
-                                    Item { Layout.fillWidth: true }
-                                }
-                            }
-
-                            // Group Clear Button
-                            Rectangle {
-                                Layout.preferredWidth: window.s(22)
-                                Layout.preferredHeight: window.s(22)
-                                radius: window.s(11)
-                                color: grpClearMa.containsMouse ? Qt.alpha(window.red, 0.2) : "transparent"
-                                Behavior on color { ColorAnimation { duration: 150 } }
-
-                                Text {
-                                    anchors.centerIn: parent
-                                    font.family: "SF Pro "
-                                    font.pixelSize: window.s(11)
-                                    color: grpClearMa.containsMouse ? window.red : window.overlay0
-                                    text: "󰅖"
-                                }
+                            RowLayout {
+                                anchors.fill: parent
+                                anchors.leftMargin: window.s(6)
+                                anchors.rightMargin: window.s(6)
+                                spacing: window.s(6)
 
                                 MouseArea {
-                                    id: grpClearMa
-                                    anchors.fill: parent
+                                    id: groupHeaderMa
+                                    Layout.fillWidth: true
+                                    Layout.fillHeight: true
                                     hoverEnabled: true
                                     cursorShape: Qt.PointingHandCursor
-                                    onClicked: window.clearGroup(section)
+                                    onClicked: window.toggleGroup(section)
+
+                                    RowLayout {
+                                        anchors.fill: parent
+                                        spacing: window.s(6)
+
+                                        Text {
+                                            font.family: "SF Pro "
+                                            font.pixelSize: window.s(12)
+                                            color: secInner.groupHasUnseen ? window.mauve : window.subtext0
+                                            text: window.isCollapsed(section) ? "󰅂" : "󰅀"
+                                            Behavior on color { ColorAnimation { duration: 200 } }
+                                        }
+
+                                        Text {
+                                            text: section.toUpperCase()
+                                            font.family: "SF Pro Text"
+                                            font.weight: Font.Black
+                                            font.pixelSize: window.s(11)
+                                            color: secInner.groupHasUnseen ? window.mauve : window.subtext0
+                                            Behavior on color { ColorAnimation { duration: 200 } }
+                                        }
+
+                                        // Group count badge
+                                        Rectangle {
+                                            property int grpCount: {
+                                                 let _d = window.notifModel ? window.notifModel.count : 0;
+                                                return window.getGroupCount(section);
+                                            }
+                                            visible: grpCount > 0
+                                            Layout.preferredHeight: window.s(16)
+                                            Layout.preferredWidth: Math.max(window.s(16), grpCountText.implicitWidth + window.s(8))
+                                            radius: height / 2
+                                            color: secInner.groupHasUnseen ? Qt.alpha(window.mauve, 0.25) : window.surface2
+                                            Behavior on color { ColorAnimation { duration: 200 } }
+
+                                            Text {
+                                                id: grpCountText
+                                                anchors.centerIn: parent
+                                                text: parent.grpCount
+                                                font.family: "SF Pro Text"
+                                                font.weight: Font.Bold
+                                                font.pixelSize: window.s(9)
+                                                color: secInner.groupHasUnseen ? window.mauve : window.subtext0
+                                                Behavior on color { ColorAnimation { duration: 200 } }
+                                            }
+                                        }
+
+                                        Item { Layout.fillWidth: true }
+                                    }
                                 }
+
+                                // Group Clear Button
+                                Rectangle {
+                                    Layout.preferredWidth: window.s(22)
+                                    Layout.preferredHeight: window.s(22)
+                                    radius: window.s(11)
+                                    color: grpClearMa.containsMouse ? Qt.alpha(window.red, 0.2) : "transparent"
+                                    scale: grpClearMa.pressed ? 0.85 : 1.0
+                                    Behavior on color { ColorAnimation { duration: 150 } }
+                                    Behavior on scale { NumberAnimation { duration: 120; easing.type: Easing.OutQuad } }
+
+                                    Text {
+                                        anchors.centerIn: parent
+                                        font.family: "SF Pro "
+                                        font.pixelSize: window.s(11)
+                                        color: grpClearMa.containsMouse ? window.red : window.overlay0
+                                        text: "󰅖"
+                                    }
+
+                                    MouseArea {
+                                        id: grpClearMa
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: secDismissAnim.start()
+                                    }
+                                }
+                            }
+                        }
+
+                        // Animate header out then clear the group
+                        SequentialAnimation {
+                            id: secDismissAnim
+                            ParallelAnimation {
+                                NumberAnimation { target: secInner; property: "opacity"; to: 0.0; duration: 160; easing.type: Easing.InQuad }
+                                NumberAnimation { target: secInner; property: "scale"; to: 0.92; duration: 160; easing.type: Easing.InQuad }
+                                NumberAnimation { target: secInner; property: "x"; to: notifListView.width * 0.15; duration: 160; easing.type: Easing.InQuad }
+                            }
+                            ScriptAction {
+                                script: window.clearGroup(section)
                             }
                         }
                     }
@@ -596,13 +617,21 @@ Item {
                     width: ListView.view ? ListView.view.width : 0
                     z: ListView.view ? (ListView.view.count - index) : 0
                     property bool isHidden: window.groupByApp && window.isCollapsed(model.appName)
+                    property bool isDismissing: false
+                    property bool isActivating: false
+
                     height: isHidden ? 0 : cardRect.height + window.s(8)
+                    opacity: isHidden ? 0.0 : 1.0
                     visible: height > 0
-                    clip: false
+                    clip: true
 
                     Behavior on height {
-                        enabled: window.isInitialLoadComplete
-                        NumberAnimation { duration: 250; easing.type: Easing.OutCubic }
+                        enabled: window.isInitialLoadComplete && !delegateWrapper.isDismissing
+                        NumberAnimation { duration: 220; easing.type: Easing.OutCubic }
+                    }
+                    Behavior on opacity {
+                        enabled: window.isInitialLoadComplete && !delegateWrapper.isDismissing
+                        NumberAnimation { duration: 180; easing.type: Easing.OutQuad }
                     }
 
                     property var realNotif: window.liveNotifs ? window.liveNotifs[model.uid] : null
@@ -619,35 +648,39 @@ Item {
                         }
                     }
 
-                    Rectangle {
-                        id: cardRect
-                        anchors.top: parent.top
-                        width: parent.width
-                        height: colLayout.implicitHeight + window.s(20)
-                        radius: window.s(12)
-                        color: cardMa.containsMouse ? window.surface2 : window.surface1
-                        border.color: model.urgency === 2 ? window.red : (cardMa.containsMouse ? Qt.rgba(window.text.r, window.text.g, window.text.b, 0.25) : Qt.rgba(window.text.r, window.text.g, window.text.b, 0.12))
-                        border.width: 1
-                        clip: true
+                    // Animate card out then remove from model
+                    SequentialAnimation {
+                        id: dismissItemAnim
+                        ParallelAnimation {
+                            NumberAnimation { target: cardRect; property: "opacity"; to: 0.0; duration: 140; easing.type: Easing.InQuad }
+                            NumberAnimation { target: cardRect; property: "scale"; to: 0.88; duration: 140; easing.type: Easing.InQuad }
+                            NumberAnimation { target: cardRect; property: "x"; to: notifListView.width * 0.18; duration: 140; easing.type: Easing.InQuad }
+                        }
+                        ScriptAction {
+                            script: delegateWrapper.removeThisNotif()
+                        }
+                    }
 
-                        Behavior on color { ColorAnimation { duration: 150 } }
-                        Behavior on border.color { ColorAnimation { duration: 250 } }
+                    function startDismissItem() {
+                        if (delegateWrapper.isDismissing || delegateWrapper.isActivating) return;
+                        delegateWrapper.isDismissing = true;
+                        dismissItemAnim.start();
+                    }
 
-                        // Main Card Interaction (Click & Middle Click)
-                        MouseArea {
-                            id: cardMa
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            acceptedButtons: Qt.LeftButton | Qt.MiddleButton
-                            cursorShape: Qt.PointingHandCursor
-
-                            onClicked: (mouse) => {
-                                if (mouse.button === Qt.MiddleButton) {
-                                    delegateWrapper.removeThisNotif();
-                                    return;
-                                }
-
-                                // Left click: invoke default action if present
+                    SequentialAnimation {
+                        id: activateAnim
+                        ParallelAnimation {
+                            NumberAnimation { target: cardRect; property: "scale"; to: 0.94; duration: 80; easing.type: Easing.OutQuad }
+                            NumberAnimation { target: clickFlash; property: "opacity"; from: 0.0; to: 0.28; duration: 80; easing.type: Easing.OutQuad }
+                        }
+                        ParallelAnimation {
+                            NumberAnimation { target: cardRect; property: "x"; to: notifListView.width * 0.22; duration: 120; easing.type: Easing.InCubic }
+                            NumberAnimation { target: cardRect; property: "opacity"; to: 0.0; duration: 120; easing.type: Easing.InCubic }
+                            NumberAnimation { target: cardRect; property: "scale"; to: 0.88; duration: 120; easing.type: Easing.InCubic }
+                            NumberAnimation { target: clickFlash; property: "opacity"; to: 0.0; duration: 120; easing.type: Easing.InCubic }
+                        }
+                        ScriptAction {
+                            script: {
                                 if (delegateWrapper.realNotif && delegateWrapper.realNotif.actions) {
                                     for (var i = 0; i < delegateWrapper.realNotif.actions.length; i++) {
                                         if (delegateWrapper.realNotif.actions[i].identifier === "default") {
@@ -659,6 +692,56 @@ Item {
 
                                 window.focusApp(model.appName, model.desktopEntry, model.senderPid || 0, model.summary || "");
                                 delegateWrapper.removeThisNotif();
+                            }
+                        }
+                    }
+
+                    Rectangle {
+                        id: cardRect
+                        anchors.top: parent.top
+                        width: parent.width
+                        height: colLayout.implicitHeight + window.s(20)
+                        radius: window.s(12)
+                        transformOrigin: Item.Center
+                        scale: (delegateWrapper.isActivating || delegateWrapper.isDismissing) ? 0.94 : (cardMa.pressed ? 0.97 : 1.0)
+                        color: cardMa.containsMouse ? window.surface2 : window.surface1
+                        border.color: model.urgency === 2 ? window.red : (cardMa.containsMouse ? Qt.rgba(window.text.r, window.text.g, window.text.b, 0.25) : Qt.rgba(window.text.r, window.text.g, window.text.b, 0.12))
+                        border.width: 1
+                        clip: true
+
+                        Behavior on scale {
+                            enabled: !activateAnim.running && !dismissItemAnim.running
+                            NumberAnimation { duration: 120; easing.type: Easing.OutQuad }
+                        }
+                        Behavior on color { ColorAnimation { duration: 150 } }
+                        Behavior on border.color { ColorAnimation { duration: 250 } }
+
+                        // Subtle Accent Flash Overlay on Click
+                        Rectangle {
+                            id: clickFlash
+                            anchors.fill: parent
+                            radius: window.s(12)
+                            color: window.blue ? window.blue : window.mauve
+                            opacity: 0.0
+                        }
+
+                        // Main Card Interaction (Click & Middle Click)
+                        MouseArea {
+                            id: cardMa
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            acceptedButtons: Qt.LeftButton | Qt.MiddleButton
+                            cursorShape: Qt.PointingHandCursor
+
+                            onClicked: (mouse) => {
+                                if (delegateWrapper.isActivating || delegateWrapper.isDismissing) return;
+                                if (mouse.button === Qt.MiddleButton) {
+                                    delegateWrapper.startDismissItem();
+                                    return;
+                                }
+
+                                delegateWrapper.isActivating = true;
+                                activateAnim.start();
                             }
                         }
 
@@ -717,7 +800,9 @@ Item {
                                     Layout.preferredHeight: window.s(20)
                                     radius: window.s(10)
                                     color: itemDismissMa.containsMouse ? Qt.alpha(window.red, 0.2) : "transparent"
+                                    scale: itemDismissMa.pressed ? 0.85 : 1.0
                                     Behavior on color { ColorAnimation { duration: 150 } }
+                                    Behavior on scale { NumberAnimation { duration: 120; easing.type: Easing.OutQuad } }
 
                                     Text {
                                         anchors.centerIn: parent
@@ -732,7 +817,7 @@ Item {
                                         anchors.fill: parent
                                         hoverEnabled: true
                                         cursorShape: Qt.PointingHandCursor
-                                        onClicked: delegateWrapper.removeThisNotif()
+                                        onClicked: delegateWrapper.startDismissItem()
                                     }
                                 }
                             }
@@ -795,6 +880,7 @@ Item {
                                         width: Math.min(implicitBtnWidth, cardRect.width - window.s(28))
                                         height: window.s(26)
                                         radius: window.s(6)
+                                        scale: btnMa.pressed ? 0.94 : 1.0
 
                                         property real implicitBtnWidth: btnText.implicitWidth + window.s(16)
                                         property bool isPrimary: index === 0
@@ -803,6 +889,7 @@ Item {
                                         border.color: isPrimary ? window.blue : window.surface2
                                         border.width: 1
                                         Behavior on color { ColorAnimation { duration: 150 } }
+                                        Behavior on scale { NumberAnimation { duration: 120; easing.type: Easing.OutQuad } }
 
                                         Text {
                                             id: btnText
