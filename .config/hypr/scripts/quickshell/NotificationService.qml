@@ -21,7 +21,17 @@ Item {
 
     readonly property alias history: historyModel
     readonly property alias toasts: toastModel
-    readonly property int unreadCount: historyModel.count
+    property int unseenCount: 0
+    readonly property int unreadCount: unseenCount
+
+    function recountUnseen() {
+        let count = 0;
+        for (let i = 0; i < historyModel.count; i++) {
+            let item = historyModel.get(i);
+            if (item && !item.seen) count++;
+        }
+        unseenCount = count;
+    }
 
     Timer {
         interval: 600
@@ -36,6 +46,46 @@ Item {
                 break;
             }
         }
+    }
+
+    function markAsSeen(uid) {
+        for (let i = 0; i < historyModel.count; i++) {
+            if (historyModel.get(i).uid === uid) {
+                if (!historyModel.get(i).seen) {
+                    historyModel.setProperty(i, "seen", true);
+                    recountUnseen();
+                }
+                break;
+            }
+        }
+    }
+
+    function markGroupAsSeen(appName) {
+        let changed = false;
+        for (let i = 0; i < historyModel.count; i++) {
+            let item = historyModel.get(i);
+            if (item.appName === appName && !item.seen) {
+                historyModel.setProperty(i, "seen", true);
+                changed = true;
+            }
+        }
+        if (changed) recountUnseen();
+    }
+
+    function markAllAsSeen() {
+        for (let i = 0; i < historyModel.count; i++) {
+            historyModel.setProperty(i, "seen", true);
+        }
+        recountUnseen();
+    }
+
+    function getGroupUnseenCount(appName) {
+        let count = 0;
+        for (let i = 0; i < historyModel.count; i++) {
+            let item = historyModel.get(i);
+            if (item.appName === appName && !item.seen) count++;
+        }
+        return count;
     }
 
     function addHistory(notifData) {
@@ -54,7 +104,8 @@ Item {
                     "urgency": item.urgency,
                     "timestamp": item.timestamp,
                     "actionsJson": item.actionsJson,
-                    "uid": item.uid
+                    "uid": item.uid,
+                    "seen": item.seen !== undefined ? item.seen : false
                 });
                 historyModel.remove(i);
             }
@@ -63,6 +114,7 @@ Item {
         for (let j = 0; j < sameApp.length; j++) {
             historyModel.insert(j + 1, sameApp[j]);
         }
+        recountUnseen();
         updateNotifCountFile();
     }
 
@@ -75,6 +127,7 @@ Item {
             }
         }
         removeToast(uid);
+        recountUnseen();
         updateNotifCountFile();
     }
 
@@ -82,6 +135,7 @@ Item {
         for (let key in liveNotifs) delete liveNotifs[key];
         historyModel.clear();
         toastModel.clear();
+        unseenCount = 0;
         updateNotifCountFile();
     }
 
@@ -98,6 +152,7 @@ Item {
                 toastModel.remove(i);
             }
         }
+        recountUnseen();
         updateNotifCountFile();
     }
 
@@ -116,6 +171,7 @@ Item {
     }
 
     function invokeAction(uid, actionId) {
+        markAsSeen(uid);
         let n = liveNotifs[uid];
         if (n && n.actions) {
             for (let i = 0; i < n.actions.length; i++) {
@@ -131,6 +187,7 @@ Item {
     }
 
     function activateCard(appName, desktopEntry, uid) {
+        markAsSeen(uid);
         let n = liveNotifs[uid];
         if (n && n.actions) {
             for (let i = 0; i < n.actions.length; i++) {
@@ -204,7 +261,8 @@ Item {
                 "urgency":      urgencyVal,
                 "timestamp":    Date.now(),
                 "actionsJson":  JSON.stringify(extractedActions),
-                "uid":          currentUid
+                "uid":          currentUid,
+                "seen":         false
             };
 
             // Always add to history (grouped by application)

@@ -2220,7 +2220,8 @@ Variants {
                         // Notification Pill
                         Item {
                             id: notifPillItem
-                            property int unreadNotifCount: NotificationService.unreadCount
+                            property int unreadNotifCount: NotificationService.unseenCount
+                            property int totalNotifCount: NotificationService.history.count
                             width: notifPillRect.width
                             height: sysLayout.pillHeight
 
@@ -2229,7 +2230,7 @@ Variants {
                                 property bool isHovered: notifMouse.containsMouse
                                 property bool hasUnread: notifPillItem.unreadNotifCount > 0
 
-                                color: isHovered ? Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, 0.6) : (hasUnread ? Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, 0.4) : Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.4))
+                                color: isHovered ? Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, 0.6) : Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.4)
                                 radius: barWindow.s(10); height: sysLayout.pillHeight;
                                 clip: true
 
@@ -2255,15 +2256,15 @@ Variants {
                                         anchors.verticalCenter: parent.verticalCenter
                                         text: "󰂚"
                                         font.family: "SF Pro "; font.pixelSize: barWindow.s(16);
-                                        color: mocha.text
+                                        color: notifPillRect.hasUnread ? mocha.mauve : mocha.text
                                         Behavior on color { ColorAnimation { duration: 200 } }
                                     }
                                     Text { 
                                         anchors.verticalCenter: parent.verticalCenter
-                                        visible: notifPillItem.unreadNotifCount > 0
-                                        text: notifPillItem.unreadNotifCount
+                                        visible: notifPillItem.totalNotifCount > 0
+                                        text: notifPillItem.totalNotifCount
                                         font.family: "SF Pro Text"; font.pixelSize: barWindow.s(12); font.weight: Font.Bold
-                                        color: mocha.text
+                                        color: notifPillRect.hasUnread ? mocha.mauve : mocha.text
                                         Behavior on color { ColorAnimation { duration: 200 } }
                                     }
                                 }
