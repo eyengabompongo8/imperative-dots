@@ -1827,7 +1827,7 @@ Variants {
                     readonly property real islandTargetW: Math.max(basePillWidth, Math.max(barWindow.animPanelHeight > 2 ? currentPanelW : 0, barWindow.animToastHeight > 2 ? currentToastW : 0))
 
                     readonly property real currentPanelH: barWindow.animPanelHeight > 2 ? (barWindow.animPanelHeight + padTop + padBottom) : 0
-                    readonly property real currentToastH: barWindow.animToastHeight > 2 ? (barWindow.animToastHeight + (barWindow.animPanelHeight > 2 ? itemGap : (padTop + padBottom))) : 0
+                    readonly property real currentToastH: barWindow.animToastHeight > 2 ? (barWindow.animToastHeight + (barWindow.animPanelHeight > 2 ? (itemGap + padBottom) : (padTop + padBottom))) : 0
                     readonly property real islandTargetH: barWindow.barHeight + currentPanelH + (barWindow.animPanelHeight > 2 ? currentToastH : (barWindow.animToastHeight > 2 ? currentToastH : 0))
 
                     width: islandTargetW
@@ -1929,7 +1929,7 @@ Variants {
                             ? (barWindow.animToastWidth + 2 * rightBox.padSide)
                             : 0
                         toastHeight: (barWindow.animPanelHeight > 2 && barWindow.animToastHeight > 2)
-                            ? (barWindow.animToastHeight + rightBox.itemGap)
+                            ? (barWindow.animToastHeight + rightBox.itemGap + rightBox.padBottom)
                             : 0
                         isOpen: barWindow.rightPanelOpen || barWindow.animPanelHeight > 2 || barWindow.animToastHeight > 2
                         earRadius: barWindow.s(14)
