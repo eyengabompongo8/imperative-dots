@@ -11,6 +11,7 @@ Item {
 
     ListModel { id: historyModel }
     ListModel { id: toastModel }
+    ListModel { id: actionToastModel }
 
     property var liveNotifs: ({})
     property int _popupCounter: 0
@@ -22,6 +23,7 @@ Item {
 
     readonly property alias history: historyModel
     readonly property alias toasts: toastModel
+    readonly property alias actionToasts: actionToastModel
     property int unseenCount: 0
     readonly property int unreadCount: unseenCount
 
@@ -289,7 +291,7 @@ Item {
                 }
             }
         }
-        removeToast(uid);
+        removeHistory(uid);
     }
 
     function activateCard(appName, desktopEntry, uid, senderPid, summary) {
@@ -306,7 +308,59 @@ Item {
             }
         }
         focusApp(appName, desktopEntry, senderPid, summary);
-        removeToast(uid);
+        removeHistory(uid);
+    }
+
+    function removeActionToast(uid) {
+        for (let i = 0; i < actionToastModel.count; i++) {
+            if (actionToastModel.get(i).uid === uid) {
+                actionToastModel.remove(i);
+                break;
+            }
+        }
+    }
+
+    function dismissAllActionToasts() {
+        actionToastModel.clear();
+    }
+
+    function activateLatestNotification() {
+        let target = null;
+        if (toastModel.count > 0) {
+            target = toastModel.get(0);
+        } else if (historyModel.count > 0) {
+            target = historyModel.get(0);
+        }
+        if (!target) return;
+
+        let uid = target.uid;
+        let appName = target.appName || "System";
+        let desktopEntry = target.desktopEntry || "";
+        let senderPid = target.senderPid || 0;
+        let summary = target.summary || "";
+        let body = target.body || "";
+        let iconPath = target.iconPath || "";
+        let imagePath = target.imagePath || "";
+
+        // Trigger action & focus
+        activateCard(appName, desktopEntry, uid, senderPid, summary);
+
+        // Spawn separate mauve action pop-out
+        root._popupCounter++;
+        let actionUid = root._popupCounter;
+        actionToastModel.insert(0, {
+            "uid": actionUid,
+            "sourceUid": uid,
+            "appName": appName,
+            "summary": summary,
+            "body": body,
+            "iconPath": iconPath,
+            "imagePath": imagePath,
+            "desktopEntry": desktopEntry,
+            "senderPid": senderPid,
+            "timestamp": Date.now(),
+            "actionPerformed": true
+        });
     }
 
     function updateNotifCountFile() {
