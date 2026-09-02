@@ -15,6 +15,7 @@ hl.layer_rule({ match = { namespace = "^(qs-master)$" }, blur = true, ignore_alp
 hl.layer_rule({ match = { namespace = "^(qs-popups)$" }, blur = true, ignore_alpha = 0.2 })
 hl.layer_rule({ match = { namespace = "^(qs-floating-overlay)$" }, blur = true, ignore_alpha = 0.2 })
 hl.layer_rule({ match = { namespace = "^(qs-screenshot-overlay)$" }, blur = true, ignore_alpha = 0.2 })
+hl.layer_rule({ match = { namespace = "^(qs-topbar)$" }, blur = true, ignore_alpha = 0.2 })
 
 -- Window rules
 hl.window_rule({
