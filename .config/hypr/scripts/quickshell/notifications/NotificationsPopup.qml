@@ -11,8 +11,8 @@ Item {
     id: window
     focus: true
 
-    property var notifModel
-    property var liveNotifs
+    property var notifModel: NotificationService.history
+    property var liveNotifs: NotificationService.liveNotifs
     property real layoutWidth
     property real layoutHeight
 
@@ -86,36 +86,20 @@ Item {
     }
 
     function syncNotifCount() {
-        let cnt = notifModel ? notifModel.count : 0;
-        Quickshell.execDetached(["bash", "-c", "mkdir -p " + paths.runDir + " && echo '" + cnt + "' > " + paths.runDir + "/notif_count"]);
+        NotificationService.updateNotifCountFile();
     }
 
     function clearGroup(appName) {
-        if (!notifModel) return;
-        for (let i = notifModel.count - 1; i >= 0; i--) {
-            if (notifModel.get(i).appName === appName) {
-                let uid = notifModel.get(i).uid;
-                if (liveNotifs && liveNotifs[uid]) delete liveNotifs[uid];
-                notifModel.remove(i);
-            }
-        }
-        syncNotifCount();
+        NotificationService.clearGroup(appName);
     }
 
     function clearAllNotifs() {
-        if (!notifModel) return;
-        if (liveNotifs) {
-            for (let key in liveNotifs) delete liveNotifs[key];
-        }
-        notifModel.clear();
-        syncNotifCount();
+        NotificationService.clearAllHistory();
     }
 
     // --- Window Focus Dispatcher ---
     function focusApp(appName, desktopEntry) {
-        let target = (desktopEntry || appName || "").trim();
-        if (!target) return;
-        Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/focus_app.sh '" + target.replace(/'/g, "") + "'"]);
+        NotificationService.focusApp(appName, desktopEntry);
     }
 
     // --- Time Format Helper ---
@@ -134,10 +118,9 @@ Item {
     // Root Panel Container
     Rectangle {
         anchors.fill: parent
-        color: window.base
+        color: "transparent"
         radius: window.s(16)
-        border.color: window.surface1
-        border.width: 1
+        border.width: 0
         clip: true
 
         ColumnLayout {
@@ -388,16 +371,7 @@ Item {
                     property var realNotif: window.liveNotifs ? window.liveNotifs[model.uid] : null
 
                     function removeThisNotif() {
-                        if (!window.notifModel) return;
-                        for (let i = 0; i < window.notifModel.count; i++) {
-                            if (window.notifModel.get(i).uid === model.uid) {
-                                if (window.liveNotifs && window.liveNotifs[model.uid]) {
-                                    delete window.liveNotifs[model.uid];
-                                }
-                                window.notifModel.remove(i);
-                                break;
-                            }
-                        }
+                        NotificationService.removeHistory(model.uid);
                     }
 
                     property var actionArray: {
@@ -610,21 +584,9 @@ Item {
                                             cursorShape: Qt.PointingHandCursor
 
                                             onClicked: {
-                                                if (delegateWrapper.realNotif && delegateWrapper.realNotif.actions) {
-                                                    for (var i = 0; i < delegateWrapper.realNotif.actions.length; i++) {
-                                                        if (delegateWrapper.realNotif.actions[i].identifier === modelData.id) {
-                                                            delegateWrapper.realNotif.actions[i].invoke();
-                                                            break;
-                                                        }
-                                                    }
-                                                }
-                                                window.focusApp(model.appName, model.desktopEntry);
-
-                                                // Don't auto-remove resident notifications
-                                                let isResident = delegateWrapper.realNotif && delegateWrapper.realNotif.hints && delegateWrapper.realNotif.hints["resident"] === true;
-                                                if (!isResident) {
-                                                    delegateWrapper.removeThisNotif();
-                                                }
+                                                NotificationService.invokeAction(model.uid, modelData.id || modelData.identifier);
+                                                NotificationService.focusApp(model.appName, model.desktopEntry);
+                                                NotificationService.removeHistory(model.uid);
                                             }
                                         }
                                     }

@@ -13,26 +13,7 @@ PanelWindow {
 
     Caching { id: paths }
 
-    property var popupModel
     property real uiScale: 1.0
-
-    // Local map — live QObjects stored directly
-    property var _notifMap: ({})
-
-    function storeNotif(uid, notif) {
-        _notifMap[uid] = notif;
-    }
-
-    function getNotif(uid) {
-        return _notifMap[uid] || null;
-    }
-
-    function removeNotif(uid) {
-        delete _notifMap[uid];
-        popupWindow.removeRequested(uid);
-    }
-
-    signal removeRequested(int uid)
 
     property var layoutConfig: Registry.getPopupLayout(Screen.width, popupWindow.uiScale)
 
@@ -45,8 +26,12 @@ PanelWindow {
     }
 
     margins {
-        top: popupWindow.layoutConfig.marginTop
+        top: NotificationService.rightIslandBottomY
         right: popupWindow.layoutConfig.marginRight
+    }
+
+    Behavior on margins.top {
+        NumberAnimation { duration: 280; easing.type: Easing.OutExpo }
     }
 
     exclusionMode: ExclusionMode.Ignore
@@ -74,34 +59,50 @@ PanelWindow {
         onTriggered: dndPoller.running = true
     }
 
-    function focusApp(appName, desktopEntry) {
-        let target = (desktopEntry || appName || "").trim();
-        if (!target) return;
-        Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/focus_app.sh '" + target.replace(/'/g, "") + "'"]);
+    function removeToast(uid) {
+        NotificationService.removeToast(uid);
+    }
+
+    function invokeAction(uid, actionId) {
+        NotificationService.invokeAction(uid, actionId);
+    }
+
+    function activateCard(appName, desktopEntry, uid) {
+        NotificationService.activateCard(appName, desktopEntry, uid);
+    }
+
+    function formatTime(timestamp) {
+        if (!timestamp) return "Just now";
+        let date = new Date(timestamp);
+        let now = new Date();
+        let diffMs = now - date;
+        let diffMins = Math.floor(diffMs / 60000);
+        let diffHours = Math.floor(diffMins / 60);
+
+        if (diffMins < 1) return "Just now";
+        if (diffMins < 60) return diffMins + "m ago";
+        if (diffHours < 24) {
+            let h = date.getHours().toString().padStart(2, '0');
+            let m = date.getMinutes().toString().padStart(2, '0');
+            return h + ":" + m;
+        }
+        return (date.getMonth() + 1) + "/" + date.getDate();
     }
 
     Item {
         id: contentWrapper
         anchors.fill: parent
 
-        opacity: popupWindow.dndEnabled ? 0.0 : 1.0
+        opacity: (popupWindow.dndEnabled || !NotificationService.isRightWidgetOpen || NotificationService.toasts.count === 0) ? 0.0 : 1.0
         visible: opacity > 0.01
         Behavior on opacity { NumberAnimation { duration: 200 } }
 
         MatugenColors { id: _theme }
 
-        property var blobPalette1: [_theme.mauve, _theme.blue, _theme.peach, _theme.green, _theme.pink]
-        property var blobPalette2: [_theme.sapphire, _theme.teal, _theme.maroon, _theme.yellow, _theme.red]
-
-        property real globalOrbitAngle: 0
-        NumberAnimation on globalOrbitAngle {
-            from: 0; to: Math.PI * 2; duration: 25000; loops: Animation.Infinite; running: true
-        }
-
         ListView {
             id: popupList
             anchors.fill: parent
-            model: popupWindow.popupModel
+            model: NotificationService.toasts
             spacing: popupWindow.layoutConfig.spacing
             interactive: false
             clip: false
@@ -129,15 +130,12 @@ PanelWindow {
             delegate: Item {
                 id: delegateRoot
                 width: ListView.view.width
-                height: contentCol.height + (popupWindow.layoutConfig.padding * 2)
+                height: contentCol.implicitHeight + (20 * popupWindow.uiScale)
 
                 property string fullSummary: model.summary || ""
                 property string fullBody: model.body || ""
-                property int typeLenSum: 0
-                property int typeLenBody: 0
                 property int popupUid: model.uid
-
-                property var sourceNotif: popupWindow.getNotif(model.uid)
+                property int urgencyVal: model.urgency !== undefined ? model.urgency : 1
 
                 property var actionArray: {
                     try {
@@ -148,121 +146,67 @@ PanelWindow {
                 }
 
                 property int effectiveTimeout: {
-                    if (model.urgency === 2) return 0; // Critical notifications stay persistent
-                    var n = popupWindow.getNotif(model.uid);
-                    if (!n || n.timeout === undefined) return 5000;
-                    if (n.timeout === 0) return 0;
-                    if (n.timeout > 0) return n.timeout;
+                    if (urgencyVal === 2) return 0; // Critical notifications stay persistent
                     return 5000;
-                }
-
-                Connections {
-                    target: delegateRoot.sourceNotif || null
-                    function onClosed() {
-                        popupWindow.removeNotif(delegateRoot.popupUid);
-                    }
-                }
-
-                ParallelAnimation {
-                    running: true
-                    NumberAnimation {
-                        target: delegateRoot; property: "typeLenSum"
-                        from: 0; to: fullSummary.length
-                        duration: Math.min(fullSummary.length * 20, 600)
-                        easing.type: Easing.OutCubic
-                    }
-                    SequentialAnimation {
-                        PauseAnimation { duration: 150 }
-                        NumberAnimation {
-                            target: delegateRoot; property: "typeLenBody"
-                            from: 0; to: fullBody.length
-                            duration: Math.min(fullBody.length * 15, 1200)
-                            easing.type: Easing.OutCubic
-                        }
-                    }
                 }
 
                 Rectangle {
                     id: popupCard
                     anchors.fill: parent
-                    radius: popupWindow.layoutConfig.radius
-                    color: _theme.base
-                    border.color: model.urgency === 2 ? _theme.red : _theme.surface1
-                    border.width: model.urgency === 2 ? 2 : 1
+                    radius: 14 * popupWindow.uiScale
+                    color: cardMouseArea.containsMouse ? Qt.rgba(_theme.surface1.r, _theme.surface1.g, _theme.surface1.b, 0.85) : Qt.rgba(_theme.base.r, _theme.base.g, _theme.base.b, 0.85)
+                    border.color: urgencyVal === 2 ? _theme.red : (cardMouseArea.containsMouse ? Qt.rgba(_theme.text.r, _theme.text.g, _theme.text.b, 0.2) : Qt.rgba(_theme.text.r, _theme.text.g, _theme.text.b, 0.12))
+                    border.width: 1.2
                     clip: true
 
-                    property color blob1Color: contentWrapper.blobPalette1[index % 5]
-                    property color blob2Color: contentWrapper.blobPalette2[index % 5]
+                    Behavior on color { ColorAnimation { duration: 150 } }
+                    Behavior on border.color { ColorAnimation { duration: 150 } }
 
+                    // Left Accent Stripe (Red for Critical, Mauve for Normal)
                     Rectangle {
-                        width: parent.width * 0.7; height: width; radius: width / 2
-                        x: (parent.width / 2 - width / 2) + Math.cos(contentWrapper.globalOrbitAngle * 2 + index) * 60
-                        y: (parent.height / 2 - height / 2) + Math.sin(contentWrapper.globalOrbitAngle * 2 + index) * 30
-                        color: popupCard.blob1Color
-                        opacity: 0.12
-                    }
-
-                    Rectangle {
-                        width: parent.width * 0.5; height: width; radius: width / 2
-                        x: (parent.width / 2 - width / 2) + Math.sin(contentWrapper.globalOrbitAngle * 1.5 - index) * -50
-                        y: (parent.height / 2 - height / 2) + Math.cos(contentWrapper.globalOrbitAngle * 1.5 - index) * -40
-                        color: popupCard.blob2Color
-                        opacity: 0.10
+                        width: 3 * popupWindow.uiScale
+                        height: Math.max(20 * popupWindow.uiScale, contentCol.implicitHeight - (4 * popupWindow.uiScale))
+                        anchors.left: parent.left
+                        anchors.leftMargin: 3 * popupWindow.uiScale
+                        anchors.verticalCenter: parent.verticalCenter
+                        radius: 1.5 * popupWindow.uiScale
+                        color: delegateRoot.urgencyVal === 2 ? _theme.red : _theme.mauve
                     }
 
                     // Auto-Dismiss Timer — PAUSES ON MOUSE HOVER
                     Timer {
                         interval: delegateRoot.effectiveTimeout > 0 ? delegateRoot.effectiveTimeout : 5000
                         running: delegateRoot.effectiveTimeout > 0 && !cardMouseArea.containsMouse
-                        onTriggered: popupWindow.removeNotif(delegateRoot.popupUid)
+                        onTriggered: popupWindow.removeToast(delegateRoot.popupUid)
                     }
 
                     // Card Mouse Interaction (Left & Middle Click)
                     MouseArea {
                         id: cardMouseArea
                         anchors.fill: parent
-                        z: 1
                         hoverEnabled: true
                         acceptedButtons: Qt.LeftButton | Qt.MiddleButton
                         cursorShape: Qt.PointingHandCursor
 
                         onClicked: (mouse) => {
                             if (mouse.button === Qt.MiddleButton) {
-                                popupWindow.removeNotif(delegateRoot.popupUid);
+                                popupWindow.removeToast(delegateRoot.popupUid);
                                 return;
                             }
-
-                            var n = popupWindow.getNotif(delegateRoot.popupUid);
-                            if (n && n.actions) {
-                                for (var i = 0; i < n.actions.length; i++) {
-                                    if (n.actions[i].identifier === "default") {
-                                        n.actions[i].invoke();
-                                        break;
-                                    }
-                                }
-                            }
-                            popupWindow.focusApp(model.appName, model.desktopEntry);
-                            Qt.callLater(function() { popupWindow.removeNotif(delegateRoot.popupUid); });
-                        }
-
-                        Rectangle {
-                            anchors.fill: parent
-                            radius: popupCard.radius
-                            color: _theme.surface0
-                            opacity: parent.containsMouse ? 0.3 : 0.0
-                            Behavior on opacity { NumberAnimation { duration: 250 } }
+                            popupWindow.activateCard(model.appName, model.desktopEntry, delegateRoot.popupUid);
                         }
                     }
 
                     ColumnLayout {
                         id: contentCol
-                        z: 0
                         anchors.left: parent.left
                         anchors.right: parent.right
                         anchors.top: parent.top
                         anchors.margins: popupWindow.layoutConfig.padding
-                        spacing: 6 * popupWindow.uiScale
+                        anchors.leftMargin: popupWindow.layoutConfig.padding + (6 * popupWindow.uiScale)
+                        spacing: 5 * popupWindow.uiScale
 
+                        // Header Row: Icon, AppName, Timestamp, Dismiss
                         RowLayout {
                             Layout.fillWidth: true
                             spacing: 6 * popupWindow.uiScale
@@ -278,68 +222,74 @@ PanelWindow {
                             Text {
                                 text: model.appName || "System"
                                 font.family: "SF Pro Text"
-                                font.weight: Font.Medium
-                                font.pixelSize: 12 * popupWindow.uiScale
-                                color: _theme.overlay1
-                                Layout.fillWidth: true
-                            }
-                        }
-
-                        Item {
-                            Layout.fillWidth: true
-                            Layout.preferredHeight: hiddenSummary.implicitHeight
-
-                            Text {
-                                id: hiddenSummary
-                                text: delegateRoot.fullSummary
-                                width: parent.width
-                                font.family: "SF Pro Text"
                                 font.weight: Font.Bold
-                                font.pixelSize: 15 * popupWindow.uiScale
-                                wrapMode: Text.Wrap
-                                visible: false
-                            }
-
-                            Text {
-                                anchors.fill: parent
-                                text: delegateRoot.fullSummary.substring(0, delegateRoot.typeLenSum)
-                                font: hiddenSummary.font
-                                color: _theme.text
-                                wrapMode: Text.Wrap
-                            }
-                        }
-
-                        Item {
-                            Layout.fillWidth: true
-                            Layout.preferredHeight: hiddenBody.implicitHeight
-                            visible: delegateRoot.fullBody !== ""
-
-                            Text {
-                                id: hiddenBody
-                                text: delegateRoot.fullBody
-                                width: parent.width
-                                font.family: "SF Pro Text"
-                                font.weight: Font.Medium
-                                font.pixelSize: 13 * popupWindow.uiScale
-                                wrapMode: Text.Wrap
-                                textFormat: Text.StyledText
-                                linkColor: _theme.blue
-                                visible: false
-                            }
-
-                            Text {
-                                anchors.fill: parent
-                                text: delegateRoot.fullBody.substring(0, delegateRoot.typeLenBody)
-                                font: hiddenBody.font
+                                font.pixelSize: 11 * popupWindow.uiScale
                                 color: _theme.subtext0
-                                linkColor: _theme.blue
-                                wrapMode: Text.Wrap
-                                textFormat: Text.StyledText
-                                onLinkActivated: (link) => Quickshell.execDetached(["xdg-open", link])
+                            }
+
+                            Text {
+                                text: "• " + popupWindow.formatTime(model.timestamp)
+                                font.family: "SF Pro Text"
+                                font.pixelSize: 10 * popupWindow.uiScale
+                                color: _theme.overlay0
+                                visible: model.timestamp !== undefined && model.timestamp > 0
+                            }
+
+                            Item { Layout.fillWidth: true }
+
+                            Rectangle {
+                                Layout.preferredWidth: 20 * popupWindow.uiScale
+                                Layout.preferredHeight: 20 * popupWindow.uiScale
+                                radius: 10 * popupWindow.uiScale
+                                color: itemDismissMa.containsMouse ? Qt.alpha(_theme.red, 0.25) : "transparent"
+                                Behavior on color { ColorAnimation { duration: 150 } }
+
+                                Text {
+                                    anchors.centerIn: parent
+                                    font.family: "SF Pro "
+                                    font.pixelSize: 10 * popupWindow.uiScale
+                                    color: itemDismissMa.containsMouse ? _theme.red : _theme.overlay0
+                                    text: "󰅖"
+                                }
+
+                                MouseArea {
+                                    id: itemDismissMa
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: popupWindow.removeToast(delegateRoot.popupUid)
+                                }
                             }
                         }
 
-                        // Preview Image Thumbnail (if available)
+                        // Summary Title
+                        Text {
+                            text: delegateRoot.fullSummary || "Notification"
+                            font.family: "SF Pro Text"
+                            font.weight: Font.Bold
+                            font.pixelSize: 12 * popupWindow.uiScale
+                            color: _theme.text
+                            Layout.fillWidth: true
+                            wrapMode: Text.Wrap
+                            textFormat: Text.StyledText
+                        }
+
+                        // Body Text
+                        Text {
+                            text: delegateRoot.fullBody
+                            font.family: "SF Pro Text"
+                            font.weight: Font.Normal
+                            font.pixelSize: 11 * popupWindow.uiScale
+                            color: _theme.subtext0
+                            linkColor: _theme.blue
+                            Layout.fillWidth: true
+                            wrapMode: Text.Wrap
+                            visible: text !== ""
+                            textFormat: Text.StyledText
+                            onLinkActivated: (link) => Quickshell.execDetached(["xdg-open", link])
+                        }
+
+                        // Preview Image
                         Image {
                             id: previewImgToast
                             visible: source !== "" && status === Image.Ready
@@ -357,18 +307,18 @@ PanelWindow {
                             clip: true
                         }
 
-                        // --- INLINE ACTION BUTTONS ---
+                        // Action Buttons Row
                         Flow {
                             Layout.fillWidth: true
-                            Layout.topMargin: delegateRoot.actionArray.length > 0 ? (6 * popupWindow.uiScale) : 0
-                            spacing: 8 * popupWindow.uiScale
+                            Layout.topMargin: delegateRoot.actionArray.length > 0 ? (4 * popupWindow.uiScale) : 0
+                            spacing: 6 * popupWindow.uiScale
                             visible: delegateRoot.actionArray.length > 0
 
                             Repeater {
                                 model: delegateRoot.actionArray
                                 delegate: Rectangle {
-                                    width: Math.min(btnTextToast.implicitWidth + (16 * popupWindow.uiScale), popupCard.width - (24 * popupWindow.uiScale))
-                                    height: 30 * popupWindow.uiScale
+                                    width: Math.min(btnTextToast.implicitWidth + (16 * popupWindow.uiScale), popupCard.width - (28 * popupWindow.uiScale))
+                                    height: 26 * popupWindow.uiScale
                                     radius: 6 * popupWindow.uiScale
 
                                     property bool isPrimary: index === 0
@@ -405,20 +355,8 @@ PanelWindow {
                                         anchors.fill: parent
                                         hoverEnabled: true
                                         cursorShape: Qt.PointingHandCursor
-                                        z: 10
-
                                         onClicked: {
-                                            var n = popupWindow.getNotif(delegateRoot.popupUid);
-                                            if (n && n.actions) {
-                                                for (var i = 0; i < n.actions.length; i++) {
-                                                    if (n.actions[i].identifier === modelData.id) {
-                                                        n.actions[i].invoke();
-                                                        break;
-                                                    }
-                                                }
-                                            }
-                                            popupWindow.focusApp(model.appName, model.desktopEntry);
-                                            Qt.callLater(function() { popupWindow.removeNotif(delegateRoot.popupUid); });
+                                            popupWindow.invokeAction(delegateRoot.popupUid, modelData.id || modelData.identifier);
                                         }
                                     }
                                 }
