@@ -382,9 +382,8 @@ Item {
         Rectangle {
             anchors.fill: parent
             radius: window.s(20)
-            color: window.base
-            border.color: window.surface0 
-            border.width: 1
+            color: "transparent"
+            border.width: 0
             clip: true
 
             // Rotating Background Blobs - Spanning across the whole widget natively

@@ -18,7 +18,6 @@ Item {
     property var liveNotifs
     property real layoutWidth: 0
     property real layoutHeight: 0
-    property real targetMasterHeight: s(265)
 
     // --- Responsive Scaling Logic ---
     Scaler {
@@ -28,6 +27,13 @@ Item {
 
     function s(val) {
         return scaler.s(val);
+    }
+
+    readonly property real targetMasterHeight: {
+        let count = (hasBatteryThreshold ? 1 : 0) + (hasTurbo ? 1 : 0);
+        if (count >= 2) return s(275);
+        if (count === 1) return s(205);
+        return s(155);
     }
 
     // -------------------------------------------------------------------------
@@ -325,9 +331,8 @@ Item {
         Rectangle {
             anchors.fill: parent
             radius: window.s(20)
-            color: window.base
-            border.color: window.surface0
-            border.width: 1
+            color: "transparent"
+            border.width: 0
             clip: true
 
             // Rotating Background Ambient Blobs
@@ -347,7 +352,10 @@ Item {
             }
 
             ColumnLayout {
-                anchors.fill: parent
+                id: mainLayout
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.top: parent.top
                 anchors.margins: window.s(16)
                 spacing: window.s(10)
 
@@ -428,7 +436,7 @@ Item {
 
                 Rectangle {
                     Layout.fillWidth: true
-                    height: 1
+                    Layout.preferredHeight: 1
                     color: window.surface0
                 }
 
@@ -818,6 +826,42 @@ Item {
                                     cursorShape: Qt.PointingHandCursor
                                     onClicked: window.applyChanges()
                                 }
+                            }
+                        }
+                    }
+
+                    // ---------------------------------------------------------
+                    // 4. FALLBACK / NO FEATURES DETECTED
+                    // ---------------------------------------------------------
+                    Rectangle {
+                        visible: !window.hasBatteryThreshold && !window.hasTurbo
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: window.s(48)
+                        radius: window.s(12)
+                        color: Qt.rgba(window.surface0.r, window.surface0.g, window.surface0.b, 0.5)
+                        border.color: window.surface1
+                        border.width: 1
+
+                        RowLayout {
+                            anchors.fill: parent
+                            anchors.leftMargin: window.s(12)
+                            anchors.rightMargin: window.s(12)
+                            spacing: window.s(10)
+
+                            Text {
+                                text: "󰅙"
+                                font.family: "SF Pro "
+                                font.pixelSize: window.s(18)
+                                color: window.subtext0
+                            }
+
+                            Text {
+                                text: "No hardware controls available on this system."
+                                font.family: "SF Pro Text"
+                                font.pixelSize: window.s(12)
+                                color: window.subtext0
+                                Layout.fillWidth: true
+                                elide: Text.ElideRight
                             }
                         }
                     }
