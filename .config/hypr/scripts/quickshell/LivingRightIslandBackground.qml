@@ -32,11 +32,12 @@ Item {
     readonly property real yToastBottom: yWidgetBottom + toastHeight
 
     // Continuous mode determination
-    readonly property bool hasSteppedToastWide: (widgetHeight > 4 && toastHeight > 4 && widgetWidth > (toastWidth + 10) && widgetWidth > (pillWidth + 4))
-    readonly property bool hasSteppedToastNarrow: (widgetHeight > 4 && toastHeight > 4 && widgetWidth > (toastWidth + 10) && !hasSteppedToastWide)
-    readonly property bool isWider: !hasSteppedToastWide && !hasSteppedToastNarrow && (widgetHeight > 4) && (widgetWidth > (pillWidth + 4))
-    readonly property bool isNarrower: !hasSteppedToastWide && !hasSteppedToastNarrow && !isWider && (widgetHeight > 4)
-    readonly property bool isCollapsed: !hasSteppedToastWide && !hasSteppedToastNarrow && !isWider && !isNarrower
+    readonly property bool isStandalone: (topBarHeight <= 4) && (widgetHeight > 4)
+    readonly property bool hasSteppedToastWide: !isStandalone && (widgetHeight > 4 && toastHeight > 4 && widgetWidth > (toastWidth + 10) && widgetWidth > (pillWidth + 4))
+    readonly property bool hasSteppedToastNarrow: !isStandalone && (widgetHeight > 4 && toastHeight > 4 && widgetWidth > (toastWidth + 10) && !hasSteppedToastWide)
+    readonly property bool isWider: !isStandalone && !hasSteppedToastWide && !hasSteppedToastNarrow && (widgetHeight > 4) && (widgetWidth > (pillWidth + 4))
+    readonly property bool isNarrower: !isStandalone && !hasSteppedToastWide && !hasSteppedToastNarrow && !isWider && (widgetHeight > 4)
+    readonly property bool isCollapsed: !isStandalone && !hasSteppedToastWide && !hasSteppedToastNarrow && !isWider && !isNarrower
 
     anchors.top: parent ? parent.top : undefined
     anchors.bottom: parent ? parent.bottom : undefined
@@ -52,6 +53,69 @@ Item {
     Shape {
         anchors.fill: parent
         smooth: true
+
+        // -------------------------------------------------------------
+        // 0. STANDALONE FILL: Single Corner Dynamic Island (topBarHeight <= 4)
+        // -------------------------------------------------------------
+        ShapePath {
+            fillColor: root.isStandalone ? root.fillColor : "transparent"
+            strokeColor: "transparent"
+            strokeWidth: 0
+
+            startX: root.xWidgetLeft
+            startY: 0
+
+            // 1. Top-Left concave ear
+            PathArc {
+                x: root.xWidgetLeft + root.earRadius
+                y: root.earRadius
+                radiusX: root.earRadius
+                radiusY: root.earRadius
+                direction: PathArc.Clockwise
+            }
+
+            // 2. Left vertical wall
+            PathLine {
+                x: root.xWidgetLeft + root.earRadius
+                y: root.yWidgetBottom - root.bottomRadius
+            }
+
+            // 3. Bottom-Left convex corner
+            PathArc {
+                x: root.xWidgetLeft + root.earRadius + root.bottomRadius
+                y: root.yWidgetBottom
+                radiusX: root.bottomRadius
+                radiusY: root.bottomRadius
+                direction: PathArc.Counterclockwise
+            }
+
+            // 4. Bottom horizontal edge
+            PathLine {
+                x: root.xRight
+                y: root.yWidgetBottom
+            }
+
+            // 5. Bottom-Right concave ear into right bezel
+            PathArc {
+                x: root.xRight + root.earRadius
+                y: root.yWidgetBottom + root.earRadius
+                radiusX: root.earRadius
+                radiusY: root.earRadius
+                direction: PathArc.Clockwise
+            }
+
+            // 6. Right vertical bezel edge up to top bezel
+            PathLine {
+                x: root.xRight + root.earRadius
+                y: 0
+            }
+
+            // 7. Close along top screen bezel
+            PathLine {
+                x: root.xWidgetLeft
+                y: 0
+            }
+        }
 
         // -------------------------------------------------------------
         // 1. COLLAPSED FILL: Standard Right Corner Pill
@@ -554,6 +618,58 @@ Item {
         anchors.fill: parent
         smooth: true
         visible: root.strokeWidth > 0 && root.strokeColor !== "transparent"
+
+        // -------------------------------------------------------------
+        // 0. STANDALONE STROKE: Single Corner Dynamic Island (topBarHeight <= 4)
+        // -------------------------------------------------------------
+        ShapePath {
+            fillColor: "transparent"
+            strokeColor: root.isStandalone ? root.strokeColor : "transparent"
+            strokeWidth: root.strokeWidth
+            capStyle: ShapePath.RoundCap
+
+            startX: root.xWidgetLeft
+            startY: 0
+
+            // 1. Top-Left concave ear
+            PathArc {
+                x: root.xWidgetLeft + root.earRadius
+                y: root.earRadius
+                radiusX: root.earRadius
+                radiusY: root.earRadius
+                direction: PathArc.Clockwise
+            }
+
+            // 2. Left vertical wall
+            PathLine {
+                x: root.xWidgetLeft + root.earRadius
+                y: root.yWidgetBottom - root.bottomRadius
+            }
+
+            // 3. Bottom-Left convex corner
+            PathArc {
+                x: root.xWidgetLeft + root.earRadius + root.bottomRadius
+                y: root.yWidgetBottom
+                radiusX: root.bottomRadius
+                radiusY: root.bottomRadius
+                direction: PathArc.Counterclockwise
+            }
+
+            // 4. Bottom horizontal edge
+            PathLine {
+                x: root.xRight
+                y: root.yWidgetBottom
+            }
+
+            // 5. Bottom-Right concave ear into right bezel
+            PathArc {
+                x: root.xRight + root.earRadius
+                y: root.yWidgetBottom + root.earRadius
+                radiusX: root.earRadius
+                radiusY: root.earRadius
+                direction: PathArc.Clockwise
+            }
+        }
 
         // -------------------------------------------------------------
         // 1. COLLAPSED STROKE

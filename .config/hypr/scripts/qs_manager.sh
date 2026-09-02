@@ -150,6 +150,11 @@ handle_network_prep() {
 # -----------------------------------------------------------------------------
 # IPC ROUTING
 # -----------------------------------------------------------------------------
+if [[ "$ACTION" == "action_latest" || "$ACTION" == "activate_latest" ]]; then
+    timeout 0.3s quickshell -p "$SHELL_QML_PATH" ipc call topbar handleActionLatest >/dev/null 2>&1
+    exit 0
+fi
+
 if [[ "$ACTION" == "close" ]]; then
     # Close both main widgets and right-panel widgets (Step 9)
     quickshell -p "$SHELL_QML_PATH" ipc call main handleCommand "close" "" "" >/dev/null 2>&1
