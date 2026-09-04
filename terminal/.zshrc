@@ -128,3 +128,13 @@ eval "$(pyenv init - zsh)"
 
 export PATH="$HOME/.local/bin:$PATH"
 alias gnome-control-center="env XDG_CURRENT_DESKTOP=GNOME gnome-control-center"
+
+
+# Yazi
+function y() {
+	local tmp cwd; tmp="$(mktemp -t "yazi-cwd.XXXXXX")"
+	command yazi "$@" --cwd-file="$tmp"
+	IFS= read -r -d '' cwd < "$tmp"
+	[ "$cwd" != "$PWD" ] && [ -d "$cwd" ] && builtin cd -- "$cwd" || builtin true
+	command rm -f -- "$tmp"
+}

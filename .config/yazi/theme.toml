@@ -1,0 +1,16 @@
+#:schema https://yazi-rs.github.io/schemas/theme.json
+
+[flavor]
+dark  = "vscode-dark-modern"
+light = "vscode-light-modern"
+
+[indicator]
+padding = { open = "", close = "" }
+
+[tabs]
+sep_inner = { open = "", close = "" }
+sep_outer = { open = "", close = "" }
+
+[status]
+sep_left  = { open = "", close = "" }
+sep_right = { open = "", close = "" }
