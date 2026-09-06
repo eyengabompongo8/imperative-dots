@@ -78,6 +78,37 @@ Variants {
                     }
                 }
 
+                function toggle() {
+                    if (floatingWidget.isSidebarVisible) {
+                        floatingWidget.isSidebarVisible = false;
+                        floatingWidget.isExpanded = false;
+                    } else {
+                        floatingWidget.showSidebar(floatingWidget.activeEdge, floatingWidget.screen.height / 2);
+                        floatingWidget.isExpanded = true;
+                        floatingWidget.isPinned = true;
+                    }
+                }
+
+                function open(edge: string) {
+                    let targetEdge = (edge === "right" || edge === "bottom") ? edge : "left";
+                    let pos = targetEdge === "bottom" ? (floatingWidget.screen.width / 2) : (floatingWidget.screen.height / 2);
+                    floatingWidget.showSidebar(targetEdge, pos);
+                    floatingWidget.isExpanded = true;
+                }
+
+                function peek(edge: string) {
+                    let targetEdge = (edge === "right" || edge === "bottom") ? edge : "left";
+                    let pos = targetEdge === "bottom" ? (floatingWidget.screen.width / 2) : (floatingWidget.screen.height / 2);
+                    floatingWidget.showPeek(targetEdge, pos);
+                }
+
+                function close() {
+                    floatingWidget.isSidebarVisible = false;
+                    floatingWidget.isExpanded = false;
+                    floatingWidget.isPinned = false;
+                    floatingWidget.isPeekVisible = false;
+                }
+
                 function forceReload() {
                     Quickshell.reload(true) 
                 }
@@ -275,7 +306,7 @@ Variants {
                 let innerW = floatingWidget.sidebarW + floatingWidget.currentExtraWidth;
                 let innerH = floatingWidget.baseSidebarH + floatingWidget.currentExtraLength;
 
-                let buffer = floatingWidget.s(15); 
+                let buffer = floatingWidget.s(18); 
 
                 let relMinX = -cw / 2 - buffer;
                 let relMaxX = -cw / 2 + innerW + buffer;
@@ -310,16 +341,41 @@ Variants {
                 return Qt.rect(aabbX, aabbY, aabbW, aabbH);
             }
 
+            property var peekMaskAABB: {
+                if (!floatingWidget.isPeekVisible) return Qt.rect(0, 0, 0, 0);
+                let pw = peekBar.width;
+                let ph = peekBar.height;
+                let cx = peekBar.x + pw / 2;
+                let cy = peekBar.y + ph / 2;
+                let buffer = floatingWidget.s(18);
+
+                let rot = peekBar.rotation;
+                let aabbX = 0, aabbY = 0, aabbW = 0, aabbH = 0;
+
+                if (rot === -90) {
+                    aabbX = cx - ph / 2 - buffer;
+                    aabbY = cy - pw / 2 - buffer;
+                    aabbW = ph + buffer * 2;
+                    aabbH = pw + buffer * 2;
+                } else {
+                    aabbX = cx - pw / 2 - buffer;
+                    aabbY = cy - ph / 2 - buffer;
+                    aabbW = pw + buffer * 2;
+                    aabbH = ph + buffer * 2;
+                }
+                return Qt.rect(aabbX, aabbY, aabbW, aabbH);
+            }
+
             mask: Region {
                 Region { x: 0; y: 0; width: 1; height: floatingWidget.height }
                 Region { x: floatingWidget.width - 1; y: 0; width: 1; height: floatingWidget.height }
                 Region { x: 0; y: floatingWidget.height - 1; width: floatingWidget.width; height: 1 }
 
                 Region {
-                    x: floatingWidget.isPeekVisible ? peekBar.x - floatingWidget.s(15) : 0
-                    y: floatingWidget.isPeekVisible ? peekBar.y - floatingWidget.s(15) : 0
-                    width: floatingWidget.isPeekVisible ? peekBar.width + floatingWidget.s(30) : 0
-                    height: floatingWidget.isPeekVisible ? peekBar.height + floatingWidget.s(30) : 0
+                    x: floatingWidget.isPeekVisible ? floatingWidget.peekMaskAABB.x : 0
+                    y: floatingWidget.isPeekVisible ? floatingWidget.peekMaskAABB.y : 0
+                    width: floatingWidget.isPeekVisible ? floatingWidget.peekMaskAABB.width : 0
+                    height: floatingWidget.isPeekVisible ? floatingWidget.peekMaskAABB.height : 0
                 }
 
                 Region {
@@ -349,7 +405,7 @@ Variants {
                 if (isExpanded) {
                     length += targetExpandedExtraLength;
                 }
-                return (length / 2) + s(5);
+                return (length / 2) + s(18);
             }
 
             property real clampedCenterX: safeClamp(currentPos, floatingWidget.width, targetEdgeMargin)
@@ -661,19 +717,18 @@ Variants {
             }
 
             // =========================================================
-            // --- FLOATING PEEK BAR (DRAG HANDLE)
+            // --- FLOATING PEEK BAR (DRAG HANDLE / DYNAMIC ISLAND TAB)
             // =========================================================
-            Rectangle {
+            Item {
                 id: peekBar
-                // 10px smaller on each side = 20px total subtraction
-                width: floatingWidget.activeEdge === "bottom" ? Math.max(floatingWidget.s(20), floatingWidget.baseSidebarH - floatingWidget.s(20)) : floatingWidget.s(12)
-                height: floatingWidget.activeEdge === "bottom" ? floatingWidget.s(12) : Math.max(floatingWidget.s(20), floatingWidget.baseSidebarH - floatingWidget.s(20))
-                radius: floatingWidget.s(6)
+                width: floatingWidget.s(16)
+                height: Math.max(floatingWidget.s(24), floatingWidget.baseSidebarH - floatingWidget.s(20))
+
+                transformOrigin: Item.Center
+                rotation: floatingWidget.targetRotation
+                Behavior on rotation { enabled: !floatingWidget.disableAnim; NumberAnimation { duration: 250; easing.type: Easing.OutExpo } }
                 
-                color: mocha.base
-                border.width: 0
-                
-                opacity: (floatingWidget.isPeekVisible && !floatingWidget.isSidebarVisible) ? (peekMouse.containsMouse || peekMouse.pressed ? 1.0 : 0.6) : 0.0
+                opacity: (floatingWidget.isPeekVisible && !floatingWidget.isSidebarVisible) ? (peekMouse.containsMouse || peekMouse.pressed ? 1.0 : 0.75) : 0.0
                 scale: floatingWidget.isPeekVisible ? 1.0 : 0.6
                 
                 Behavior on opacity { NumberAnimation { duration: 250 } }
@@ -687,13 +742,13 @@ Variants {
                 x: {
                     let offscreen = 0, visibleX = 0;
                     if (floatingWidget.activeEdge === "left") {
-                        offscreen = -width - floatingWidget.s(10);
-                        visibleX = floatingWidget.s(4); 
+                        offscreen = -width - floatingWidget.s(15);
+                        visibleX = 0; 
                         return (floatingWidget.isPeekVisible ? visibleX : offscreen) + visualDragOffset;
                     }
                     if (floatingWidget.activeEdge === "right") {
-                        offscreen = floatingWidget.width + floatingWidget.s(10);
-                        visibleX = floatingWidget.width - width - floatingWidget.s(4); 
+                        offscreen = floatingWidget.width + floatingWidget.s(15);
+                        visibleX = floatingWidget.width - width; 
                         return (floatingWidget.isPeekVisible ? visibleX : offscreen) - visualDragOffset;
                     }
                     if (floatingWidget.activeEdge === "bottom") return clampedCenterX - width / 2;
@@ -703,8 +758,8 @@ Variants {
                 y: {
                     let offscreen = 0, visibleY = 0;
                     if (floatingWidget.activeEdge === "bottom") {
-                        offscreen = floatingWidget.height + floatingWidget.s(10);
-                        visibleY = floatingWidget.height - height - floatingWidget.s(4); 
+                        offscreen = floatingWidget.height + floatingWidget.s(15);
+                        visibleY = floatingWidget.height - height / 2 - width / 2; 
                         return (floatingWidget.isPeekVisible ? visibleY : offscreen) - visualDragOffset;
                     }
                     if (floatingWidget.activeEdge === "left" || floatingWidget.activeEdge === "right") return clampedCenterY - height / 2;
@@ -714,12 +769,28 @@ Variants {
                 Behavior on x { enabled: !floatingWidget.disableAnim && !peekMouse.pressed; NumberAnimation { duration: 350; easing.type: Easing.OutExpo } }
                 Behavior on y { enabled: !floatingWidget.disableAnim && !peekMouse.pressed; NumberAnimation { duration: 350; easing.type: Easing.OutExpo } }
 
+                SideIslandBackground {
+                    id: peekBg
+                    pillWidth: parent.width
+                    pillHeight: parent.height
+                    earRadius: floatingWidget.s(10)
+                    cornerRadius: floatingWidget.s(8)
+                    fillColor: (peekMouse.containsMouse || peekMouse.pressed) ? Qt.tint(mocha.base, Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, 0.4)) : mocha.base
+                    strokeColor: Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, (peekMouse.containsMouse || peekMouse.pressed) ? 0.22 : 0.12)
+                    strokeWidth: floatingWidget.s(1.2)
+                    Behavior on fillColor { ColorAnimation { duration: 200 } }
+                    Behavior on strokeColor { ColorAnimation { duration: 200 } }
+                }
+
+                // Inner accent drag indicator pill
                 Rectangle {
                     anchors.centerIn: parent
-                    width: floatingWidget.activeEdge === "bottom" ? floatingWidget.s(30) : floatingWidget.s(4)
-                    height: floatingWidget.activeEdge === "bottom" ? floatingWidget.s(4) : floatingWidget.s(30)
-                    radius: floatingWidget.s(2)
-                    color: Qt.darker(mocha.mauve, 1.8)
+                    anchors.horizontalCenterOffset: floatingWidget.s(1)
+                    width: floatingWidget.s(3.5)
+                    height: Math.min(parent.height * 0.45, floatingWidget.s(28))
+                    radius: width / 2
+                    color: (peekMouse.containsMouse || peekMouse.pressed) ? mocha.mauve : Qt.darker(mocha.mauve, 1.8)
+                    Behavior on color { ColorAnimation { duration: 200 } }
                 }
 
                 MouseArea {
@@ -822,42 +893,43 @@ Variants {
                         }
                     }
 
-                    Rectangle {
+                    SideIslandBackground {
                         id: morphingBackground
-                        x: -floatingWidget.s(15) 
-                        y: 0
-                        width: floatingWidget.s(15) + parent.width
-                        height: parent.height
-                        radius: floatingWidget.s(15) 
-                        color: mocha.base 
-                        border.width: 1
-                        border.color: Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.08)
+                        pillWidth: parent.width
+                        pillHeight: parent.height
+                        earRadius: floatingWidget.s(14)
+                        cornerRadius: floatingWidget.s(14)
+                        fillColor: mocha.base
+                        strokeColor: Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.12)
+                        strokeWidth: floatingWidget.s(1.2)
+                        Behavior on fillColor { ColorAnimation { duration: 200 } }
+                        Behavior on strokeColor { ColorAnimation { duration: 200 } }
+                    }
 
-                        MouseArea {
-                            id: sidebarDragArea
-                            anchors.fill: parent
-                            anchors.margins: floatingWidget.isExpanded ? -floatingWidget.s(60) : -floatingWidget.s(15) 
-                            hoverEnabled: true
-                            enabled: floatingWidget.isSidebarVisible 
-                            
-                            property real startGlobalX: 0
-                            property real startGlobalY: 0
+                    MouseArea {
+                        id: sidebarDragArea
+                        anchors.fill: parent
+                        anchors.margins: floatingWidget.isExpanded ? -floatingWidget.s(60) : -floatingWidget.s(15) 
+                        hoverEnabled: true
+                        enabled: floatingWidget.isSidebarVisible 
+                        
+                        property real startGlobalX: 0
+                        property real startGlobalY: 0
 
-                            onEntered: hideTimer.stop()
-                            onExited: { if (!pressed && !gridMouseArea.containsMouse) floatingWidget.kickTimer(); }
-                            onPressed: mouse => { 
-                                let gp = mapToItem(mainHitArea, mouse.x, mouse.y);
-                                startGlobalX = gp.x; 
-                                startGlobalY = gp.y; 
-                                floatingWidget.useGraceTimer = true; // Initiated a drag, enable 3s grace
-                            }
-                            onPositionChanged: mouse => {
-                                if (!pressed) return;
-                                let gp = mapToItem(mainHitArea, mouse.x, mouse.y);
-                                floatingWidget.evaluateDrag(startGlobalX, startGlobalY, gp.x, gp.y);
-                            }
-                            onReleased: { if (!containsMouse) floatingWidget.kickTimer(); }
+                        onEntered: hideTimer.stop()
+                        onExited: { if (!pressed && !gridMouseArea.containsMouse) floatingWidget.kickTimer(); }
+                        onPressed: mouse => { 
+                            let gp = mapToItem(mainHitArea, mouse.x, mouse.y);
+                            startGlobalX = gp.x; 
+                            startGlobalY = gp.y; 
+                            floatingWidget.useGraceTimer = true; // Initiated a drag, enable 3s grace
                         }
+                        onPositionChanged: mouse => {
+                            if (!pressed) return;
+                            let gp = mapToItem(mainHitArea, mouse.x, mouse.y);
+                            floatingWidget.evaluateDrag(startGlobalX, startGlobalY, gp.x, gp.y);
+                        }
+                        onReleased: { if (!containsMouse) floatingWidget.kickTimer(); }
                     }
 
                     Item {
