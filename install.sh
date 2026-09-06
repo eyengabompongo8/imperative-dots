@@ -1036,7 +1036,7 @@ done
 
 yes "Y" | $PKG_MANAGER pipewire-jack >/dev/null 2>&1 || true
 
-CONFLICTING_PKGS=("swayosd" "quickshell" "matugen" "go-yq")
+CONFLICTING_PKGS=("swayosd" "matugen" "go-yq")
 for cpkg in "${CONFLICTING_PKGS[@]}"; do
   if pacman -Qq | grep -qx "$cpkg"; then
     echo -e "  -> ${C_YELLOW}Removing conflicting package '$cpkg'...${RESET}"
