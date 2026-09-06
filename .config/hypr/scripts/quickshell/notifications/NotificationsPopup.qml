@@ -634,10 +634,16 @@ Item {
                         NumberAnimation { duration: 180; easing.type: Easing.OutQuad }
                     }
 
+                    property int notifUid: model.uid
+                    property string notifAppName: model.appName || "System"
+                    property string notifDesktopEntry: model.desktopEntry || ""
+                    property int notifSenderPid: model.senderPid || 0
+                    property string notifSummary: model.summary || ""
+
                     property var realNotif: window.liveNotifs ? window.liveNotifs[model.uid] : null
 
                     function removeThisNotif() {
-                        NotificationService.removeHistory(model.uid);
+                        NotificationService.removeHistory(delegateWrapper.notifUid);
                     }
 
                     property var actionArray: {
@@ -869,7 +875,9 @@ Item {
 
                             // Action Buttons Dock (Flow layout for > 2 actions)
                             Flow {
+                                id: actionsFlow
                                 Layout.fillWidth: true
+                                Layout.preferredHeight: childrenRect.height
                                 Layout.topMargin: delegateWrapper.actionArray.length > 0 ? window.s(4) : 0
                                 spacing: window.s(6)
                                 visible: delegateWrapper.actionArray.length > 0
@@ -911,9 +919,8 @@ Item {
                                             cursorShape: Qt.PointingHandCursor
 
                                             onClicked: {
-                                                NotificationService.invokeAction(model.uid, modelData.id || modelData.identifier);
-                                                NotificationService.focusApp(model.appName, model.desktopEntry, model.senderPid || 0, model.summary || "");
-                                                NotificationService.removeHistory(model.uid);
+                                                let actId = modelData.id !== undefined ? modelData.id : (modelData.identifier !== undefined ? modelData.identifier : "");
+                                                NotificationService.invokeAction(delegateWrapper.notifUid, actId);
                                             }
                                         }
                                     }

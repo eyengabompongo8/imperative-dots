@@ -224,6 +224,10 @@ Item {
     }
 
     function removeHistory(uid) {
+        let notifObj = liveNotifs[uid];
+        if (notifObj && notifObj.tracked) {
+            notifObj.tracked = false;
+        }
         for (let i = 0; i < historyModel.count; i++) {
             if (historyModel.get(i).uid === uid) {
                 if (liveNotifs[uid]) delete liveNotifs[uid];
@@ -237,7 +241,12 @@ Item {
     }
 
     function clearAllHistory() {
-        for (let key in liveNotifs) delete liveNotifs[key];
+        for (let key in liveNotifs) {
+            if (liveNotifs[key] && liveNotifs[key].tracked) {
+                liveNotifs[key].tracked = false;
+            }
+            delete liveNotifs[key];
+        }
         historyModel.clear();
         toastModel.clear();
         unseenCount = 0;
@@ -248,7 +257,10 @@ Item {
         for (let i = historyModel.count - 1; i >= 0; i--) {
             if (historyModel.get(i).appName === appName) {
                 let uid = historyModel.get(i).uid;
-                if (liveNotifs[uid]) delete liveNotifs[uid];
+                if (liveNotifs[uid]) {
+                    if (liveNotifs[uid].tracked) liveNotifs[uid].tracked = false;
+                    delete liveNotifs[uid];
+                }
                 historyModel.remove(i);
             }
         }
@@ -282,10 +294,12 @@ Item {
         markAsSeen(uid);
         let n = liveNotifs[uid];
         if (n && n.actions) {
+            let targetId = String(actionId);
             for (let i = 0; i < n.actions.length; i++) {
                 let act = n.actions[i];
-                let actKey = (typeof act === "string") ? act : (act.identifier || act.key || act.id || "");
-                if (actKey === actionId) {
+                if (!act) continue;
+                let actKey = (typeof act === "string") ? act : (act.identifier !== undefined ? act.identifier : (act.key !== undefined ? act.key : (act.id !== undefined ? act.id : "")));
+                if (String(actKey) === targetId) {
                     if (typeof act.invoke === "function") act.invoke();
                     break;
                 }
@@ -300,8 +314,9 @@ Item {
         if (n && n.actions) {
             for (let i = 0; i < n.actions.length; i++) {
                 let act = n.actions[i];
-                let actKey = (typeof act === "string") ? act : (act.identifier || act.key || act.id || "");
-                if (actKey === "default" && typeof act.invoke === "function") {
+                if (!act) continue;
+                let actKey = (typeof act === "string") ? act : (act.identifier !== undefined ? act.identifier : (act.key !== undefined ? act.key : (act.id !== undefined ? act.id : "")));
+                if (String(actKey) === "default" && typeof act.invoke === "function") {
                     act.invoke();
                     break;
                 }
@@ -391,10 +406,10 @@ Item {
                     for (let i = 0; i < n.actions.length; i++) {
                         let act = n.actions[i];
                         if (!act) continue;
-                        let actionId = act.key !== undefined ? act.key : (act.identifier !== undefined ? act.identifier : (act.id !== undefined ? act.id : ""));
-                        let actionText = act.text !== undefined ? act.text : (act.label !== undefined ? act.label : (act.name !== undefined ? act.name : actionId));
-                        if (actionId !== "default" && actionId !== "") {
-                            extractedActions.push({ "id": actionId, "text": actionText });
+                        let actionId = act.identifier !== undefined ? act.identifier : (act.key !== undefined ? act.key : (act.id !== undefined ? act.id : ""));
+                        let actionText = act.text !== undefined ? act.text : (act.label !== undefined ? act.label : (act.name !== undefined ? act.name : String(actionId)));
+                        if (String(actionId) !== "default" && String(actionId) !== "") {
+                            extractedActions.push({ "id": String(actionId), "text": String(actionText) });
                         }
                     }
                 }

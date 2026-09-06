@@ -362,7 +362,9 @@ PanelWindow {
 
                         // Action Buttons Row
                         Flow {
+                            id: actionsFlow
                             Layout.fillWidth: true
+                            Layout.preferredHeight: childrenRect.height
                             Layout.topMargin: delegateRoot.actionArray.length > 0 ? (4 * popupWindow.uiScale) : 0
                             spacing: 6 * popupWindow.uiScale
                             visible: delegateRoot.actionArray.length > 0
@@ -411,7 +413,8 @@ PanelWindow {
                                         hoverEnabled: true
                                         cursorShape: Qt.PointingHandCursor
                                         onClicked: {
-                                            popupWindow.invokeAction(delegateRoot.popupUid, modelData.id || modelData.identifier);
+                                            let actId = modelData.id !== undefined ? modelData.id : (modelData.identifier !== undefined ? modelData.identifier : "");
+                                            popupWindow.invokeAction(delegateRoot.popupUid, actId);
                                         }
                                     }
                                 }

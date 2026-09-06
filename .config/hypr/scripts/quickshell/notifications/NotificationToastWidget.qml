@@ -67,7 +67,7 @@ Item {
         add: Transition {
             ParallelAnimation {
                 NumberAnimation { property: "opacity"; from: 0.0; to: 1.0; duration: 200; easing.type: Easing.OutCubic }
-                NumberAnimation { property: "x"; from: ListView.view.width * 0.35; to: 0; duration: 220; easing.type: Easing.OutCubic }
+                NumberAnimation { property: "x"; from: toastList.width * 0.35; to: 0; duration: 220; easing.type: Easing.OutCubic }
                 NumberAnimation { property: "scale"; from: 0.95; to: 1.0; duration: 200; easing.type: Easing.OutCubic }
             }
         }
@@ -75,7 +75,7 @@ Item {
         remove: Transition {
             ParallelAnimation {
                 NumberAnimation { property: "opacity"; to: 0.0; duration: 150; easing.type: Easing.InCubic }
-                NumberAnimation { property: "x"; to: ListView.view.width * 0.35; duration: 150; easing.type: Easing.InCubic }
+                NumberAnimation { property: "x"; to: toastList.width * 0.35; duration: 150; easing.type: Easing.InCubic }
                 NumberAnimation { property: "scale"; to: 0.92; duration: 150; easing.type: Easing.InCubic }
             }
         }
@@ -159,13 +159,17 @@ Item {
                     NumberAnimation { duration: 120; easing.type: Easing.OutQuad }
                 }
 
+                HoverHandler {
+                    id: cardHoverHandler
+                }
+
                 // Card backdrop with border
                 Rectangle {
                     id: cardBackdrop
                     anchors.fill: parent
                     radius: s(12)
-                    color: cardMouse.containsMouse ? _theme.surface2 : _theme.surface1
-                    border.color: cardDelegate.urgencyVal === 2 ? _theme.red : (cardMouse.containsMouse ? Qt.rgba(_theme.text.r, _theme.text.g, _theme.text.b, 0.25) : Qt.rgba(_theme.text.r, _theme.text.g, _theme.text.b, 0.12))
+                    color: (cardHoverHandler.hovered || cardMouse.containsMouse) ? _theme.surface2 : _theme.surface1
+                    border.color: cardDelegate.urgencyVal === 2 ? _theme.red : ((cardHoverHandler.hovered || cardMouse.containsMouse) ? Qt.rgba(_theme.text.r, _theme.text.g, _theme.text.b, 0.25) : Qt.rgba(_theme.text.r, _theme.text.g, _theme.text.b, 0.12))
                     border.width: 1
                     Behavior on color { ColorAnimation { duration: 150 } }
                     Behavior on border.color { ColorAnimation { duration: 150 } }
@@ -184,7 +188,7 @@ Item {
                 Timer {
                     id: dismissTimer
                     interval: cardDelegate.effectiveTimeout > 0 ? cardDelegate.effectiveTimeout : 5000
-                    running: cardDelegate.effectiveTimeout > 0 && !cardMouse.containsMouse && !cardDelegate.isActivating && !cardDelegate.isDismissing
+                    running: cardDelegate.effectiveTimeout > 0 && !cardHoverHandler.hovered && !cardMouse.containsMouse && !cardDelegate.isActivating && !cardDelegate.isDismissing
                     onTriggered: toastRoot.removeToast(cardDelegate.popupUid)
                 }
 
@@ -322,7 +326,9 @@ Item {
 
                     // Action Buttons Row (Flow)
                     Flow {
+                        id: actionsFlow
                         Layout.fillWidth: true
+                        Layout.preferredHeight: childrenRect.height
                         Layout.topMargin: cardDelegate.actionArray.length > 0 ? s(3) : 0
                         spacing: s(6)
                         visible: cardDelegate.actionArray.length > 0
@@ -371,7 +377,8 @@ Item {
                                     hoverEnabled: true
                                     cursorShape: Qt.PointingHandCursor
                                     onClicked: {
-                                        toastRoot.invokeAction(cardDelegate.popupUid, modelData.id || modelData.identifier);
+                                        let actId = modelData.id !== undefined ? modelData.id : (modelData.identifier !== undefined ? modelData.identifier : "");
+                                        toastRoot.invokeAction(cardDelegate.popupUid, actId);
                                     }
                                 }
                             }
