@@ -23,6 +23,10 @@ Variants {
  	        console.log("manual path:", paths.runDir + "/workspaces")
  	        console.log("env test:", Quickshell.env("QS_RUN_WORKSPACES"))
  	        console.log("wsPath:", paths.getRunDir("workspaces"))
+ 	        if (barWindow.hyprMon && barWindow.hyprMon.lastIpcObject && barWindow.hyprMon.lastIpcObject.specialWorkspace) {
+ 	            barWindow.trackedSpecialWorkspaceId = barWindow.hyprMon.lastIpcObject.specialWorkspace.id || 0;
+ 	            barWindow.trackedSpecialWorkspaceName = barWindow.hyprMon.lastIpcObject.specialWorkspace.name || "";
+ 	        }
 	    }	     	
         
             IpcHandler {
@@ -246,35 +250,115 @@ Variants {
             margins { top: 0; bottom: 0; left: 0; right: 0 }
             
             property var hyprMon: Hyprland.monitorFor(barWindow.screen)
+            property int trackedSpecialWorkspaceId: 0
+            property string trackedSpecialWorkspaceName: ""
+            property int fsTrigger: 0
+
+            Connections {
+                target: barWindow.hyprMon
+                function onLastIpcObjectChanged() {
+                    if (barWindow.hyprMon && barWindow.hyprMon.lastIpcObject && barWindow.hyprMon.lastIpcObject.specialWorkspace) {
+                        barWindow.trackedSpecialWorkspaceId = barWindow.hyprMon.lastIpcObject.specialWorkspace.id || 0;
+                        barWindow.trackedSpecialWorkspaceName = barWindow.hyprMon.lastIpcObject.specialWorkspace.name || "";
+                    }
+                    barWindow.fsTrigger++;
+                }
+            }
+
+            Connections {
+                target: Hyprland
+                function onRawEvent(event) {
+                    if (!event) return;
+                    let evName = event.name;
+                    if (evName === "activespecial" || evName === "activespecialv2") {
+                        let parts = event.data ? event.data.split(",") : [];
+                        let monName = "";
+                        let specialName = "";
+                        let specialId = 0;
+                        if (evName === "activespecialv2" && parts.length >= 3) {
+                            specialId = parseInt(parts[0]) || 0;
+                            specialName = parts[1] || "";
+                            monName = parts[2] || "";
+                        } else if (parts.length >= 2) {
+                            specialName = parts[0] || "";
+                            monName = parts[1] || "";
+                        }
+                        if (!monName || (barWindow.hyprMon && monName === barWindow.hyprMon.name)) {
+                            barWindow.trackedSpecialWorkspaceId = specialId;
+                            barWindow.trackedSpecialWorkspaceName = specialName;
+                        }
+                        barWindow.fsTrigger++;
+                        Hyprland.refreshMonitors();
+                        Hyprland.refreshWorkspaces();
+                    } else if (evName === "fullscreen" || evName === "changefloatingmode" || evName === "openwindow" || evName === "closewindow" || evName === "movewindow" || evName === "movewindowv2") {
+                        barWindow.fsTrigger++;
+                        Hyprland.refreshMonitors();
+                        Hyprland.refreshWorkspaces();
+                        Hyprland.refreshToplevels();
+                    }
+                }
+            }
+
             property bool isWindowFullscreen: {
-                if (!hyprMon || !hyprMon.activeWorkspace || !hyprMon.activeWorkspace.hasFullscreen) {
-                    return false;
+                let _dep = fsTrigger;
+                if (!hyprMon) return false;
+
+                let isSpecialActive = (trackedSpecialWorkspaceId !== 0 || trackedSpecialWorkspaceName !== "") ||
+                    (hyprMon.lastIpcObject && hyprMon.lastIpcObject.specialWorkspace &&
+                     (hyprMon.lastIpcObject.specialWorkspace.id !== 0 || (hyprMon.lastIpcObject.specialWorkspace.name && hyprMon.lastIpcObject.specialWorkspace.name !== "")));
+
+                let targetWsId = 0;
+                let targetWsName = "";
+
+                if (isSpecialActive) {
+                    targetWsId = trackedSpecialWorkspaceId !== 0 ? trackedSpecialWorkspaceId :
+                        (hyprMon.lastIpcObject && hyprMon.lastIpcObject.specialWorkspace ? (hyprMon.lastIpcObject.specialWorkspace.id || 0) : 0);
+                    targetWsName = trackedSpecialWorkspaceName !== "" ? trackedSpecialWorkspaceName :
+                        (hyprMon.lastIpcObject && hyprMon.lastIpcObject.specialWorkspace ? (hyprMon.lastIpcObject.specialWorkspace.name || "") : "");
+                } else {
+                    if (!hyprMon.activeWorkspace) return false;
+                    targetWsId = hyprMon.activeWorkspace.id;
+                    targetWsName = hyprMon.activeWorkspace.name;
                 }
-                let tls = hyprMon.activeWorkspace.toplevels ? hyprMon.activeWorkspace.toplevels.values : [];
-                if (!tls || tls.length === 0) {
-                    if (typeof Hyprland !== "undefined" && Hyprland.toplevels) {
-                        let all = Hyprland.toplevels.values || [];
-                        for (let i = 0; i < all.length; i++) {
-                            let t = all[i];
-                            if (t && t.workspace && t.workspace.id === hyprMon.activeWorkspace.id) {
-                                let obj = t.lastIpcObject;
-                                if ((obj && (obj.fullscreen === 2 || obj.fullscreenMode === 2)) || (t.wayland && t.wayland.fullscreen)) {
-                                    return true;
-                                }
-                            }
+
+                let targetWs = (!isSpecialActive && hyprMon.activeWorkspace) ? hyprMon.activeWorkspace : null;
+                if (!targetWs && typeof Hyprland !== "undefined" && Hyprland.workspaces) {
+                    let wsList = Hyprland.workspaces.values || [];
+                    for (let i = 0; i < wsList.length; i++) {
+                        let ws = wsList[i];
+                        if (ws && ((targetWsId !== 0 && ws.id === targetWsId) || (targetWsName !== "" && ws.name === targetWsName))) {
+                            targetWs = ws;
+                            break;
                         }
+                    }
+                }
+
+                function isToplevelFullscreen(t) {
+                    if (!t) return false;
+                    let obj = t.lastIpcObject;
+                    if ((obj && (obj.fullscreen === 2 || obj.fullscreenMode === 2)) || (t.wayland && t.wayland.fullscreen)) {
+                        return true;
                     }
                     return false;
                 }
-                for (let i = 0; i < tls.length; i++) {
-                    let t = tls[i];
-                    if (t) {
-                        let obj = t.lastIpcObject;
-                        if ((obj && (obj.fullscreen === 2 || obj.fullscreenMode === 2)) || (t.wayland && t.wayland.fullscreen)) {
-                            return true;
+
+                let tls = (targetWs && targetWs.toplevels) ? targetWs.toplevels.values : [];
+                if (tls && tls.length > 0) {
+                    for (let i = 0; i < tls.length; i++) {
+                        if (isToplevelFullscreen(tls[i])) return true;
+                    }
+                }
+
+                if (typeof Hyprland !== "undefined" && Hyprland.toplevels) {
+                    let all = Hyprland.toplevels.values || [];
+                    for (let i = 0; i < all.length; i++) {
+                        let t = all[i];
+                        if (t && t.workspace && ((targetWsId !== 0 && t.workspace.id === targetWsId) || (targetWsName !== "" && t.workspace.name === targetWsName))) {
+                            if (isToplevelFullscreen(t)) return true;
                         }
                     }
                 }
+
                 return false;
             }
 
