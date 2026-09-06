@@ -46,6 +46,9 @@ Variants {
                 function handleActionLatest(): void {
                     NotificationService.activateLatestNotification();
                 }
+                function invokeNotificationAction(uid: int, actionId: string): void {
+                    NotificationService.invokeAction(uid, actionId);
+                }
                 function handleRightPanel(cmd: string, widget: string): void {
                     if (cmd === "close" || widget === "") {
                         barWindow.rightPanelWidget = "";
@@ -1825,25 +1828,29 @@ Variants {
                                     MouseArea {
                                         id: trayMouse
                                         anchors.fill: parent
+                                        anchors.margins: -barWindow.s(4)
                                         hoverEnabled: true
+                                        cursorShape: Qt.PointingHandCursor
                                         acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
                                         onClicked: mouse => {
                                             if (mouse.button === Qt.LeftButton) {
-                                                if (modelData.isMenuOnly || modelData.onlyMenu) {
+                                                if (modelData.onlyMenu) {
+                                                    menuAnchor.open();
+                                                } else if (modelData.id && modelData.id.toLowerCase().indexOf("spotify") !== -1 && (modelData.hasMenu || modelData.menu)) {
                                                     menuAnchor.open();
                                                 } else if (typeof modelData.activate === "function") {
                                                     modelData.activate(); 
+                                                } else if (modelData.hasMenu || modelData.menu) {
+                                                    menuAnchor.open();
                                                 }
                                             } else if (mouse.button === Qt.MiddleButton) {
                                                 if (typeof modelData.secondaryActivate === "function") {
                                                     modelData.secondaryActivate();
                                                 }
                                             } else if (mouse.button === Qt.RightButton) {
-                                                if (modelData.menu) { 
+                                                if (modelData.hasMenu || modelData.menu) { 
                                                     menuAnchor.open();
-                                                } else if (typeof modelData.contextMenu === "function") {
-                                                    modelData.contextMenu(mouse.x, mouse.y);
-                                                } else {
+                                                } else if (typeof modelData.activate === "function") {
                                                     modelData.activate(); 
                                                 }
                                             }
