@@ -163,7 +163,7 @@ ARCH_PKGS=(
   "xdg-desktop-portal-hyprland"
 
   "darkman"
-  "hyprshutdown" "hypridle" "hyprsunset" "hyprcaffeine"
+  "hyprshutdown" "hypridle" "hyprsunset" "hyprcaffeine" "snappy-switcher"
 
   "pyenv"
 
@@ -1254,7 +1254,7 @@ echo -e "\n${C_CYAN}[ INFO ]${RESET} Applying Configurations & Backing Up Old On
 TARGET_CONFIG_DIR="$HOME/.config"
 BACKUP_DIR="$HOME/.config-backup-$(date +%Y%m%d_%H%M%S)"
 
-CONFIG_FOLDERS=("btop" "cava" "fastfetch" "hypr" "kitty" "rofi" "matugen" "swayosd")
+CONFIG_FOLDERS=("btop" "cava" "fastfetch" "hypr" "kitty" "rofi" "matugen" "swayosd" "snappy-switcher")
 if [ "$INSTALL_NVIM" = true ]; then CONFIG_FOLDERS+=("nvim"); fi
 
 mkdir -p "$TARGET_CONFIG_DIR" "$BACKUP_DIR"

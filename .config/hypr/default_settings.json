@@ -223,14 +223,14 @@
       "mods": "ALT",
       "key": "Tab",
       "dispatcher": "exec",
-      "command": "~/.config/hypr/scripts/window_cycle.sh"
+      "command": "snappy-switcher next --workspace --mod alt"
     },
     {
       "type": "bind",
       "mods": "ALT SHIFT",
       "key": "Tab",
       "dispatcher": "exec",
-      "command": "~/.config/hypr/scripts/window_cycle.sh prev"
+      "command": "snappy-switcher prev --workspace --mod alt"
     },
     {
       "type": "bind",
@@ -811,6 +811,9 @@
     },
     {
       "command": "~/.config/hypr/scripts/startup_terminals.sh"
+    },
+    {
+      "command": "snappy-switcher --daemon"
     }
   ]
 }
