@@ -2,6 +2,7 @@
 import json
 import os
 import subprocess
+import glob
 
 def get_json(cmd):
     try:
@@ -9,6 +10,65 @@ def get_json(cmd):
         return json.loads(res.stdout)
     except Exception:
         return None
+
+# Hardcoded overrides for apps with no .desktop or unusual WM class behavior
+ICON_OVERRIDES = {
+    'zen':          'zen-browser',
+    'code':         'com.visualstudio.code',
+    'code-oss':     'com.visualstudio.code.oss',
+    'obs':          'com.obsproject.Studio',
+}
+
+def build_class_to_icon_map():
+    """Parse .desktop files to build a WMClass / desktop ID -> icon name lookup table."""
+    class_map = {}
+    desktop_dirs = [
+        '/usr/share/applications',
+        '/usr/local/share/applications',
+        os.path.expanduser('~/.local/share/applications'),
+        '/var/lib/flatpak/exports/share/applications',
+        os.path.expanduser('~/.local/share/flatpak/exports/share/applications'),
+    ]
+    for d in desktop_dirs:
+        if not os.path.isdir(d):
+            continue
+        for path in glob.glob(os.path.join(d, '**/*.desktop'), recursive=True):
+            basename = os.path.splitext(os.path.basename(path))[0].lower()
+            try:
+                with open(path, encoding='utf-8', errors='ignore') as f:
+                    in_entry = False
+                    icon = wm_class = ''
+                    for line in f:
+                        line = line.strip()
+                        if line == '[Desktop Entry]':
+                            in_entry = True
+                        elif line.startswith('['):
+                            in_entry = False
+                        if not in_entry:
+                            continue
+                        if line.startswith('Icon=') and not icon:
+                            icon = line[5:].strip()
+                        elif line.startswith('StartupWMClass=') and not wm_class:
+                            wm_class = line[15:].strip()
+                    if icon:
+                        if wm_class:
+                            class_map[wm_class.lower()] = icon
+                        class_map[basename] = icon
+            except Exception:
+                pass
+    return class_map
+
+def resolve_icon(cls, class_map):
+    """Resolve the best icon name for a given window class string."""
+    key = cls.lower()
+    # 1. Hardcoded overrides (highest priority)
+    if key in ICON_OVERRIDES:
+        return ICON_OVERRIDES[key]
+    # 2. .desktop StartupWMClass or basename lookup
+    if key in class_map:
+        return class_map[key]
+    # 3. Bare lowercased class (last resort fallback)
+    return key
 
 def compute_virtual_tiling_bounds(windows, mon_w, mon_h):
     n = len(windows)
@@ -62,6 +122,8 @@ def fetch_overview():
         except Exception:
             pass
 
+    class_map = build_class_to_icon_map()
+
     clients = get_json(['hyprctl', 'clients', '-j']) or []
     monitors = get_json(['hyprctl', 'monitors', '-j']) or []
     active_ws = get_json(['hyprctl', 'activeworkspace', '-j']) or {}
@@ -92,9 +154,7 @@ def fetch_overview():
         ws_id = ws_info.get('id')
         if ws_id is not None and ws_id in ws_map:
             cls = c.get('class') or c.get('initialClass') or 'application-x-executable'
-            icon = cls.lower()
-            if icon == 'zen':
-                icon = 'zen-browser'
+            icon = resolve_icon(cls, class_map)
             
             addr = c.get('address', '')
             ws_map[ws_id]['isOccupied'] = True

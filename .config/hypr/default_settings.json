@@ -459,6 +459,76 @@
     },
     {
       "type": "bind",
+      "mods": "$mainMod CTRL",
+      "key": "1",
+      "dispatcher": "exec",
+      "command": "~/.config/hypr/scripts/qs_manager.sh 1 swap"
+    },
+    {
+      "type": "bind",
+      "mods": "$mainMod CTRL",
+      "key": "2",
+      "dispatcher": "exec",
+      "command": "~/.config/hypr/scripts/qs_manager.sh 2 swap"
+    },
+    {
+      "type": "bind",
+      "mods": "$mainMod CTRL",
+      "key": "3",
+      "dispatcher": "exec",
+      "command": "~/.config/hypr/scripts/qs_manager.sh 3 swap"
+    },
+    {
+      "type": "bind",
+      "mods": "$mainMod CTRL",
+      "key": "4",
+      "dispatcher": "exec",
+      "command": "~/.config/hypr/scripts/qs_manager.sh 4 swap"
+    },
+    {
+      "type": "bind",
+      "mods": "$mainMod CTRL",
+      "key": "5",
+      "dispatcher": "exec",
+      "command": "~/.config/hypr/scripts/qs_manager.sh 5 swap"
+    },
+    {
+      "type": "bind",
+      "mods": "$mainMod CTRL",
+      "key": "6",
+      "dispatcher": "exec",
+      "command": "~/.config/hypr/scripts/qs_manager.sh 6 swap"
+    },
+    {
+      "type": "bind",
+      "mods": "$mainMod CTRL",
+      "key": "7",
+      "dispatcher": "exec",
+      "command": "~/.config/hypr/scripts/qs_manager.sh 7 swap"
+    },
+    {
+      "type": "bind",
+      "mods": "$mainMod CTRL",
+      "key": "8",
+      "dispatcher": "exec",
+      "command": "~/.config/hypr/scripts/qs_manager.sh 8 swap"
+    },
+    {
+      "type": "bind",
+      "mods": "$mainMod CTRL",
+      "key": "9",
+      "dispatcher": "exec",
+      "command": "~/.config/hypr/scripts/qs_manager.sh 9 swap"
+    },
+    {
+      "type": "bind",
+      "mods": "$mainMod CTRL",
+      "key": "0",
+      "dispatcher": "exec",
+      "command": "~/.config/hypr/scripts/qs_manager.sh 10 swap"
+    },
+    {
+      "type": "bind",
       "mods": "$mainMod",
       "key": "Super_L",
       "dispatcher": "exec",

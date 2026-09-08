@@ -62,14 +62,17 @@ Item {
 
     // Monocle window aspect ratio (usable workspace area: monWidth / usable height)
     readonly property real monocleRatio: (monWidth > 0 && monHeight > 60) ? ((monWidth - 12) / (monHeight - 68)) : (16.0 / 9.0)
-    readonly property real targetMasterWidth: window.s(1200)
-    readonly property real targetMasterHeight: Math.round(2 * ((targetMasterWidth - window.s(44)) / 4) / monocleRatio + window.s(72))
+    readonly property real targetMasterWidth: window.s(980)
+    readonly property real targetMasterHeight: Math.round(2 * (((targetMasterWidth - window.s(44)) / 4) / monocleRatio + window.s(18)) + window.s(72))
 
     // Drag & Drop State Tracking
     property string draggedWindowAddress: ""
     property int draggedFromWs: 0
     property bool isDragging: false
     property bool isOverTrash: false
+    property int draggedWorkspaceId: 0
+    property bool isDraggingWorkspace: false
+    property bool isOverTrashWs: false
 
 
     function fetchOverviewData() {
@@ -122,17 +125,40 @@ Item {
         }
     }
 
+    Process {
+        id: workspaceSwapper
+        running: false
+        command: []
+        onExited: (exitCode) => {
+            window.fetchOverviewData();
+        }
+    }
+
+    Process {
+        id: workspaceCloser
+        running: false
+        command: []
+        onExited: (exitCode) => {
+            window.fetchOverviewData();
+        }
+    }
+
     Timer {
         id: autoRefreshTimer
         interval: 1000
         repeat: true
-        running: window.visible && !window.isDragging
+        running: window.visible && !window.isDragging && !window.isDraggingWorkspace
         onTriggered: window.fetchOverviewData()
     }
 
     Connections {
         target: window
         function onVisibleChanged() {
+            window.draggedWorkspaceId = 0;
+            window.isDraggingWorkspace = false;
+            window.isDragging = false;
+            window.draggedWindowAddress = "";
+            window.draggedFromWs = 0;
             if (window.visible) {
                 window.isUserSelecting = false;
                 window.selectedIndex = -1;
@@ -165,11 +191,66 @@ Item {
     }
 
     function moveWindowToWorkspace(address, targetWsId) {
-        Quickshell.execDetached(["hyprctl", "dispatch", "hl.dsp.window.move({ workspace = " + targetWsId.toString() + ", window = 'address:" + address + "' })"]);
+        Quickshell.execDetached(["hyprctl", "dispatch", "hl.dsp.window.move({ workspace = " + targetWsId.toString() + ", follow = false, window = 'address:" + address + "' })"]);
         Qt.callLater(() => window.fetchOverviewData());
     }
 
+    function swapWorkspaces(wsA, wsB) {
+        window.draggedWorkspaceId = 0;
+        window.isDraggingWorkspace = false;
+        if (!wsA || !wsB || wsA === wsB) return;
+
+        // 1. Instant optimistic UI update
+        if (window.workspacesData && window.workspacesData.length > 0) {
+            let idxA = window.workspacesData.findIndex(function(w) { return w.id === wsA; });
+            let idxB = window.workspacesData.findIndex(function(w) { return w.id === wsB; });
+            if (idxA !== -1 && idxB !== -1) {
+                let data = window.workspacesData.slice();
+                let itemA = Object.assign({}, data[idxA]);
+                let itemB = Object.assign({}, data[idxB]);
+                let tempWins = itemA.windows;
+                let tempOcc = itemA.isOccupied;
+                itemA.windows = itemB.windows;
+                itemA.isOccupied = itemB.isOccupied;
+                itemB.windows = tempWins;
+                itemB.isOccupied = tempOcc;
+                data[idxA] = itemA;
+                data[idxB] = itemB;
+                window.workspacesData = data;
+            }
+        }
+
+        // 2. Execute swap in background and refresh once complete
+        workspaceSwapper.command = ["python3", Quickshell.env("HOME") + "/.config/hypr/scripts/quickshell/overview/swap_workspaces.py", wsA.toString(), wsB.toString()];
+        workspaceSwapper.running = true;
+    }
+
+    function closeWorkspace(wsId) {
+        window.draggedWorkspaceId = 0;
+        window.isDraggingWorkspace = false;
+        if (!wsId) return;
+
+        // Instant optimistic UI update
+        if (window.workspacesData && window.workspacesData.length > 0) {
+            let idx = window.workspacesData.findIndex(function(w) { return w.id === wsId; });
+            if (idx !== -1) {
+                let data = window.workspacesData.slice();
+                let item = Object.assign({}, data[idx]);
+                item.windows = [];
+                item.isOccupied = false;
+                data[idx] = item;
+                window.workspacesData = data;
+            }
+        }
+
+        workspaceCloser.command = ["python3", Quickshell.env("HOME") + "/.config/hypr/scripts/quickshell/overview/close_workspace.py", wsId.toString()];
+        workspaceCloser.running = true;
+    }
+
     function closeOverview() {
+        window.draggedWorkspaceId = 0;
+        window.isDraggingWorkspace = false;
+        window.isDragging = false;
         Quickshell.execDetached(["bash", Quickshell.env("HOME") + "/.config/hypr/scripts/qs_manager.sh", "close"]);
     }
 
@@ -280,17 +361,19 @@ Item {
                         readonly property bool isSelected: index === window.selectedIndex
                         readonly property var windowsList: modelData.windows || []
                         property bool isHoveredDrop: false
+                        property bool isHoveredWsDrop: false
 
-                        // Elevate source workspace z-index when dragging so dragged window floats ABOVE all other workspace cards!
-                        z: (window.draggedFromWs === wsId) ? 9999 : 1
+                        // Elevate source workspace z-index when dragging so dragged window or workspace floats ABOVE all other workspace cards!
+                        z: (window.draggedFromWs === wsId || window.draggedWorkspaceId === wsId) ? 9999 : 1
 
                         radius: window.s(12)
-                        color: isHoveredDrop ? Qt.rgba(window.surface1.r, window.surface1.g, window.surface1.b, 0.65) 
-                                             : (isSelected ? Qt.rgba(window.surface1.r, window.surface1.g, window.surface1.b, 0.55)
-                                                           : (wsCardMa.containsMouse ? Qt.rgba(window.surface0.r, window.surface0.g, window.surface0.b, 0.55) 
-                                                                                     : Qt.rgba(window.mantle.r, window.mantle.g, window.mantle.b, 0.25)))
-                        border.color: isHoveredDrop ? window.green : (isSelected ? window.mauve : (isActive ? Qt.rgba(window.blue.r, window.blue.g, window.blue.b, 0.7) : (wsCardMa.containsMouse ? window.surface2 : Qt.rgba(window.surface1.r, window.surface1.g, window.surface1.b, 0.3))))
-                        border.width: (isSelected || isHoveredDrop) ? 2 : 1
+                        color: isHoveredWsDrop ? Qt.rgba(window.surface1.r, window.surface1.g, window.surface1.b, 0.75)
+                                               : (isHoveredDrop ? Qt.rgba(window.surface1.r, window.surface1.g, window.surface1.b, 0.65) 
+                                                                : (isSelected ? Qt.rgba(window.surface1.r, window.surface1.g, window.surface1.b, 0.55)
+                                                                              : (wsCardMa.containsMouse ? Qt.rgba(window.surface0.r, window.surface0.g, window.surface0.b, 0.55) 
+                                                                                                        : Qt.rgba(window.mantle.r, window.mantle.g, window.mantle.b, 0.25))))
+                        border.color: isHoveredWsDrop ? window.mauve : (isHoveredDrop ? window.green : (isSelected ? window.mauve : (isActive ? Qt.rgba(window.blue.r, window.blue.g, window.blue.b, 0.7) : (wsCardMa.containsMouse ? window.surface2 : Qt.rgba(window.surface1.r, window.surface1.g, window.surface1.b, 0.3)))))
+                        border.width: (isSelected || isHoveredDrop || isHoveredWsDrop) ? 2 : 1
 
                         Behavior on color { ColorAnimation { duration: 120 } }
                         Behavior on border.color { ColorAnimation { duration: 120 } }
@@ -310,46 +393,165 @@ Item {
                             }
                         }
 
-                        // DropArea for receiving window drops
+                        // DropArea for receiving window drops and workspace drops
                         DropArea {
                             anchors.fill: parent
-                            keys: ["window-card"]
+                            keys: ["window-card", "workspace-card"]
 
                             onEntered: (drag) => {
-                                wsCard.isHoveredDrop = true;
+                                if (drag.keys.indexOf("workspace-card") !== -1) {
+                                    if (window.draggedWorkspaceId > 0 && window.draggedWorkspaceId !== wsCard.wsId) {
+                                        wsCard.isHoveredWsDrop = true;
+                                    }
+                                } else if (drag.keys.indexOf("window-card") !== -1) {
+                                    wsCard.isHoveredDrop = true;
+                                }
                             }
 
                             onExited: {
+                                wsCard.isHoveredWsDrop = false;
                                 wsCard.isHoveredDrop = false;
                             }
 
                             onDropped: (drop) => {
+                                let wasWsDrop = wsCard.isHoveredWsDrop;
+                                wsCard.isHoveredWsDrop = false;
                                 wsCard.isHoveredDrop = false;
-                                let addr = window.draggedWindowAddress;
-                                if (addr !== "" && wsCard.wsId !== window.draggedFromWs) {
-                                    window.moveWindowToWorkspace(addr, wsCard.wsId);
-                                    drop.accept();
+
+                                if (drop.keys.indexOf("workspace-card") !== -1 || wasWsDrop) {
+                                    let srcWs = window.draggedWorkspaceId;
+                                    window.draggedWorkspaceId = 0;
+                                    window.isDraggingWorkspace = false;
+                                    if (srcWs > 0 && srcWs !== wsCard.wsId) {
+                                        window.swapWorkspaces(srcWs, wsCard.wsId);
+                                        drop.accept();
+                                    }
+                                } else if (drop.keys.indexOf("window-card") !== -1) {
+                                    let addr = window.draggedWindowAddress;
+                                    if (addr !== "" && wsCard.wsId !== window.draggedFromWs) {
+                                        window.moveWindowToWorkspace(addr, wsCard.wsId);
+                                        drop.accept();
+                                    }
+                                }
+                            }
+                        }
+
+                        // WORKSPACE HEADER & DRAG HANDLE
+                        Rectangle {
+                            id: wsHeader
+                            anchors.top: parent.top
+                            anchors.topMargin: window.s(4)
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            height: window.s(16)
+                            color: "transparent"
+                            z: 10
+
+                            RowLayout {
+                                anchors.fill: parent
+                                anchors.leftMargin: window.s(10)
+                                anchors.rightMargin: window.s(10)
+
+                                // Workspace number on the left (unhighlighted)
+                                Text {
+                                    text: wsCard.wsId.toString()
+                                    font.family: "SF Pro Display"
+                                    font.pixelSize: window.s(11)
+                                    font.weight: Font.SemiBold
+                                    color: window.subtext0
+                                }
+
+                                Item { Layout.fillWidth: true }
+                            }
+
+                            MouseArea {
+                                id: wsHeaderMa
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: window.isDraggingWorkspace ? Qt.ClosedHandCursor : (containsMouse ? Qt.OpenHandCursor : Qt.PointingHandCursor)
+
+                                drag.target: wsDragProxy
+                                drag.axis: Drag.XAndYAxis
+
+                                onPressed: (mouse) => {
+                                    let pt = wsHeaderMa.mapToItem(mainCard, mouse.x, mouse.y);
+                                    wsDragProxy.x = pt.x - wsDragProxy.width / 2;
+                                    wsDragProxy.y = pt.y - wsDragProxy.height / 2;
+                                    window.draggedWorkspaceId = wsCard.wsId;
+                                    window.isDraggingWorkspace = true;
+                                }
+
+                                onReleased: (mouse) => {
+                                    if (wsDragProxy.Drag.active) {
+                                        wsDragProxy.Drag.drop();
+                                    }
+                                    window.draggedWorkspaceId = 0;
+                                    window.isDraggingWorkspace = false;
+                                }
+
+                                onCanceled: {
+                                    window.draggedWorkspaceId = 0;
+                                    window.isDraggingWorkspace = false;
+                                }
+
+                                onClicked: (mouse) => {
+                                    window.focusWorkspace(wsCard.wsId);
                                 }
                             }
                         }
 
                         // Background Workspace Number Display
                         Text {
-                            anchors.centerIn: parent
+                            anchors.centerIn: viewport
                             text: wsCard.wsId.toString()
                             font.family: "SF Pro Display"
-                            font.pixelSize: window.s(60)
+                            font.pixelSize: window.s(54)
                             font.weight: Font.Black
                             color: wsCard.isActive ? window.mauve : window.text
-                            opacity: wsCard.isActive ? 0.25 : 0.08
+                            opacity: wsCard.isActive ? 0.22 : 0.08
                             z: 0
+                        }
+
+                        // Hovered Swap Overlay Indicator
+                        Rectangle {
+                            anchors.centerIn: parent
+                            width: swapRow.implicitWidth + window.s(20)
+                            height: window.s(28)
+                            radius: window.s(14)
+                            color: Qt.rgba(window.mauve.r, window.mauve.g, window.mauve.b, 0.95)
+                            border.color: window.text
+                            border.width: 1
+                            visible: wsCard.isHoveredWsDrop
+                            z: 200
+
+                            RowLayout {
+                                id: swapRow
+                                anchors.centerIn: parent
+                                spacing: window.s(6)
+                                Text {
+                                    text: "⇄"
+                                    font.pixelSize: window.s(14)
+                                    font.bold: true
+                                    color: window.crust
+                                }
+                                Text {
+                                    text: "Swap with Workspace " + window.draggedWorkspaceId
+                                    font.family: "SF Pro Text"
+                                    font.pixelSize: window.s(11)
+                                    font.weight: Font.Bold
+                                    color: window.crust
+                                }
+                            }
                         }
 
                         // MONITOR VIEWPORT
                         Rectangle {
                             id: viewport
-                            anchors.fill: parent
-                            anchors.margins: window.s(4)
+                            anchors.top: wsHeader.bottom
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            anchors.bottom: parent.bottom
+                            anchors.margins: window.s(3)
                             radius: window.s(8)
                             color: "transparent"
                             clip: !window.isDragging
@@ -508,38 +710,56 @@ Item {
             }
 
             // -----------------------------------------------------------------
-            // TRASHCAN DROP ZONE FOR CLOSING WINDOWS
+            // TRASHCAN DROP ZONE FOR CLOSING WINDOWS OR WORKSPACES
             // -----------------------------------------------------------------
             Rectangle {
                 id: trashZone
                 Layout.fillWidth: true
                 Layout.preferredHeight: window.s(36)
                 radius: window.s(10)
-                color: window.isOverTrash ? window.red : Qt.rgba(window.mantle.r, window.mantle.g, window.mantle.b, 0.3)
-                border.color: window.isOverTrash ? window.red : Qt.rgba(window.surface1.r, window.surface1.g, window.surface1.b, 0.4)
-                border.width: window.isOverTrash ? 2 : 1
+                color: (window.isOverTrash || window.isOverTrashWs) ? window.red : Qt.rgba(window.mantle.r, window.mantle.g, window.mantle.b, 0.3)
+                border.color: (window.isOverTrash || window.isOverTrashWs) ? window.red : Qt.rgba(window.surface1.r, window.surface1.g, window.surface1.b, 0.4)
+                border.width: (window.isOverTrash || window.isOverTrashWs) ? 2 : 1
 
                 Behavior on color { ColorAnimation { duration: 150 } }
                 Behavior on border.color { ColorAnimation { duration: 150 } }
 
                 DropArea {
                     anchors.fill: parent
-                    keys: ["window-card"]
+                    keys: ["window-card", "workspace-card"]
 
                     onEntered: (drag) => {
-                        window.isOverTrash = true;
+                        if (drag.keys.indexOf("workspace-card") !== -1) {
+                            window.isOverTrashWs = true;
+                        } else {
+                            window.isOverTrash = true;
+                        }
                     }
 
                     onExited: {
+                        window.isOverTrashWs = false;
                         window.isOverTrash = false;
                     }
 
                     onDropped: (drop) => {
+                        let wasWs = window.isOverTrashWs;
+                        window.isOverTrashWs = false;
                         window.isOverTrash = false;
-                        let addr = window.draggedWindowAddress;
-                        if (addr !== "") {
-                            window.closeWindow(addr);
-                            drop.accept();
+
+                        if (drop.keys.indexOf("workspace-card") !== -1 || wasWs) {
+                            let wsId = window.draggedWorkspaceId;
+                            window.draggedWorkspaceId = 0;
+                            window.isDraggingWorkspace = false;
+                            if (wsId > 0) {
+                                window.closeWorkspace(wsId);
+                                drop.accept();
+                            }
+                        } else if (drop.keys.indexOf("window-card") !== -1) {
+                            let addr = window.draggedWindowAddress;
+                            if (addr !== "") {
+                                window.closeWindow(addr);
+                                drop.accept();
+                            }
                         }
                     }
                 }
@@ -554,11 +774,70 @@ Item {
                     }
 
                     Text {
-                        text: window.isOverTrash ? "Release to Close Window" : "Drag window here to close"
+                        text: window.isOverTrashWs
+                              ? ("Release to Close Workspace " + window.draggedWorkspaceId + " (All Windows)")
+                              : (window.isOverTrash ? "Release to Close Window" : "Drag window or workspace here to close")
                         font.family: "SF Pro Text"
                         font.pixelSize: window.s(11)
-                        font.weight: window.isOverTrash ? Font.Bold : Font.Medium
-                        color: window.isOverTrash ? window.crust : window.subtext0
+                        font.weight: (window.isOverTrash || window.isOverTrashWs) ? Font.Bold : Font.Medium
+                        color: (window.isOverTrash || window.isOverTrashWs) ? window.crust : window.subtext0
+                    }
+                }
+            }
+        }
+
+        // Safety release catcher: dismiss ghost if released anywhere outside drop areas
+        MouseArea {
+            anchors.fill: parent
+            z: window.isDraggingWorkspace ? 99990 : -1
+            enabled: window.isDraggingWorkspace
+            onReleased: {
+                window.draggedWorkspaceId = 0;
+                window.isDraggingWorkspace = false;
+            }
+        }
+
+        // ---------------------------------------------------------------------
+        // FLOATING GHOST PREVIEW FOR WORKSPACE DRAGGING
+        // ---------------------------------------------------------------------
+        Item {
+            id: wsDragProxy
+            width: window.s(180)
+            height: Math.round(width / window.monocleRatio)
+            visible: window.isDraggingWorkspace && window.draggedWorkspaceId > 0
+            z: 99999
+
+            Drag.active: window.isDraggingWorkspace
+            Drag.keys: ["workspace-card"]
+            Drag.hotSpot.x: width / 2
+            Drag.hotSpot.y: height / 2
+
+            Rectangle {
+                anchors.fill: parent
+                radius: window.s(10)
+                color: Qt.rgba(window.surface0.r, window.surface0.g, window.surface0.b, 0.92)
+                border.color: window.mauve
+                border.width: 2
+
+                ColumnLayout {
+                    anchors.centerIn: parent
+                    spacing: window.s(4)
+
+                    Text {
+                        Layout.alignment: Qt.AlignHCenter
+                        text: "Workspace " + window.draggedWorkspaceId
+                        font.family: "SF Pro Display"
+                        font.pixelSize: window.s(14)
+                        font.weight: Font.Bold
+                        color: window.mauve
+                    }
+
+                    Text {
+                        Layout.alignment: Qt.AlignHCenter
+                        text: "⇄ Drag to Swap or 🗑️ Close"
+                        font.family: "SF Pro Text"
+                        font.pixelSize: window.s(10)
+                        color: window.subtext0
                     }
                 }
             }
