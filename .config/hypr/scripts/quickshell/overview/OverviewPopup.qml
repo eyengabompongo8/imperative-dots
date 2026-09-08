@@ -75,10 +75,232 @@ Item {
     property bool isOverTrashWs: false
 
 
-    function fetchOverviewData() {
-        if (!overviewFetcher.running) {
-            overviewFetcher.running = true;
+    // Icon overrides & class map
+    readonly property var iconOverrides: ({
+        "zen": "zen-browser",
+        "code": "com.visualstudio.code",
+        "code-oss": "com.visualstudio.code.oss",
+        "obs": "com.obsproject.Studio"
+    })
+
+    function resolveIcon(cls) {
+        if (!cls) return "application-x-executable";
+        let raw = cls.toString().trim();
+        let key = raw.toLowerCase();
+        if (iconOverrides[key]) return iconOverrides[key];
+
+        // 1. Quickshell native XDG DesktopEntries lookup
+        if (typeof DesktopEntries !== "undefined") {
+            let entry = DesktopEntries.heuristicLookup(raw) || DesktopEntries.byId(raw) || DesktopEntries.byId(key);
+            if (entry && entry.icon) return entry.icon;
+
+            // Match StartupWMClass across desktop entries (standard for Obsidian, Spotify, etc.)
+            if (DesktopEntries.applications && DesktopEntries.applications.values) {
+                let apps = DesktopEntries.applications.values;
+                for (let i = 0; i < apps.length; i++) {
+                    let app = apps[i];
+                    if (app && app.startupClass && app.startupClass.toLowerCase() === key) {
+                        if (app.icon) return app.icon;
+                    }
+                }
+            }
         }
+
+        // 2. Reverse-domain fallback: e.g. "md.obsidian.Obsidian" -> "obsidian"
+        if (key.indexOf(".") !== -1) {
+            let parts = key.split(".");
+            let last = parts[parts.length - 1];
+            if (iconOverrides[last]) return iconOverrides[last];
+            if (typeof DesktopEntries !== "undefined") {
+                let entry = DesktopEntries.heuristicLookup(last) || DesktopEntries.byId(last);
+                if (entry && entry.icon) return entry.icon;
+                if (DesktopEntries.applications && DesktopEntries.applications.values) {
+                    let apps = DesktopEntries.applications.values;
+                    for (let i = 0; i < apps.length; i++) {
+                        let app = apps[i];
+                        if (app && (app.id.toLowerCase() === last || (app.name && app.name.toLowerCase() === last))) {
+                            if (app.icon) return app.icon;
+                        }
+                    }
+                }
+            }
+            if (last && last.length > 2) return last;
+        }
+
+        return key;
+    }
+
+    function computeVirtualTilingBounds(windows, monW, monH) {
+        let n = windows.length;
+        if (n === 0) return;
+        let gap = 12;
+
+        function splitRect(rect, count) {
+            if (count === 1) return [rect];
+            let x = rect[0], y = rect[1], w = rect[2], h = rect[3];
+            if (count === 2) {
+                if (w >= h) {
+                    let w1 = Math.max(100, Math.floor((w - gap) / 2));
+                    let w2 = Math.max(100, w - w1 - gap);
+                    return [[x, y, w1, h], [x + w1 + gap, y, w2, h]];
+                } else {
+                    let h1 = Math.max(80, Math.floor((h - gap) / 2));
+                    let h2 = Math.max(80, h - h1 - gap);
+                    return [[x, y, w, h1], [x, y + h1 + gap, w, h2]];
+                }
+            }
+            let half = Math.floor(count / 2);
+            let rest = count - half;
+            if (w >= h) {
+                let w1 = Math.max(100, Math.floor((w - gap) / 2));
+                let w2 = Math.max(100, w - w1 - gap);
+                return splitRect([x, y, w1, h], half).concat(splitRect([x + w1 + gap, y, w2, h], rest));
+            } else {
+                let h1 = Math.max(80, Math.floor((h - gap) / 2));
+                let h2 = Math.max(80, h - h1 - gap);
+                return splitRect([x, y, w, h1], half).concat(splitRect([x, y + h1 + gap, w, h2], rest));
+            }
+        }
+
+        let rects = splitRect([0, 0, monW, monH], n);
+        for (let i = 0; i < n && i < rects.length; i++) {
+            let r = rects[i];
+            windows[i].at = [Math.floor(r[0]), Math.floor(r[1])];
+            windows[i].size = [Math.floor(r[2]), Math.floor(r[3])];
+        }
+    }
+
+    function fetchOverviewData() {
+        if (typeof Hyprland === "undefined") return;
+
+        let activeWsId = 1;
+        if (Hyprland.focusedWorkspace && Hyprland.focusedWorkspace.id) {
+            activeWsId = Hyprland.focusedWorkspace.id;
+        } else if (Hyprland.focusedMonitor && Hyprland.focusedMonitor.activeWorkspace && Hyprland.focusedMonitor.activeWorkspace.id) {
+            activeWsId = Hyprland.focusedMonitor.activeWorkspace.id;
+        }
+        window.activeWorkspaceId = activeWsId;
+
+        let monW = 1920;
+        let monH = 1080;
+        if (Hyprland.focusedMonitor) {
+            monW = Hyprland.focusedMonitor.width || 1920;
+            monH = Hyprland.focusedMonitor.height || 1080;
+        }
+        window.monWidth = monW;
+        window.monHeight = monH;
+
+        let totalWs = window.workspaceCount || 8;
+        let wsMap = {};
+        // Build layout lookup from Hyprland workspace objects
+        let wsLayouts = {};
+        if (Hyprland.workspaces && Hyprland.workspaces.values) {
+            let wsList = Hyprland.workspaces.values;
+            for (let w = 0; w < wsList.length; w++) {
+                let ws = wsList[w];
+                if (ws && ws.id !== undefined && ws.lastIpcObject) {
+                    wsLayouts[ws.id] = ws.lastIpcObject.tiledLayout || "monocle";
+                }
+            }
+        }
+
+        for (let i = 1; i <= totalWs; i++) {
+            wsMap[i] = {
+                id: i,
+                name: i.toString(),
+                isActive: (i === activeWsId),
+                isOccupied: false,
+                layout: wsLayouts[i] || "monocle",
+                windows: []
+            };
+        }
+
+        let toplevels = (Hyprland.toplevels && Hyprland.toplevels.values) ? Hyprland.toplevels.values : [];
+        for (let i = 0; i < toplevels.length; i++) {
+            let t = toplevels[i];
+            if (!t) continue;
+            let ipc = t.lastIpcObject || {};
+            if (ipc.mapped === false || ipc.hidden === true) continue;
+
+            let wsId = null;
+            if (t.workspace && t.workspace.id !== undefined && t.workspace.id !== null) {
+                wsId = t.workspace.id;
+            }
+            if (wsId === null && typeof Hyprland !== "undefined" && Hyprland.workspaces) {
+                let wss = Hyprland.workspaces.values || [];
+                for (let w = 0; w < wss.length; w++) {
+                    let wObj = wss[w];
+                    if (wObj && wObj.toplevels && wObj.toplevels.values) {
+                        let wTls = wObj.toplevels.values;
+                        if (wTls.indexOf(t) !== -1) {
+                            wsId = wObj.id;
+                            break;
+                        }
+                    }
+                }
+            }
+            if (wsId === null && ipc.workspace && ipc.workspace.id !== undefined && ipc.workspace.id !== null) {
+                wsId = ipc.workspace.id;
+            }
+
+            if (wsId !== null && wsMap[wsId]) {
+                let cls = ipc["class"] || ipc["initialClass"] || "application-x-executable";
+                let icon = resolveIcon(cls);
+                let rawAddr = (ipc && ipc.address) ? ipc.address : (t && t.address ? t.address : "");
+                let addr = "";
+                if (typeof rawAddr === "number") {
+                    addr = "0x" + rawAddr.toString(16);
+                } else if (typeof rawAddr === "string" && rawAddr.length > 0) {
+                    addr = (rawAddr.startsWith("0x") || rawAddr.startsWith("0X")) ? rawAddr : ("0x" + rawAddr);
+                }
+
+                wsMap[wsId].isOccupied = true;
+                wsMap[wsId].windows.push({
+                    address: addr,
+                    title: t.title || ipc.title || "Window",
+                    "class": cls,
+                    icon: icon,
+                    at: ipc.at ? [ipc.at[0], ipc.at[1]] : [0, 0],
+                    size: ipc.size ? [ipc.size[0], ipc.size[1]] : [400, 300],
+                    floating: Boolean(ipc.floating),
+                    fullscreen: parseInt(ipc.fullscreen || 0),
+                    focusHistoryID: (ipc.focusHistoryID !== undefined) ? ipc.focusHistoryID : 99
+                });
+            }
+        }
+
+        let resultList = [];
+        for (let i = 1; i <= totalWs; i++) {
+            let item = wsMap[i];
+            item.windows.sort((a, b) => a.focusHistoryID - b.focusHistoryID);
+            window.computeVirtualTilingBounds(item.windows, monW, monH);
+
+            // Preserve existing array reference if windows list is identical to prevent QML Repeater from recreating delegates
+            let prevWs = (window.workspacesData && (i - 1) < window.workspacesData.length) ? window.workspacesData[i - 1] : null;
+            if (prevWs && prevWs.windows && prevWs.windows.length === item.windows.length) {
+                let match = true;
+                for (let w = 0; w < item.windows.length; w++) {
+                    let nw = item.windows[w];
+                    let pw = prevWs.windows[w];
+                    if (nw.address !== pw.address ||
+                        nw.icon !== pw.icon ||
+                        nw.title !== pw.title ||
+                        nw.at[0] !== pw.at[0] || nw.at[1] !== pw.at[1] ||
+                        nw.size[0] !== pw.size[0] || nw.size[1] !== pw.size[1]) {
+                        match = false;
+                        break;
+                    }
+                }
+                if (match) {
+                    item.windows = prevWs.windows;
+                }
+            }
+
+            resultList.push(item);
+        }
+
+        window.workspacesData = resultList;
+        window.syncSelectedIndex();
     }
 
     function getToplevelForAddress(addr) {
@@ -87,8 +309,10 @@ Item {
         let list = Hyprland.toplevels.values;
         for (let i = 0; i < list.length; i++) {
             let htl = list[i];
-            if (htl && htl.address) {
-                let htlAddr = htl.address.toString().replace(/^0x/i, "").toLowerCase();
+            if (!htl) continue;
+            let raw = (htl.lastIpcObject && htl.lastIpcObject.address) ? htl.lastIpcObject.address : htl.address;
+            if (raw) {
+                let htlAddr = (typeof raw === "number") ? raw.toString(16).toLowerCase() : raw.toString().replace(/^0x/i, "").toLowerCase();
                 if (htlAddr === target) {
                     return htl.wayland || null;
                 }
@@ -99,56 +323,45 @@ Item {
 
 
 
+    Timer {
+        id: reSyncTimer
+        interval: 250
+        repeat: false
+        onTriggered: {
+            if (typeof Hyprland !== "undefined") {
+                if (typeof Hyprland.refreshMonitors === "function") Hyprland.refreshMonitors();
+                if (typeof Hyprland.refreshWorkspaces === "function") Hyprland.refreshWorkspaces();
+                if (typeof Hyprland.refreshToplevels === "function") Hyprland.refreshToplevels();
+            }
+            window.fetchOverviewData();
+        }
+    }
 
-    Process {
-        id: overviewFetcher
-        running: false
-        command: ["bash", "-c", "python3 " + Quickshell.env("HOME") + "/.config/hypr/scripts/quickshell/overview/overview_fetcher.py"]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                try {
-                    if (this.text && this.text.trim().length > 0) {
-                        let parsed = JSON.parse(this.text);
-                        window.workspaceCount = parsed.workspaceCount || 8;
-                        window.activeWorkspaceId = parsed.activeWorkspaceId || 1;
-                        if (parsed.monitor) {
-                            window.monWidth = parsed.monitor.width || 1920;
-                            window.monHeight = parsed.monitor.height || 1080;
-                        }
-                        window.workspacesData = parsed.workspaces || [];
-                        window.syncSelectedIndex();
-                    }
-                } catch(e) {
-                    console.log("Error parsing overview data: ", e);
+    Connections {
+        target: Hyprland || null
+        function onRawEvent(event) {
+            if (!event || !window.visible) return;
+            let evName = event.name;
+            if (evName === "workspace" || evName === "workspacev2" ||
+                evName === "openwindow" || evName === "closewindow" ||
+                evName === "movewindow" || evName === "movewindowv2" ||
+                evName === "changefloatingmode" || evName === "fullscreen") {
+                if (!window.isDragging && !window.isDraggingWorkspace) {
+                    reSyncTimer.restart();
                 }
+            }
+        }
+        function onFocusedWorkspaceChanged() {
+            if (window.visible && !window.isDragging && !window.isDraggingWorkspace) {
+                reSyncTimer.restart();
             }
         }
     }
 
-    Process {
-        id: workspaceSwapper
-        running: false
-        command: []
-        onExited: (exitCode) => {
-            window.fetchOverviewData();
-        }
-    }
-
-    Process {
-        id: workspaceCloser
-        running: false
-        command: []
-        onExited: (exitCode) => {
-            window.fetchOverviewData();
-        }
-    }
-
-    Timer {
-        id: autoRefreshTimer
-        interval: 1000
-        repeat: true
-        running: window.visible && !window.isDragging && !window.isDraggingWorkspace
-        onTriggered: window.fetchOverviewData()
+    Component.onCompleted: {
+        window.fetchOverviewData();
+        focusTimer.restart();
+        introPhaseAnim.restart();
     }
 
     Connections {
@@ -170,37 +383,124 @@ Item {
         }
     }
 
-
-
     // -------------------------------------------------------------------------
     // HYPRLAND LUA DISPATCH ACTIONS
     // -------------------------------------------------------------------------
     function focusWorkspace(wsId) {
-        Quickshell.execDetached(["hyprctl", "dispatch", "hl.dsp.focus({ workspace = " + wsId.toString() + " })"]);
+        if (!wsId) return;
+        Quickshell.execDetached(["bash", "-c", "hyprctl dispatch \"hl.dsp.focus({ workspace = " + wsId.toString() + " })\""]);
         closeOverview();
     }
 
     function focusWindow(address) {
-        Quickshell.execDetached(["hyprctl", "dispatch", "hl.dsp.focus({ window = 'address:" + address + "' })"]);
+        if (!address) return;
+        let formattedAddr = address.toString();
+        if (!formattedAddr.startsWith("0x") && !formattedAddr.startsWith("0X")) {
+            formattedAddr = "0x" + formattedAddr;
+        }
+        Quickshell.execDetached(["bash", "-c", "hyprctl dispatch \"hl.dsp.focus({ window = 'address:" + formattedAddr + "' })\""]);
         closeOverview();
     }
 
     function closeWindow(address) {
-        Quickshell.execDetached(["bash", "-c", "hyprctl dispatch \"hl.dsp.focus({ window = 'address:" + address + "' })\" && hyprctl dispatch \"hl.dsp.window.close()\""]);
-        Qt.callLater(() => window.fetchOverviewData());
+        window.isDragging = false;
+        window.draggedWindowAddress = "";
+        window.draggedFromWs = 0;
+        if (!address) return;
+        let formattedAddr = address.toString();
+        if (!formattedAddr.startsWith("0x") && !formattedAddr.startsWith("0X")) {
+            formattedAddr = "0x" + formattedAddr;
+        }
+
+        // Instant optimistic UI update: remove window from workspacesData
+        if (window.workspacesData && window.workspacesData.length > 0) {
+            let data = window.workspacesData.slice();
+            for (let i = 0; i < data.length; i++) {
+                let ws = Object.assign({}, data[i]);
+                if (ws.windows && ws.windows.length > 0) {
+                    let winIdx = ws.windows.findIndex(function(w) {
+                        return w.address === address || w.address === formattedAddr;
+                    });
+                    if (winIdx !== -1) {
+                        let wins = ws.windows.slice();
+                        wins.splice(winIdx, 1);
+                        ws.windows = wins;
+                        ws.isOccupied = wins.length > 0;
+                        data[i] = ws;
+                        break;
+                    }
+                }
+            }
+            window.workspacesData = data;
+        }
+
+        Quickshell.execDetached(["bash", "-c", "hyprctl dispatch \"hl.dsp.focus({ window = 'address:" + formattedAddr + "' })\" && hyprctl dispatch \"hl.dsp.window.close()\""]);
+        reSyncTimer.restart();
     }
 
     function moveWindowToWorkspace(address, targetWsId) {
-        Quickshell.execDetached(["hyprctl", "dispatch", "hl.dsp.window.move({ workspace = " + targetWsId.toString() + ", follow = false, window = 'address:" + address + "' })"]);
-        Qt.callLater(() => window.fetchOverviewData());
+        window.isDragging = false;
+        window.draggedWindowAddress = "";
+        window.draggedFromWs = 0;
+        if (!address || !targetWsId) return;
+
+        let formattedAddr = address.toString();
+        if (!formattedAddr.startsWith("0x") && !formattedAddr.startsWith("0X")) {
+            formattedAddr = "0x" + formattedAddr;
+        }
+
+        // 1. Optimistic UI update: move window across workspacesData immediately
+        if (window.workspacesData && window.workspacesData.length > 0) {
+            let data = window.workspacesData.slice();
+            let movedWin = null;
+            for (let i = 0; i < data.length; i++) {
+                let ws = Object.assign({}, data[i]);
+                if (ws.windows && ws.windows.length > 0) {
+                    let winIdx = ws.windows.findIndex(function(w) {
+                        return w.address === address || w.address === formattedAddr;
+                    });
+                    if (winIdx !== -1) {
+                        let wins = ws.windows.slice();
+                        movedWin = wins.splice(winIdx, 1)[0];
+                        window.computeVirtualTilingBounds(wins, window.monWidth, window.monHeight);
+                        ws.windows = wins;
+                        ws.isOccupied = wins.length > 0;
+                        data[i] = ws;
+                        break;
+                    }
+                }
+            }
+            if (movedWin) {
+                let targetIdx = data.findIndex(function(w) { return w.id === targetWsId; });
+                if (targetIdx !== -1) {
+                    let targetWs = Object.assign({}, data[targetIdx]);
+                    let wins = targetWs.windows ? targetWs.windows.slice() : [];
+                    wins.push(movedWin);
+                    window.computeVirtualTilingBounds(wins, window.monWidth, window.monHeight);
+                    targetWs.windows = wins;
+                    targetWs.isOccupied = true;
+                    data[targetIdx] = targetWs;
+                }
+                window.workspacesData = data;
+            }
+        }
+
+        // 2. Dispatch window move to Hyprland
+        Quickshell.execDetached(["bash", "-c", "hyprctl dispatch \"hl.dsp.window.move({ workspace = " + targetWsId.toString() + ", follow = false, window = 'address:" + formattedAddr + "' })\""]);
+        reSyncTimer.restart();
     }
 
     function swapWorkspaces(wsA, wsB) {
-        window.draggedWorkspaceId = 0;
         window.isDraggingWorkspace = false;
+        window.draggedWorkspaceId = 0;
         if (!wsA || !wsB || wsA === wsB) return;
 
-        // 1. Instant optimistic UI update
+        let winsA = [];
+        let winsB = [];
+        let layoutA = "";
+        let layoutB = "";
+
+        // 1. Instant optimistic UI update + capture windows + layouts
         if (window.workspacesData && window.workspacesData.length > 0) {
             let idxA = window.workspacesData.findIndex(function(w) { return w.id === wsA; });
             let idxB = window.workspacesData.findIndex(function(w) { return w.id === wsB; });
@@ -208,27 +508,82 @@ Item {
                 let data = window.workspacesData.slice();
                 let itemA = Object.assign({}, data[idxA]);
                 let itemB = Object.assign({}, data[idxB]);
+                winsA = itemA.windows ? itemA.windows.slice() : [];
+                winsB = itemB.windows ? itemB.windows.slice() : [];
+                layoutA = itemA.layout || "";
+                layoutB = itemB.layout || "";
                 let tempWins = itemA.windows;
                 let tempOcc = itemA.isOccupied;
+                let tempLayout = itemA.layout;
                 itemA.windows = itemB.windows;
                 itemA.isOccupied = itemB.isOccupied;
+                itemA.layout = itemB.layout;
                 itemB.windows = tempWins;
                 itemB.isOccupied = tempOcc;
+                itemB.layout = tempLayout;
                 data[idxA] = itemA;
                 data[idxB] = itemB;
                 window.workspacesData = data;
             }
         }
 
-        // 2. Execute swap in background and refresh once complete
-        workspaceSwapper.command = ["python3", Quickshell.env("HOME") + "/.config/hypr/scripts/quickshell/overview/swap_workspaces.py", wsA.toString(), wsB.toString()];
-        workspaceSwapper.running = true;
+        // Sort helper: tiled by spatial position (X then Y), floating by focusHistoryID descending
+        function sortedForMove(wins) {
+            let tiled = wins.filter(function(w) { return !w.floating; });
+            let floating = wins.filter(function(w) { return w.floating; });
+            tiled.sort(function(a, b) {
+                let ax = a.at ? a.at[0] : 0, ay = a.at ? a.at[1] : 0;
+                let bx = b.at ? b.at[0] : 0, by = b.at ? b.at[1] : 0;
+                return ax !== bx ? ax - bx : ay - by;
+            });
+            floating.sort(function(a, b) {
+                return (b.focusHistoryID || 99) - (a.focusHistoryID || 99);
+            });
+            return tiled.concat(floating);
+        }
+
+        // 2. Build and execute batch
+        let batch = [];
+        const TEMP_WS = 9999;
+        let orderedA = sortedForMove(winsA);
+        let orderedB = sortedForMove(winsB);
+
+        // Move wsA -> TEMP
+        for (let i = 0; i < orderedA.length; i++) {
+            if (orderedA[i].address) {
+                batch.push("dispatch hl.dsp.window.move({ workspace = " + TEMP_WS + ", follow = false, window = 'address:" + orderedA[i].address + "' })");
+            }
+        }
+        // Swap layout rules if they differ
+        if (layoutA && layoutB && layoutA !== layoutB) {
+            batch.push("eval hl.workspace_rule({ workspace = '" + wsA + "', layout = '" + layoutB + "' })");
+            batch.push("eval hl.workspace_rule({ workspace = '" + wsB + "', layout = '" + layoutA + "' })");
+        }
+        // Move wsB -> wsA (in spatial order so tiling layout is preserved)
+        for (let i = 0; i < orderedB.length; i++) {
+            if (orderedB[i].address) {
+                batch.push("dispatch hl.dsp.window.move({ workspace = " + wsA + ", follow = false, window = 'address:" + orderedB[i].address + "' })");
+            }
+        }
+        // Move TEMP -> wsB (in spatial order)
+        for (let i = 0; i < orderedA.length; i++) {
+            if (orderedA[i].address) {
+                batch.push("dispatch hl.dsp.window.move({ workspace = " + wsB + ", follow = false, window = 'address:" + orderedA[i].address + "' })");
+            }
+        }
+
+        if (batch.length > 0) {
+            Quickshell.execDetached(["hyprctl", "--batch", batch.join(" ; ")]);
+        }
+        reSyncTimer.restart();
     }
 
     function closeWorkspace(wsId) {
-        window.draggedWorkspaceId = 0;
         window.isDraggingWorkspace = false;
+        window.draggedWorkspaceId = 0;
         if (!wsId) return;
+
+        let wins = [];
 
         // Instant optimistic UI update
         if (window.workspacesData && window.workspacesData.length > 0) {
@@ -236,6 +591,7 @@ Item {
             if (idx !== -1) {
                 let data = window.workspacesData.slice();
                 let item = Object.assign({}, data[idx]);
+                wins = item.windows ? item.windows.slice() : [];
                 item.windows = [];
                 item.isOccupied = false;
                 data[idx] = item;
@@ -243,8 +599,17 @@ Item {
             }
         }
 
-        workspaceCloser.command = ["python3", Quickshell.env("HOME") + "/.config/hypr/scripts/quickshell/overview/close_workspace.py", wsId.toString()];
-        workspaceCloser.running = true;
+        // Dispatch window close directly to Hyprland in batch
+        let batch = [];
+        for (let i = 0; i < wins.length; i++) {
+            if (wins[i].address) {
+                batch.push("dispatch hl.dsp.focus({ window = 'address:" + wins[i].address + "' }) ; dispatch hl.dsp.window.close()");
+            }
+        }
+        if (batch.length > 0) {
+            Quickshell.execDetached(["hyprctl", "--batch", batch.join(" ; ")]);
+        }
+        reSyncTimer.restart();
     }
 
     function closeOverview() {
@@ -347,19 +712,19 @@ Item {
                 columnSpacing: window.s(8)
 
                 Repeater {
-                    model: window.workspacesData
+                    model: window.workspaceCount
 
                     delegate: Rectangle {
                         id: wsCard
                         Layout.fillWidth: true
                         Layout.preferredHeight: Math.round(wsCard.width / window.monocleRatio)
 
-
-                        readonly property int wsId: modelData.id
-                        readonly property bool isActive: modelData.isActive
-                        readonly property bool isOccupied: modelData.isOccupied
+                        readonly property int wsId: index + 1
+                        readonly property var wsData: (window.workspacesData && index < window.workspacesData.length) ? window.workspacesData[index] : null
+                        readonly property bool isActive: wsData ? Boolean(wsData.isActive) : (wsId === window.activeWorkspaceId)
+                        readonly property bool isOccupied: wsData ? Boolean(wsData.isOccupied) : false
                         readonly property bool isSelected: index === window.selectedIndex
-                        readonly property var windowsList: modelData.windows || []
+                        readonly property var windowsList: (wsData && wsData.windows) ? wsData.windows : []
                         property bool isHoveredDrop: false
                         property bool isHoveredWsDrop: false
 
@@ -395,16 +760,22 @@ Item {
 
                         // DropArea for receiving window drops and workspace drops
                         DropArea {
+                            id: wsDropArea
                             anchors.fill: parent
+                            z: 50
                             keys: ["window-card", "workspace-card"]
 
                             onEntered: (drag) => {
                                 if (drag.keys.indexOf("workspace-card") !== -1) {
-                                    if (window.draggedWorkspaceId > 0 && window.draggedWorkspaceId !== wsCard.wsId) {
+                                    let srcWs = (drag.source && drag.source.sourceWsId) ? drag.source.sourceWsId : window.draggedWorkspaceId;
+                                    if (srcWs > 0 && srcWs !== wsCard.wsId) {
                                         wsCard.isHoveredWsDrop = true;
                                     }
                                 } else if (drag.keys.indexOf("window-card") !== -1) {
-                                    wsCard.isHoveredDrop = true;
+                                    let fromWs = (drag.source && drag.source.winSourceWs) ? drag.source.winSourceWs : window.draggedFromWs;
+                                    if (fromWs !== wsCard.wsId) {
+                                        wsCard.isHoveredDrop = true;
+                                    }
                                 }
                             }
 
@@ -415,20 +786,25 @@ Item {
 
                             onDropped: (drop) => {
                                 let wasWsDrop = wsCard.isHoveredWsDrop;
+                                let wasWinDrop = wsCard.isHoveredDrop;
                                 wsCard.isHoveredWsDrop = false;
                                 wsCard.isHoveredDrop = false;
 
                                 if (drop.keys.indexOf("workspace-card") !== -1 || wasWsDrop) {
-                                    let srcWs = window.draggedWorkspaceId;
-                                    window.draggedWorkspaceId = 0;
+                                    let srcWs = (drop.source && drop.source.sourceWsId) ? drop.source.sourceWsId : window.draggedWorkspaceId;
                                     window.isDraggingWorkspace = false;
+                                    window.draggedWorkspaceId = 0;
                                     if (srcWs > 0 && srcWs !== wsCard.wsId) {
                                         window.swapWorkspaces(srcWs, wsCard.wsId);
                                         drop.accept();
                                     }
-                                } else if (drop.keys.indexOf("window-card") !== -1) {
-                                    let addr = window.draggedWindowAddress;
-                                    if (addr !== "" && wsCard.wsId !== window.draggedFromWs) {
+                                } else if (drop.keys.indexOf("window-card") !== -1 || wasWinDrop) {
+                                    let addr = (drop.source && drop.source.winAddress) ? drop.source.winAddress : window.draggedWindowAddress;
+                                    let fromWs = (drop.source && drop.source.winSourceWs) ? drop.source.winSourceWs : window.draggedFromWs;
+                                    window.isDragging = false;
+                                    window.draggedWindowAddress = "";
+                                    window.draggedFromWs = 0;
+                                    if (addr !== "" && wsCard.wsId !== fromWs) {
                                         window.moveWindowToWorkspace(addr, wsCard.wsId);
                                         drop.accept();
                                     }
@@ -457,7 +833,7 @@ Item {
                                     text: wsCard.wsId.toString()
                                     font.family: "SF Pro Display"
                                     font.pixelSize: window.s(11)
-                                    font.weight: Font.SemiBold
+                                    font.weight: Font.DemiBold
                                     color: window.subtext0
                                 }
 
@@ -477,6 +853,7 @@ Item {
                                     let pt = wsHeaderMa.mapToItem(mainCard, mouse.x, mouse.y);
                                     wsDragProxy.x = pt.x - wsDragProxy.width / 2;
                                     wsDragProxy.y = pt.y - wsDragProxy.height / 2;
+                                    wsDragProxy.sourceWsId = wsCard.wsId;
                                     window.draggedWorkspaceId = wsCard.wsId;
                                     window.isDraggingWorkspace = true;
                                 }
@@ -554,7 +931,7 @@ Item {
                             anchors.margins: window.s(3)
                             radius: window.s(8)
                             color: "transparent"
-                            clip: !window.isDragging
+                            clip: !(window.isDragging && window.draggedFromWs === wsCard.wsId)
                             z: 1
 
                             Repeater {
@@ -564,6 +941,8 @@ Item {
                                     id: winContainer
 
                                     readonly property var winData: modelData
+                                    property string winAddress: winData.address || ""
+                                    property int winSourceWs: wsCard.wsId
                                     readonly property real scaleX: viewport.width / window.monWidth
                                     readonly property real scaleY: viewport.height / window.monHeight
 
@@ -580,8 +959,14 @@ Item {
                                     // Floating windows ALWAYS sit on top (z: 100 for floating, z: 1 for tiling) so they can be grabbed without conflict!
                                     z: winData.floating ? 100 : 1
 
-                                    Drag.active: winDragArea.drag.active
+                                    Drag.active: window.isDragging && window.draggedWindowAddress === winAddress
                                     Drag.keys: ["window-card"]
+                                    Drag.source: winContainer
+                                    Drag.onDragFinished: {
+                                        window.draggedWindowAddress = "";
+                                        window.draggedFromWs = 0;
+                                        window.isDragging = false;
+                                    }
 
                                     Rectangle {
                                         id: winMiniCard
@@ -614,10 +999,7 @@ Item {
                                                 height: (scCropWrapper.srcRatio > scCropWrapper.containerRatio) ? winMiniCard.height : (winMiniCard.width / scCropWrapper.srcRatio)
                                                 anchors.centerIn: parent
 
-                                                captureSource: {
-                                                    let _dep = (typeof Hyprland !== "undefined" && Hyprland.toplevels) ? Hyprland.toplevels.values.length : 0;
-                                                    return window.getToplevelForAddress(winData.address);
-                                                }
+                                                captureSource: window.getToplevelForAddress(winData.address)
                                                 live: window.visible
                                                 paintCursor: false
                                             }
@@ -646,6 +1028,11 @@ Item {
                                                 fillMode: Image.PreserveAspectFit
                                                 asynchronous: true
                                                 smooth: true
+                                                onStatusChanged: {
+                                                    if (status === Image.Error && source.toString() !== "image://icon/application-x-executable") {
+                                                        source = "image://icon/application-x-executable";
+                                                    }
+                                                }
                                             }
 
                                             Text {
@@ -676,7 +1063,9 @@ Item {
                                                 winContainer.y = winContainer.y;
                                                 winContainer.z = 9999;
 
-                                                window.draggedWindowAddress = winData.address;
+                                                winContainer.winAddress = winData.address || "";
+                                                winContainer.winSourceWs = wsCard.wsId;
+                                                window.draggedWindowAddress = winData.address || "";
                                                 window.draggedFromWs = wsCard.wsId;
                                                 window.isDragging = true;
                                                 winContainer.Drag.hotSpot.x = winContainer.width / 2;
@@ -692,6 +1081,15 @@ Item {
                                                 window.isDragging = false;
 
                                                 // Re-bind x, y, and z upon release
+                                                winContainer.x = Qt.binding(function() { return winContainer.origX; });
+                                                winContainer.y = Qt.binding(function() { return winContainer.origY; });
+                                                winContainer.z = Qt.binding(function() { return winData.floating ? 100 : 1; });
+                                            }
+
+                                            onCanceled: {
+                                                window.draggedWindowAddress = "";
+                                                window.draggedFromWs = 0;
+                                                window.isDragging = false;
                                                 winContainer.x = Qt.binding(function() { return winContainer.origX; });
                                                 winContainer.y = Qt.binding(function() { return winContainer.origY; });
                                                 winContainer.z = Qt.binding(function() { return winData.floating ? 100 : 1; });
@@ -743,19 +1141,23 @@ Item {
 
                     onDropped: (drop) => {
                         let wasWs = window.isOverTrashWs;
+                        let wasWin = window.isOverTrash;
                         window.isOverTrashWs = false;
                         window.isOverTrash = false;
 
                         if (drop.keys.indexOf("workspace-card") !== -1 || wasWs) {
-                            let wsId = window.draggedWorkspaceId;
-                            window.draggedWorkspaceId = 0;
+                            let wsId = (drop.source && drop.source.sourceWsId) ? drop.source.sourceWsId : window.draggedWorkspaceId;
                             window.isDraggingWorkspace = false;
+                            window.draggedWorkspaceId = 0;
                             if (wsId > 0) {
                                 window.closeWorkspace(wsId);
                                 drop.accept();
                             }
-                        } else if (drop.keys.indexOf("window-card") !== -1) {
-                            let addr = window.draggedWindowAddress;
+                        } else if (drop.keys.indexOf("window-card") !== -1 || wasWin) {
+                            let addr = (drop.source && drop.source.winAddress) ? drop.source.winAddress : window.draggedWindowAddress;
+                            window.isDragging = false;
+                            window.draggedWindowAddress = "";
+                            window.draggedFromWs = 0;
                             if (addr !== "") {
                                 window.closeWindow(addr);
                                 drop.accept();
@@ -789,11 +1191,21 @@ Item {
         // Safety release catcher: dismiss ghost if released anywhere outside drop areas
         MouseArea {
             anchors.fill: parent
-            z: window.isDraggingWorkspace ? 99990 : -1
-            enabled: window.isDraggingWorkspace
+            z: (window.isDraggingWorkspace || window.isDragging) ? 99990 : -1
+            enabled: window.isDraggingWorkspace || window.isDragging
+            onClicked: {
+                window.draggedWorkspaceId = 0;
+                window.isDraggingWorkspace = false;
+                window.draggedWindowAddress = "";
+                window.draggedFromWs = 0;
+                window.isDragging = false;
+            }
             onReleased: {
                 window.draggedWorkspaceId = 0;
                 window.isDraggingWorkspace = false;
+                window.draggedWindowAddress = "";
+                window.draggedFromWs = 0;
+                window.isDragging = false;
             }
         }
 
@@ -807,10 +1219,17 @@ Item {
             visible: window.isDraggingWorkspace && window.draggedWorkspaceId > 0
             z: 99999
 
+            property int sourceWsId: 0
+
             Drag.active: window.isDraggingWorkspace
             Drag.keys: ["workspace-card"]
+            Drag.source: wsDragProxy
             Drag.hotSpot.x: width / 2
             Drag.hotSpot.y: height / 2
+            Drag.onDragFinished: {
+                window.draggedWorkspaceId = 0;
+                window.isDraggingWorkspace = false;
+            }
 
             Rectangle {
                 anchors.fill: parent
