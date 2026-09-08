@@ -11,3 +11,7 @@ commit.txt
 .vscode
 
 *.conf
+
+# Agent skills (cloned from external repos — not tracked here)
+.agents/skills/hyprland/
+.agents/skills/hyprland-lua-migration/
