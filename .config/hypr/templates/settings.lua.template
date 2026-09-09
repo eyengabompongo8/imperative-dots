@@ -60,7 +60,7 @@ hl.config({
         kb_layout = "{{KB_LAYOUT}}",
         kb_options = "{{KB_OPTIONS}}",
         numlock_by_default = true,
-        follow_mouse = 2,
+        follow_mouse = 1,
         accel_profile = "flat",
         touchpad = {
             natural_scroll = true
