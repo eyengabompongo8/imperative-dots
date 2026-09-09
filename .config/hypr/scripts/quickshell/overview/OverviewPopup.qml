@@ -379,6 +379,8 @@ Item {
                 focusTimer.restart();
                 window.forceActiveFocus();
                 introPhaseAnim.restart();
+            } else {
+                window.introPhase = 0;
             }
         }
     }
@@ -683,7 +685,7 @@ Item {
     property real introPhase: 0
     NumberAnimation on introPhase {
         id: introPhaseAnim
-        from: 0; to: 1; duration: 250; easing.type: Easing.OutExpo; running: true
+        from: 0; to: 1; duration: 130; easing.type: Easing.OutCubic; running: true
     }
 
     Rectangle {
