@@ -176,6 +176,11 @@ fi
 
 if [[ "$ACTION" == "open" || "$ACTION" == "toggle" ]]; then
 
+    if [[ "$TARGET" == "topbar" || "$TARGET" == "bar" ]]; then
+        timeout 0.3s quickshell -p "$SHELL_QML_PATH" ipc call topbar toggleBar >/dev/null 2>&1
+        exit 0
+    fi
+
     # Right-panel widgets go directly to the topbar IPC handler (Step 8)
     RIGHT_PANEL_WIDGETS=("volume" "battery" "hardware" "notifications" "network")
     IS_RIGHT_PANEL=false

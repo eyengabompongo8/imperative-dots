@@ -44,6 +44,15 @@ Variants {
                 function toggleUpdate() {
                     barWindow.forceUpdateShow = !barWindow.forceUpdateShow
                 }
+                function toggleBar(): void {
+                    barWindow.isBarHidden = !barWindow.isBarHidden;
+                }
+                function hideBar(): void {
+                    barWindow.isBarHidden = true;
+                }
+                function showBar(): void {
+                    barWindow.isBarHidden = false;
+                }
                 function cancelCenterClose(): void {
                     barWindow.centerHoverCloseTimer.stop();
                 }
@@ -362,8 +371,11 @@ Variants {
                 return false;
             }
 
-            onIsWindowFullscreenChanged: {
-                if (!isWindowFullscreen) {
+            property bool isBarHidden: false
+            readonly property bool isBarEffectiveFullscreen: isWindowFullscreen || isBarHidden
+
+            onIsBarEffectiveFullscreenChanged: {
+                if (!isBarEffectiveFullscreen) {
                     isLeftRevealed = false;
                     isCenterRevealed = false;
                     isRightRevealed = false;
@@ -383,38 +395,38 @@ Variants {
             readonly property bool hasAnyToast: hasActiveToast || hasActiveActionToast
             readonly property bool rightPanelOpen: rightPanelWidget !== "" || hasAnyToast
 
-            readonly property bool isRightPillRevealed: !isWindowFullscreen || isRightRevealed || rightPanelWidget !== ""
+            readonly property bool isRightPillRevealed: !isBarEffectiveFullscreen || isRightRevealed || rightPanelWidget !== ""
             readonly property bool isRightPillHidden: !isRightPillRevealed
-            readonly property bool isStandaloneFullscreenToast: isWindowFullscreen && isRightPillHidden && (hasAnyToast || animToastHeight > 2)
+            readonly property bool isStandaloneFullscreenToast: isBarEffectiveFullscreen && isRightPillHidden && (hasAnyToast || animToastHeight > 2)
 
             readonly property bool isLeftWidgetOpen: isSettingsOpen || activeWidget === "guide" || activeWidget === "help" || activeWidget === "applauncher" || activeWidget === "search" || activeWidget === "updater"
             readonly property bool isCenterWidgetOpen: activeWidget === "music" || activeWidget === "calendar"
             readonly property bool isRightWidgetOpen: (rightPanelWidget !== "" || activeWidget === "monitors")
 
-            readonly property bool isLeftHidden: isWindowFullscreen && !isLeftRevealed && !isLeftWidgetOpen
-            readonly property bool isCenterHidden: isWindowFullscreen && !isCenterRevealed && !isCenterWidgetOpen
-            readonly property bool isRightHidden: isWindowFullscreen && !isRightRevealed && !isRightWidgetOpen && !hasAnyToast && animToastHeight <= 2
+            readonly property bool isLeftHidden: isBarEffectiveFullscreen && !isLeftRevealed && !isLeftWidgetOpen
+            readonly property bool isCenterHidden: isBarEffectiveFullscreen && !isCenterRevealed && !isCenterWidgetOpen
+            readonly property bool isRightHidden: isBarEffectiveFullscreen && !isRightRevealed && !isRightWidgetOpen && !hasAnyToast && animToastHeight <= 2
 
-            exclusionMode: isWindowFullscreen ? ExclusionMode.Ignore : ExclusionMode.Normal
-            exclusiveZone: isWindowFullscreen ? 0 : barHeight
+            exclusionMode: isBarEffectiveFullscreen ? ExclusionMode.Ignore : ExclusionMode.Normal
+            exclusiveZone: isBarEffectiveFullscreen ? 0 : barHeight
             color: "transparent"
 
             mask: Region {
                 // 1. Non-fullscreen: Top Bar horizontal strip
                 Region {
                     x: 0; y: 0
-                    width: !barWindow.isWindowFullscreen ? barWindow.width : 0
-                    height: !barWindow.isWindowFullscreen ? (barWindow.barHeight + barWindow.s(16)) : 0
+                    width: !barWindow.isBarEffectiveFullscreen ? barWindow.width : 0
+                    height: !barWindow.isBarEffectiveFullscreen ? (barWindow.barHeight + barWindow.s(16)) : 0
                 }
 
                 // 2. Non-fullscreen: Expanded right dynamic island area
                 Region {
-                    x: (!barWindow.isWindowFullscreen && (barWindow.rightPanelOpen || barWindow.animPanelHeight > 2 || barWindow.animToastHeight > 2) && typeof rightBox !== "undefined" && rightBox)
+                    x: (!barWindow.isBarEffectiveFullscreen && (barWindow.rightPanelOpen || barWindow.animPanelHeight > 2 || barWindow.animToastHeight > 2) && typeof rightBox !== "undefined" && rightBox)
                         ? Math.max(0, rightBox.x - barWindow.s(10)) : 0
                     y: 0
-                    width: (!barWindow.isWindowFullscreen && (barWindow.rightPanelOpen || barWindow.animPanelHeight > 2 || barWindow.animToastHeight > 2) && typeof rightBox !== "undefined" && rightBox)
+                    width: (!barWindow.isBarEffectiveFullscreen && (barWindow.rightPanelOpen || barWindow.animPanelHeight > 2 || barWindow.animToastHeight > 2) && typeof rightBox !== "undefined" && rightBox)
                         ? (rightBox.width + barWindow.s(20)) : 0
-                    height: (!barWindow.isWindowFullscreen && (barWindow.rightPanelOpen || barWindow.animPanelHeight > 2 || barWindow.animToastHeight > 2) && typeof rightBox !== "undefined" && rightBox)
+                    height: (!barWindow.isBarEffectiveFullscreen && (barWindow.rightPanelOpen || barWindow.animPanelHeight > 2 || barWindow.animToastHeight > 2) && typeof rightBox !== "undefined" && rightBox)
                         ? (rightBox.height + barWindow.s(10)) : 0
                 }
 
@@ -428,52 +440,52 @@ Variants {
                 // 4. Fullscreen trigger edges
                 Region {
                     x: 0; y: 0
-                    width: barWindow.isWindowFullscreen ? Math.floor(barWindow.width / 3) : 0
-                    height: barWindow.isWindowFullscreen ? barWindow.s(6) : 0
+                    width: barWindow.isBarEffectiveFullscreen ? Math.floor(barWindow.width / 3) : 0
+                    height: barWindow.isBarEffectiveFullscreen ? barWindow.s(6) : 0
                 }
                 Region {
-                    x: barWindow.isWindowFullscreen ? Math.floor(barWindow.width / 3) : 0
+                    x: barWindow.isBarEffectiveFullscreen ? Math.floor(barWindow.width / 3) : 0
                     y: 0
-                    width: barWindow.isWindowFullscreen ? Math.floor(barWindow.width / 3) : 0
-                    height: barWindow.isWindowFullscreen ? barWindow.s(6) : 0
+                    width: barWindow.isBarEffectiveFullscreen ? Math.floor(barWindow.width / 3) : 0
+                    height: barWindow.isBarEffectiveFullscreen ? barWindow.s(6) : 0
                 }
                 Region {
-                    x: barWindow.isWindowFullscreen ? Math.floor(barWindow.width * 2 / 3) : 0
+                    x: barWindow.isBarEffectiveFullscreen ? Math.floor(barWindow.width * 2 / 3) : 0
                     y: 0
-                    width: barWindow.isWindowFullscreen ? (barWindow.width - Math.floor(barWindow.width * 2 / 3)) : 0
-                    height: barWindow.isWindowFullscreen ? barWindow.s(6) : 0
+                    width: barWindow.isBarEffectiveFullscreen ? (barWindow.width - Math.floor(barWindow.width * 2 / 3)) : 0
+                    height: barWindow.isBarEffectiveFullscreen ? barWindow.s(6) : 0
                 }
 
                 // 5. Fullscreen revealed islands (Left & Center)
                 Region {
-                    x: (barWindow.isWindowFullscreen && (barWindow.isLeftRevealed || barWindow.isLeftWidgetOpen)) ? Math.max(0, leftBox.x - barWindow.s(10)) : 0
-                    y: (barWindow.isWindowFullscreen && (barWindow.isLeftRevealed || barWindow.isLeftWidgetOpen)) ? 0 : 0
-                    width: (barWindow.isWindowFullscreen && (barWindow.isLeftRevealed || barWindow.isLeftWidgetOpen)) ? (leftBox.width + barWindow.s(20)) : 0
-                    height: (barWindow.isWindowFullscreen && (barWindow.isLeftRevealed || barWindow.isLeftWidgetOpen)) ? (barWindow.barHeight + barWindow.s(16)) : 0
+                    x: (barWindow.isBarEffectiveFullscreen && (barWindow.isLeftRevealed || barWindow.isLeftWidgetOpen)) ? Math.max(0, leftBox.x - barWindow.s(10)) : 0
+                    y: (barWindow.isBarEffectiveFullscreen && (barWindow.isLeftRevealed || barWindow.isLeftWidgetOpen)) ? 0 : 0
+                    width: (barWindow.isBarEffectiveFullscreen && (barWindow.isLeftRevealed || barWindow.isLeftWidgetOpen)) ? (leftBox.width + barWindow.s(20)) : 0
+                    height: (barWindow.isBarEffectiveFullscreen && (barWindow.isLeftRevealed || barWindow.isLeftWidgetOpen)) ? (barWindow.barHeight + barWindow.s(16)) : 0
                 }
                 Region {
-                    x: (barWindow.isWindowFullscreen && (barWindow.isCenterRevealed || barWindow.isCenterWidgetOpen)) ? Math.max(0, centerBox.x - barWindow.s(10)) : 0
-                    y: (barWindow.isWindowFullscreen && (barWindow.isCenterRevealed || barWindow.isCenterWidgetOpen)) ? 0 : 0
-                    width: (barWindow.isWindowFullscreen && (barWindow.isCenterRevealed || barWindow.isCenterWidgetOpen)) ? (centerBox.width + barWindow.s(20)) : 0
-                    height: (barWindow.isWindowFullscreen && (barWindow.isCenterRevealed || barWindow.isCenterWidgetOpen)) ? (barWindow.barHeight + barWindow.s(16)) : 0
+                    x: (barWindow.isBarEffectiveFullscreen && (barWindow.isCenterRevealed || barWindow.isCenterWidgetOpen)) ? Math.max(0, centerBox.x - barWindow.s(10)) : 0
+                    y: (barWindow.isBarEffectiveFullscreen && (barWindow.isCenterRevealed || barWindow.isCenterWidgetOpen)) ? 0 : 0
+                    width: (barWindow.isBarEffectiveFullscreen && (barWindow.isCenterRevealed || barWindow.isCenterWidgetOpen)) ? (centerBox.width + barWindow.s(20)) : 0
+                    height: (barWindow.isBarEffectiveFullscreen && (barWindow.isCenterRevealed || barWindow.isCenterWidgetOpen)) ? (barWindow.barHeight + barWindow.s(16)) : 0
                 }
 
                 // 6. Fullscreen revealed right island (when status pill / panel is revealed)
                 Region {
-                    x: (barWindow.isWindowFullscreen && barWindow.isRightPillRevealed) ? Math.max(0, rightBox.x - barWindow.s(10)) : 0
+                    x: (barWindow.isBarEffectiveFullscreen && barWindow.isRightPillRevealed) ? Math.max(0, rightBox.x - barWindow.s(10)) : 0
                     y: 0
-                    width: (barWindow.isWindowFullscreen && barWindow.isRightPillRevealed) ? (rightBox.width + barWindow.s(20)) : 0
-                    height: (barWindow.isWindowFullscreen && barWindow.isRightPillRevealed)
+                    width: (barWindow.isBarEffectiveFullscreen && barWindow.isRightPillRevealed) ? (rightBox.width + barWindow.s(20)) : 0
+                    height: (barWindow.isBarEffectiveFullscreen && barWindow.isRightPillRevealed)
                         ? (rightBox.height + barWindow.s(10))
                         : 0
                 }
 
                 // 7. Fullscreen standalone notification toast area ONLY
                 Region {
-                    x: (barWindow.isWindowFullscreen && barWindow.isStandaloneFullscreenToast) ? Math.max(0, rightBox.x - barWindow.s(10)) : 0
+                    x: (barWindow.isBarEffectiveFullscreen && barWindow.isStandaloneFullscreenToast) ? Math.max(0, rightBox.x - barWindow.s(10)) : 0
                     y: 0
-                    width: (barWindow.isWindowFullscreen && barWindow.isStandaloneFullscreenToast) ? (rightBox.width + barWindow.s(20)) : 0
-                    height: (barWindow.isWindowFullscreen && barWindow.isStandaloneFullscreenToast)
+                    width: (barWindow.isBarEffectiveFullscreen && barWindow.isStandaloneFullscreenToast) ? (rightBox.width + barWindow.s(20)) : 0
+                    height: (barWindow.isBarEffectiveFullscreen && barWindow.isStandaloneFullscreenToast)
                         ? (barWindow.animToastHeight + rightBox.padTop + rightBox.padBottom + barWindow.s(10))
                         : 0
                 }
@@ -1131,7 +1143,7 @@ Variants {
                 height: barWindow.s(6)
                 hoverEnabled: true
                 z: 100
-                enabled: barWindow.isWindowFullscreen
+                enabled: barWindow.isBarEffectiveFullscreen
                 onEntered: {
                     leftHideTimer.stop();
                     leftShowTimer.restart();
@@ -1149,7 +1161,7 @@ Variants {
                 height: barWindow.s(6)
                 hoverEnabled: true
                 z: 100
-                enabled: barWindow.isWindowFullscreen
+                enabled: barWindow.isBarEffectiveFullscreen
                 onEntered: {
                     centerHideTimer.stop();
                     centerShowTimer.restart();
@@ -1167,7 +1179,7 @@ Variants {
                 height: barWindow.s(6)
                 hoverEnabled: true
                 z: 100
-                enabled: barWindow.isWindowFullscreen
+                enabled: barWindow.isBarEffectiveFullscreen
                 onEntered: {
                     rightHideTimer.stop();
                     rightShowTimer.restart();
@@ -1226,8 +1238,8 @@ Variants {
                         hasBottomRightRadius: true
                         earRadius: barWindow.s(14)
                         bottomRadius: barWindow.s(14)
-                        fillColor: barWindow.isWindowFullscreen ? "#000000" : Qt.rgba(mocha.base.r, mocha.base.g, mocha.base.b, 0.75)
-                        strokeColor: barWindow.isWindowFullscreen ? Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.15) : Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.12)
+                        fillColor: barWindow.isBarEffectiveFullscreen ? "#000000" : Qt.rgba(mocha.base.r, mocha.base.g, mocha.base.b, 0.75)
+                        strokeColor: barWindow.isBarEffectiveFullscreen ? Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.15) : Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.12)
                         Behavior on fillColor { ColorAnimation { duration: 200 } }
                         Behavior on strokeColor { ColorAnimation { duration: 200 } }
                     }
@@ -1597,7 +1609,7 @@ Variants {
                         hasBottomRightEar: false
                         earRadius: barWindow.s(14)
                         bottomRadius: barWindow.s(14)
-                        fillColor: barWindow.isWindowFullscreen ? (centerBox.isHovered ? Qt.rgba(0.08, 0.08, 0.08, 1.0) : "#000000") : (centerBox.isHovered ? Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, 0.85) : Qt.rgba(mocha.base.r, mocha.base.g, mocha.base.b, 0.75))
+                        fillColor: barWindow.isBarEffectiveFullscreen ? (centerBox.isHovered ? Qt.rgba(0.08, 0.08, 0.08, 1.0) : "#000000") : (centerBox.isHovered ? Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, 0.85) : Qt.rgba(mocha.base.r, mocha.base.g, mocha.base.b, 0.75))
                         strokeColor: Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, centerBox.isHovered ? 0.18 : 0.12)
                         Behavior on fillColor { ColorAnimation { duration: 200 } }
                         Behavior on strokeColor { ColorAnimation { duration: 200 } }
@@ -2080,8 +2092,8 @@ Variants {
                         opacity: barWindow.isRightHidden ? 0.0 : 1.0
                         earRadius: barWindow.s(14)
                         bottomRadius: barWindow.s(14)
-                        fillColor: barWindow.isWindowFullscreen ? "#000000" : Qt.rgba(mocha.base.r, mocha.base.g, mocha.base.b, 0.75)
-                        strokeColor: barWindow.isWindowFullscreen ? Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.15) : Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.12)
+                        fillColor: barWindow.isBarEffectiveFullscreen ? "#000000" : Qt.rgba(mocha.base.r, mocha.base.g, mocha.base.b, 0.75)
+                        strokeColor: barWindow.isBarEffectiveFullscreen ? Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.15) : Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.12)
                         strokeWidth: 1.2
                         Behavior on opacity { NumberAnimation { duration: 200 } }
                         Behavior on fillColor { ColorAnimation { duration: 200 } }
