@@ -18,7 +18,7 @@ hl.gesture({ fingers = 4, direction = "down", action = function() hl.exec_cmd(ho
 hl.gesture({ fingers = 3, direction = "pinchin", action = "float" })
 hl.gesture({ fingers = 3, direction = "pinchout", action = "float" })
 
-hl.gesture({ fingers = 4, direction = "pinch", action = "fullscreen" })
+hl.gesture({ fingers = 4, direction = "pinch", action = "fullscreen", mode = "maximize" })
 
 -- ───────── Lid ─────────
 hl.bind("switch:off:Lid Switch", hl.dsp.dpms({ action = "enable" }), { locked = true })
