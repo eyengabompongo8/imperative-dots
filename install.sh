@@ -163,7 +163,7 @@ ARCH_PKGS=(
   "xdg-desktop-portal-hyprland"
 
   "darkman"
-  "hyprshutdown" "hypridle" "hyprsunset" "hyprcaffeine"
+  "hyprshutdown" "hypridle" "hyprsunset" "hyprcaffeine" "snappy-switcher"
 
   "pyenv"
 
@@ -1254,7 +1254,7 @@ echo -e "\n${C_CYAN}[ INFO ]${RESET} Applying Configurations & Backing Up Old On
 TARGET_CONFIG_DIR="$HOME/.config"
 BACKUP_DIR="$HOME/.config-backup-$(date +%Y%m%d_%H%M%S)"
 
-CONFIG_FOLDERS=("btop" "cava" "fastfetch" "hypr" "kitty" "rofi" "matugen" "swayosd")
+CONFIG_FOLDERS=("btop" "cava" "fastfetch" "hypr" "kitty" "rofi" "matugen" "swayosd" "snappy-switcher")
 if [ "$INSTALL_NVIM" = true ]; then CONFIG_FOLDERS+=("nvim"); fi
 
 mkdir -p "$TARGET_CONFIG_DIR" "$BACKUP_DIR"
@@ -1384,6 +1384,43 @@ else
   fi
 
 fi
+
+# --- 4.6 Deploy Agent Skills ---
+# Installs AI agent skills into ~/.config/hypr/.agents/skills/ so that tools
+# like Antigravity can discover them when working inside the live Hyprland config.
+echo -e "\n${C_CYAN}[ INFO ]${RESET} Deploying Agent Skills to Hyprland config..."
+
+SKILLS_TARGET_DIR="$TARGET_CONFIG_DIR/hypr/.agents/skills"
+mkdir -p "$SKILLS_TARGET_DIR"
+
+# deploy_skill <skill-name> <git-repo-url>
+# - If the skill dir is already a git repo: pull latest changes.
+# - If the skill dir exists but is not a git repo: skip (user-managed).
+# - Otherwise: shallow-clone from the given URL.
+# Network failures are non-fatal; a warning is printed and the install continues.
+deploy_skill() {
+  local skill_name="$1"
+  local skill_repo="$2"
+  local skill_dir="$SKILLS_TARGET_DIR/$skill_name"
+
+  if [ -d "$skill_dir/.git" ]; then
+    git -C "$skill_dir" pull --ff-only --quiet 2>/dev/null \
+      && printf "  -> Skill %-35s ${C_GREEN}[ UPDATED ]${RESET}\n" "$skill_name" \
+      || printf "  -> Skill %-35s ${C_YELLOW}[ SKIP (up to date or offline) ]${RESET}\n" "$skill_name"
+  elif [ -d "$skill_dir" ] && [ -n "$(ls -A "$skill_dir" 2>/dev/null)" ]; then
+    printf "  -> Skill %-35s ${C_YELLOW}[ SKIP (non-git dir exists) ]${RESET}\n" "$skill_name"
+  else
+    rm -rf "$skill_dir"
+    if git clone --depth=1 --quiet "$skill_repo" "$skill_dir" 2>/dev/null; then
+      printf "  -> Skill %-35s ${C_GREEN}[ OK ]${RESET}\n" "$skill_name"
+    else
+      printf "  -> Skill %-35s ${C_RED}[ FAILED (network error?) ]${RESET}\n" "$skill_name"
+    fi
+  fi
+}
+
+deploy_skill "hyprland"               "https://github.com/marceloeatworld/hyprland-ai-skill"
+deploy_skill "hyprland-lua-migration" "https://github.com/dabstractor/hyprland-lua-migration"
 
 # --- 4.5 Bake Hardware Variables into Template ---
 # By doing this now, we eliminate the need for the hacky hardware_env.conf file

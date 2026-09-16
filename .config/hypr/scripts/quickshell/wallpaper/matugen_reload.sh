@@ -77,20 +77,3 @@ cat ~/.config/cava/config_base ~/.config/cava/colors > ~/.config/cava/config 2>/
 if pgrep -x "cava" > /dev/null; then
     killall -USR1 cava
 fi
-
-
-# GTK Live-Reload Hack
-# Rapidly toggles the global theme to force GTK3 and GTK4 apps to flush 
-# their caches and read the newly generated Matugen CSS.
-if command -v gsettings &> /dev/null; then
-    # GTK3 apps
-    gsettings set org.gnome.desktop.interface gtk-theme 'Adwaita'
-    sleep 0.05
-    gsettings set org.gnome.desktop.interface gtk-theme 'adw-gtk3-dark'
-    
-    # GTK4 / Libadwaita apps
-    gsettings set org.gnome.desktop.interface color-scheme 'default'
-    sleep 0.05
-    gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark'
-fi
-

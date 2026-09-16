@@ -15,6 +15,11 @@ if [[ "$ACTION" =~ ^[0-9]+$ ]]; then
     # Send IPC command directly to Main.qml via Quickshell's native IPC handler
     quickshell -p "$SHELL_QML_PATH" ipc call main handleCommand "close" "" "" >/dev/null 2>&1
 
+    if [[ "$TARGET" == "swap" ]]; then
+        python3 "$SCRIPTS_DIR/overview/swap_workspaces.py" "$ACTION"
+        exit 0
+    fi
+
     CMD="hl.dsp.focus({ workspace = $ACTION })"
     [[ "$TARGET" == "move" ]] && CMD="hl.dsp.window.move({ workspace = $ACTION })"
     hyprctl dispatch "$CMD" >/dev/null 2>&1
@@ -170,6 +175,11 @@ if [[ "$ACTION" == "close" ]]; then
 fi
 
 if [[ "$ACTION" == "open" || "$ACTION" == "toggle" ]]; then
+
+    if [[ "$TARGET" == "topbar" || "$TARGET" == "bar" ]]; then
+        timeout 0.3s quickshell -p "$SHELL_QML_PATH" ipc call topbar toggleBar >/dev/null 2>&1
+        exit 0
+    fi
 
     # Right-panel widgets go directly to the topbar IPC handler (Step 8)
     RIGHT_PANEL_WIDGETS=("volume" "battery" "hardware" "notifications" "network")

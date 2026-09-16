@@ -41,7 +41,8 @@
       "type": "bind",
       "mods": "$mainMod SHIFT",
       "key": "F",
-      "dispatcher": "fullscreen"
+      "dispatcher": "exec",
+      "command": "bash ~/.config/hypr/scripts/qs_manager.sh toggle topbar"
     },
     {
       "type": "bind",
@@ -223,14 +224,14 @@
       "mods": "ALT",
       "key": "Tab",
       "dispatcher": "exec",
-      "command": "~/.config/hypr/scripts/window_cycle.sh"
+      "command": "snappy-switcher next --workspace --mod alt"
     },
     {
       "type": "bind",
       "mods": "ALT SHIFT",
       "key": "Tab",
       "dispatcher": "exec",
-      "command": "~/.config/hypr/scripts/window_cycle.sh prev"
+      "command": "snappy-switcher prev --workspace --mod alt"
     },
     {
       "type": "bind",
@@ -456,6 +457,76 @@
       "key": "0",
       "dispatcher": "exec",
       "command": "~/.config/hypr/scripts/qs_manager.sh 10 move"
+    },
+    {
+      "type": "bind",
+      "mods": "$mainMod CTRL",
+      "key": "1",
+      "dispatcher": "exec",
+      "command": "~/.config/hypr/scripts/qs_manager.sh 1 swap"
+    },
+    {
+      "type": "bind",
+      "mods": "$mainMod CTRL",
+      "key": "2",
+      "dispatcher": "exec",
+      "command": "~/.config/hypr/scripts/qs_manager.sh 2 swap"
+    },
+    {
+      "type": "bind",
+      "mods": "$mainMod CTRL",
+      "key": "3",
+      "dispatcher": "exec",
+      "command": "~/.config/hypr/scripts/qs_manager.sh 3 swap"
+    },
+    {
+      "type": "bind",
+      "mods": "$mainMod CTRL",
+      "key": "4",
+      "dispatcher": "exec",
+      "command": "~/.config/hypr/scripts/qs_manager.sh 4 swap"
+    },
+    {
+      "type": "bind",
+      "mods": "$mainMod CTRL",
+      "key": "5",
+      "dispatcher": "exec",
+      "command": "~/.config/hypr/scripts/qs_manager.sh 5 swap"
+    },
+    {
+      "type": "bind",
+      "mods": "$mainMod CTRL",
+      "key": "6",
+      "dispatcher": "exec",
+      "command": "~/.config/hypr/scripts/qs_manager.sh 6 swap"
+    },
+    {
+      "type": "bind",
+      "mods": "$mainMod CTRL",
+      "key": "7",
+      "dispatcher": "exec",
+      "command": "~/.config/hypr/scripts/qs_manager.sh 7 swap"
+    },
+    {
+      "type": "bind",
+      "mods": "$mainMod CTRL",
+      "key": "8",
+      "dispatcher": "exec",
+      "command": "~/.config/hypr/scripts/qs_manager.sh 8 swap"
+    },
+    {
+      "type": "bind",
+      "mods": "$mainMod CTRL",
+      "key": "9",
+      "dispatcher": "exec",
+      "command": "~/.config/hypr/scripts/qs_manager.sh 9 swap"
+    },
+    {
+      "type": "bind",
+      "mods": "$mainMod CTRL",
+      "key": "0",
+      "dispatcher": "exec",
+      "command": "~/.config/hypr/scripts/qs_manager.sh 10 swap"
     },
     {
       "type": "bind",
@@ -741,6 +812,9 @@
     },
     {
       "command": "~/.config/hypr/scripts/startup_terminals.sh"
+    },
+    {
+      "command": "snappy-switcher --daemon"
     }
   ]
 }
