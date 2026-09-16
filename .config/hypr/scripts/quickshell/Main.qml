@@ -197,7 +197,7 @@ PanelWindow {
 
     property int morphDuration: 150
     property int morphDurationSwitch: 130
-    property int exitDuration: 100
+    property int exitDuration: 40
 
     property real animW: 1
     property real animH: 1
@@ -282,7 +282,7 @@ PanelWindow {
         }
 
         masterWindow.animX = finalX;
-        masterWindow.animY = t.ry;
+        masterWindow.animY = (masterWindow.currentActive === "overview" && currentItem && currentItem.targetMasterHeight !== undefined) ? Math.floor((masterWindow.height / 2) - (finalH / 2)) : t.ry;
         masterWindow.animW = finalW;
         masterWindow.animH = finalH;
         masterWindow.targetW = finalW;
@@ -323,7 +323,7 @@ PanelWindow {
         opacity: masterWindow.isVisible ? 1.0 : 0.0
         Behavior on opacity {
             NumberAnimation {
-                duration: 100
+                duration: masterWindow.isVisible ? 100 : 40
                 easing.type: masterWindow.isVisible ? Easing.OutCubic : Easing.InCubic
             }
         }
@@ -430,18 +430,22 @@ PanelWindow {
         if (newWidget === "hidden") {
             if (currentActive !== "hidden") {
                 masterWindow.morphDuration = masterWindow.exitDuration;
-                masterWindow.disableMorph = false;
+                let closingOverview = (currentActive === "overview" || currentActive === "windowpicker");
+                masterWindow.disableMorph = closingOverview;
 
-                masterWindow.animW = 1;
-                masterWindow.animH = 1;
+                if (!closingOverview) {
+                    masterWindow.animW = 1;
+                    masterWindow.animH = 1;
+                }
                 masterWindow.isVisible = false;
 
                 delayedClear.start();
             }
         } else {
+            let isOverview = (newWidget === "overview");
             if (currentActive === "hidden" || !masterWindow.isVisible) {
                 masterWindow.morphDuration = 150;
-                masterWindow.disableMorph = false;
+                masterWindow.disableMorph = isOverview;
 
                 let t = getLayout(newWidget);
                 masterWindow.animX = t.rx;
@@ -452,10 +456,10 @@ PanelWindow {
                 masterWindow.targetH = t.h;
             } else {
                 masterWindow.morphDuration = masterWindow.morphDurationSwitch;
-                masterWindow.disableMorph = false;
+                masterWindow.disableMorph = isOverview;
             }
 
-            if (newWidget === "windowswitcher") {
+            if (newWidget === "windowswitcher" || isOverview) {
                 executeSwitch(newWidget, arg, true);
             } else {
                 Qt.callLater(() => executeSwitch(newWidget, arg, false));
@@ -514,8 +518,12 @@ PanelWindow {
                 masterWindow.animX = Math.floor((masterWindow.width / 2) - (dynW / 2));
             }
             if (currentItem.targetMasterHeight !== undefined) {
-                masterWindow.animH = currentItem.targetMasterHeight;
-                masterWindow.targetH = currentItem.targetMasterHeight;
+                let dynH = currentItem.targetMasterHeight;
+                masterWindow.animH = dynH;
+                masterWindow.targetH = dynH;
+                if (newWidget === "overview") {
+                    masterWindow.animY = Math.floor((masterWindow.height / 2) - (dynH / 2));
+                }
             }
         }
 
@@ -525,7 +533,7 @@ PanelWindow {
 
     Timer {
         id: delayedClear
-        interval: 120
+        interval: 50
         onTriggered: {
             masterWindow.currentActive = "hidden";
             widgetStack.clear();

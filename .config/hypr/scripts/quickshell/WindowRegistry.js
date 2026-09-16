@@ -51,6 +51,7 @@ function getLayout(name, mx, my, mw, mh, userScale) {
         "calendar":  { w: s(1450, scale), h: s(750, scale), rx: Math.floor((mw/2)-(s(1450, scale)/2)), ry: s(60, scale), comp: "calendar/CalendarPopup.qml" },
         "overview":  { w: s(980, scale), h: s(380, scale), rx: Math.floor((mw/2)-(s(980, scale)/2)), ry: Math.floor((mh/2)-(s(380, scale)/2)), comp: "overview/OverviewPopup.qml" },
         "windowswitcher": { w: s(720, scale), h: s(220, scale), rx: Math.floor((mw/2)-(s(720, scale)/2)), ry: Math.floor((mh/2)-(s(220, scale)/2)), comp: "windowswitcher/WindowSwitcherPopup.qml" },
+        "windowpicker": { w: s(750, scale), h: s(520, scale), rx: Math.floor((mw/2)-(s(750, scale)/2)), ry: Math.floor((mh/2)-(s(520, scale)/2)), comp: "windowpicker/WindowPicker.qml" },
 
         "wallpaper": { w: mw, h: s(650, scale), rx: 0, ry: Math.floor((mh/2)-(s(650, scale)/2)), comp: "wallpaper/WallpaperPicker.qml" },
         
