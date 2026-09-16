@@ -196,8 +196,8 @@ PanelWindow {
     property bool disableMorph: false
 
     property int morphDuration: 150
-    property int morphDurationSwitch: 130
-    property int exitDuration: 40
+    property int morphDurationSwitch: 120
+    property int exitDuration: 90
 
     property real animW: 1
     property real animH: 1
@@ -302,6 +302,7 @@ PanelWindow {
         width:  masterWindow.animW
         height: masterWindow.animH
         clip: true
+        transformOrigin: Item.Center
 
         Behavior on x {
             enabled: !masterWindow.disableMorph
@@ -320,10 +321,18 @@ PanelWindow {
             NumberAnimation { duration: masterWindow.morphDuration; easing.type: Easing.OutCubic }
         }
 
+        scale: masterWindow.isVisible ? 1.0 : 0.96
+        Behavior on scale {
+            NumberAnimation {
+                duration: masterWindow.isVisible ? 140 : 90
+                easing.type: masterWindow.isVisible ? Easing.OutCubic : Easing.InCubic
+            }
+        }
+
         opacity: masterWindow.isVisible ? 1.0 : 0.0
         Behavior on opacity {
             NumberAnimation {
-                duration: masterWindow.isVisible ? 100 : 40
+                duration: masterWindow.isVisible ? 140 : 90
                 easing.type: masterWindow.isVisible ? Easing.OutCubic : Easing.InCubic
             }
         }
@@ -346,7 +355,7 @@ PanelWindow {
 
         Timer {
             id: autoCloseGraceTimer
-            interval: 250
+            interval: 400
             repeat: false
             onTriggered: {
                 if (!mainMorphHoverTracker.hovered && masterWindow.isVisible && (masterWindow.currentActive === "music" || masterWindow.currentActive === "calendar")) {
@@ -430,13 +439,7 @@ PanelWindow {
         if (newWidget === "hidden") {
             if (currentActive !== "hidden") {
                 masterWindow.morphDuration = masterWindow.exitDuration;
-                let closingOverview = (currentActive === "overview" || currentActive === "windowpicker");
-                masterWindow.disableMorph = closingOverview;
-
-                if (!closingOverview) {
-                    masterWindow.animW = 1;
-                    masterWindow.animH = 1;
-                }
+                masterWindow.disableMorph = true;
                 masterWindow.isVisible = false;
 
                 delayedClear.start();
@@ -445,7 +448,7 @@ PanelWindow {
             let isOverview = (newWidget === "overview");
             if (currentActive === "hidden" || !masterWindow.isVisible) {
                 masterWindow.morphDuration = 150;
-                masterWindow.disableMorph = isOverview;
+                masterWindow.disableMorph = true;
 
                 let t = getLayout(newWidget);
                 masterWindow.animX = t.rx;
@@ -533,7 +536,7 @@ PanelWindow {
 
     Timer {
         id: delayedClear
-        interval: 50
+        interval: 100
         onTriggered: {
             masterWindow.currentActive = "hidden";
             widgetStack.clear();

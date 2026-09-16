@@ -82,13 +82,30 @@ Variants {
             }
 
             property string pendingCenterHover: ""
+            property string activeCenterHoverWidget: ""
+
+            readonly property bool isCenterPillHovered: (typeof centerHoverTracker !== "undefined" && centerHoverTracker.hovered) ||
+                                                       (typeof centerMouse !== "undefined" && centerMouse.containsMouse) ||
+                                                       (typeof mediaInfoMouse !== "undefined" && mediaInfoMouse.containsMouse) ||
+                                                       (typeof centerBoxDragArea !== "undefined" && (centerBoxDragArea.containsMouse || centerBoxDragArea.pressed))
+
+            onIsCenterPillHoveredChanged: {
+                if (!isCenterPillHovered) {
+                    pendingCenterHover = "";
+                    centerHoverOpenTimer.stop();
+                    if (barWindow.activeCenterHoverWidget !== "") {
+                        centerHoverCloseTimer.restart();
+                    }
+                }
+            }
 
             Timer {
                 id: centerHoverOpenTimer
-                interval: 120
+                interval: 160
                 repeat: false
                 onTriggered: {
                     if (barWindow.pendingCenterHover !== "") {
+                        barWindow.activeCenterHoverWidget = barWindow.pendingCenterHover;
                         Quickshell.execDetached(["quickshell", "-p", paths.shellQmlPath, "ipc", "call", "main", "handleCommand", "open", barWindow.pendingCenterHover, ""]);
                     }
                 }
@@ -96,10 +113,11 @@ Variants {
 
             Timer {
                 id: centerHoverCloseTimer
-                interval: 250
+                interval: 400
                 repeat: false
                 onTriggered: {
-                    if (!centerHoverTracker.hovered) {
+                    if (!barWindow.isCenterPillHovered) {
+                        barWindow.activeCenterHoverWidget = "";
                         Quickshell.execDetached(["quickshell", "-p", paths.shellQmlPath, "ipc", "call", "main", "handleCommand", "close", "", ""]);
                     }
                 }
@@ -108,14 +126,18 @@ Variants {
             function handleCenterHover(wName, isHovered) {
                 if (isHovered) {
                     centerHoverCloseTimer.stop();
-                    pendingCenterHover = wName;
-                    centerHoverOpenTimer.restart();
+                    if (barWindow.activeCenterHoverWidget !== wName) {
+                        pendingCenterHover = wName;
+                        centerHoverOpenTimer.restart();
+                    }
                 } else {
                     if (pendingCenterHover === wName) {
                         pendingCenterHover = "";
                         centerHoverOpenTimer.stop();
                     }
-                    centerHoverCloseTimer.restart();
+                    if (!barWindow.isCenterPillHovered) {
+                        centerHoverCloseTimer.restart();
+                    }
                 }
             }
 
@@ -345,7 +367,7 @@ Variants {
                 function isToplevelFullscreen(t) {
                     if (!t) return false;
                     let obj = t.lastIpcObject;
-                    if ((obj && (obj.fullscreen === 2 || obj.fullscreenMode === 2)) || (t.wayland && t.wayland.fullscreen)) {
+                    if ((obj && (obj.fullscreen === 2 || obj.fullscreen === true || obj.fullscreenMode === 2)) || (t.wayland && t.wayland.fullscreen)) {
                         return true;
                     }
                     return false;
@@ -375,11 +397,16 @@ Variants {
             readonly property bool isBarEffectiveFullscreen: isWindowFullscreen || isBarHidden
 
             onIsBarEffectiveFullscreenChanged: {
-                if (!isBarEffectiveFullscreen) {
-                    isLeftRevealed = false;
-                    isCenterRevealed = false;
-                    isRightRevealed = false;
-                }
+                isLeftRevealed = false;
+                isCenterRevealed = false;
+                isRightRevealed = false;
+                pendingCenterHover = "";
+                activeCenterHoverWidget = "";
+                centerHoverOpenTimer.stop();
+                centerHoverCloseTimer.stop();
+                leftHideTimer.stop();
+                centerHideTimer.stop();
+                rightHideTimer.stop();
             }
             property bool isLeftRevealed: false
             property bool isCenterRevealed: false
@@ -504,9 +531,8 @@ Variants {
             }
 
             function isCenterHovered() {
-                return (typeof centerHoverTracker !== "undefined" && centerHoverTracker.hovered) ||
-                       (typeof centerEdgeTrigger !== "undefined" && centerEdgeTrigger.containsMouse) ||
-                       (typeof centerBoxDragArea !== "undefined" && (centerBoxDragArea.containsMouse || centerBoxDragArea.pressed));
+                return barWindow.isCenterPillHovered ||
+                       (typeof centerEdgeTrigger !== "undefined" && centerEdgeTrigger.containsMouse);
             }
 
             function isRightHovered() {
@@ -516,17 +542,20 @@ Variants {
             }
 
             function kickLeftTimer() {
-                if (isLeftHovered()) return;
+                if (isLeftHovered() && !barWindow.isBarEffectiveFullscreen) return;
+                leftHideTimer.interval = barWindow.useLeftGraceTimer ? 3000 : 800;
                 leftHideTimer.restart();
             }
 
             function kickCenterTimer() {
-                if (isCenterHovered()) return;
+                if (isCenterHovered() && !barWindow.isBarEffectiveFullscreen) return;
+                centerHideTimer.interval = barWindow.useCenterGraceTimer ? 3000 : 800;
                 centerHideTimer.restart();
             }
 
             function kickRightTimer() {
-                if (isRightHovered()) return;
+                if (isRightHovered() && !barWindow.isBarEffectiveFullscreen) return;
+                rightHideTimer.interval = barWindow.useRightGraceTimer ? 3000 : 800;
                 rightHideTimer.restart();
             }
 
@@ -534,6 +563,7 @@ Variants {
                 if (!isLeftWidgetOpen) {
                     if (!isLeftHovered()) {
                         barWindow.isLeftRevealed = false;
+                        barWindow.useLeftGraceTimer = false;
                     } else {
                         kickLeftTimer();
                     }
@@ -544,6 +574,7 @@ Variants {
                 if (!isCenterWidgetOpen) {
                     if (!isCenterHovered()) {
                         barWindow.isCenterRevealed = false;
+                        barWindow.useCenterGraceTimer = false;
                     } else {
                         kickCenterTimer();
                     }
@@ -554,6 +585,7 @@ Variants {
                 if (!isRightWidgetOpen) {
                     if (!isRightHovered()) {
                         barWindow.isRightRevealed = false;
+                        barWindow.useRightGraceTimer = false;
                     } else {
                         kickRightTimer();
                     }
@@ -569,6 +601,10 @@ Variants {
                 interval: barWindow.useLeftGraceTimer ? 3000 : 800
                 onTriggered: {
                     if (barWindow.isLeftHovered() || barWindow.isLeftWidgetOpen) {
+                        if (barWindow.isBarEffectiveFullscreen && !barWindow.isLeftHovered() && barWindow.isLeftWidgetOpen) {
+                            leftHideTimer.interval = 400;
+                            leftHideTimer.restart();
+                        }
                         return;
                     }
                     barWindow.isLeftRevealed = false;
@@ -580,6 +616,10 @@ Variants {
                 interval: barWindow.useCenterGraceTimer ? 3000 : 800
                 onTriggered: {
                     if (barWindow.isCenterHovered() || barWindow.isCenterWidgetOpen) {
+                        if (barWindow.isBarEffectiveFullscreen && !barWindow.isCenterHovered() && barWindow.isCenterWidgetOpen) {
+                            centerHideTimer.interval = 400;
+                            centerHideTimer.restart();
+                        }
                         return;
                     }
                     barWindow.isCenterRevealed = false;
@@ -591,6 +631,10 @@ Variants {
                 interval: barWindow.useRightGraceTimer ? 3000 : 800
                 onTriggered: {
                     if (barWindow.isRightHovered() || barWindow.isRightWidgetOpen) {
+                        if (barWindow.isBarEffectiveFullscreen && !barWindow.isRightHovered() && barWindow.isRightWidgetOpen) {
+                            rightHideTimer.interval = 400;
+                            rightHideTimer.restart();
+                        }
                         return;
                     }
                     barWindow.isRightRevealed = false;
@@ -1578,8 +1622,10 @@ Variants {
                                 barWindow.useCenterGraceTimer = false;
                                 centerHideTimer.stop();
                             } else {
-                                barWindow.centerHoverCloseTimer.restart();
-                                barWindow.kickCenterTimer();
+                                if (!barWindow.isCenterPillHovered) {
+                                    barWindow.centerHoverCloseTimer.restart();
+                                    barWindow.kickCenterTimer();
+                                }
                             }
                         }
                     }
@@ -1597,8 +1643,10 @@ Variants {
                             centerHideTimer.stop();
                         }
                         onExited: {
-                            barWindow.centerHoverCloseTimer.restart();
-                            barWindow.kickCenterTimer();
+                            if (!barWindow.isCenterPillHovered) {
+                                barWindow.centerHoverCloseTimer.restart();
+                                barWindow.kickCenterTimer();
+                            }
                         }
                     }
 
