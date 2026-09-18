@@ -167,6 +167,7 @@ Variants {
             }
 
             property int barHeight: s(44)
+            property int bottomGap: s(4)
 
             // Standardized paddings
             readonly property real padSide: barWindow.s(8)
@@ -435,7 +436,7 @@ Variants {
             readonly property bool isRightHidden: isBarEffectiveFullscreen && !isRightRevealed && !isRightWidgetOpen && !hasAnyToast && animToastHeight <= 2
 
             exclusionMode: isBarEffectiveFullscreen ? ExclusionMode.Ignore : ExclusionMode.Normal
-            exclusiveZone: isBarEffectiveFullscreen ? 0 : barHeight
+            exclusiveZone: isBarEffectiveFullscreen ? 0 : (barHeight + bottomGap)
             color: "transparent"
 
             mask: Region {

@@ -31,9 +31,9 @@ hl.window_rule({ match = { class = "^(discord)$" }, workspace = "special:spotify
 hl.window_rule({ match = { class = "(?i)^(spotify)$" }, workspace = "special:spotify_discord silent" })
 hl.window_rule({ match = { title = "(?i)^(spotify.*)$" }, workspace = "special:spotify_discord silent" })
 
--- Smart Gaps (Keeps a clean matching top gap under the top bar, removes left/right/bottom gaps and borders)
-hl.workspace_rule({ workspace = "w[tv1]s[false]", gaps_out = { top = 4, right = 0, bottom = 0, left = 0 }, gaps_in = 0 })
-hl.workspace_rule({ workspace = "f[1]s[false]", gaps_out = { top = 4, right = 0, bottom = 0, left = 0 }, gaps_in = 0 })
+-- Smart Gaps (Top gap is managed via Quickshell exclusiveZone; 0 gap here ensures flush layout when bar is hidden)
+hl.workspace_rule({ workspace = "w[tv1]s[false]", gaps_out = { top = 0, right = 0, bottom = 0, left = 0 }, gaps_in = 0 })
+hl.workspace_rule({ workspace = "f[1]s[false]", gaps_out = { top = 0, right = 0, bottom = 0, left = 0 }, gaps_in = 0 })
 hl.workspace_rule({ workspace = "s[true]", gaps_out = { top = 12, right = 4, bottom = 4, left = 4 } })
 hl.window_rule({ match = { float = false, workspace = "w[tv1]s[false]" }, border_size = 0 })
 hl.window_rule({ match = { float = false, workspace = "f[1]s[false]" }, border_size = 0 })
