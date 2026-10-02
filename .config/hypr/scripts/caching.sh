@@ -23,12 +23,3 @@ qs_ensure_cache() {
     export "QS_STATE_${WIDGET_UPPER}=$WIDGET_STATE"
     export "QS_RUN_${WIDGET_UPPER}=$WIDGET_RUN"
 }
-
-# Pre-initialize for all existing QML widget folders in the main directory
-if [ -d "$QS_DIR" ]; then
-    for dir in "$QS_DIR"/*/; do
-        [ -d "$dir" ] || continue
-        WIDGET_NAME=$(basename "$dir")
-        qs_ensure_cache "$WIDGET_NAME"
-    done
-fi
