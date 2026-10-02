@@ -1240,6 +1240,14 @@ if git clone --depth=1 https://github.com/kayozxo/GNOME-macOS-Tahoe "$TAHOE_CLON
     chmod +x install.sh
     echo -e "  -> Executing theme configuration setup..."
     ./install.sh -la --install-both
+
+    # Fix upstream Tahoe-Light popover styling bug
+    for f in "$HOME/.themes/Tahoe-Light/gtk-4.0/gtk.css" "$HOME/.themes/Tahoe-Light/gtk-4.0/gtk-dark.css"; do
+      if [ -f "$f" ]; then
+        sed -i '/popover > contents {/,/border-radius: 16px;/c\popover > contents {\n  background-color: rgba(255, 255, 255, 0.92);\n  background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.43));\n  box-shadow: inset 2px 2px 4px -2.8px rgb(255, 255, 255), inset -2px -2px 4px -2.8px rgb(255, 255, 255), 0 2px 12px rgba(0, 0, 0, 0.12);\n  border-radius: 16px;\n}' "$f"
+        sed -i '/popover > arrow {/,/}/c\popover > arrow {\n  background-color: rgba(255, 255, 255, 0.92);\n  background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.43));\n}' "$f"
+      fi
+    done
   )
 
   # Clean up /tmp to prevent stale directory cluttering subsequent script runs
