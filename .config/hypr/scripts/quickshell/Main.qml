@@ -159,17 +159,21 @@ PanelWindow {
         if (widgetCache[name]) return;
         let t = getLayout(name);
         if (!t || !t.comp) return;
-        let obj = t.comp.createObject(preloaderContainer, {
-            "notifModel": masterWindow.notifModel,
-            "liveNotifs": masterWindow.liveNotifs,
-            "visible": false
-        });
-        if (obj) widgetCache[name] = obj;
+        let comp = Qt.createComponent(t.comp);
+        if (comp.status === Component.Ready) {
+            let obj = comp.createObject(preloaderContainer, {
+                "notifModel": masterWindow.notifModel,
+                "liveNotifs": masterWindow.liveNotifs,
+                "visible": false
+            });
+            if (obj) widgetCache[name] = obj;
+        } else if (comp.status === Component.Error) {
+            console.log("Error preloading widget " + name + ":", comp.errorString());
+        }
     }
 
     Component.onCompleted: {
         Qt.callLater(() => preloadWidget("settings"));
-        Qt.callLater(() => preloadWidget("windowswitcher"));
         preloadStaggerTimer.start();
     }
 
@@ -178,8 +182,8 @@ PanelWindow {
         interval: 900
         repeat: false
         onTriggered: {
-            preloadWidget("search");
-            preloadWidget("help");
+            preloadWidget("applauncher");
+            Qt.callLater(() => preloadWidget("clipboard"));
         }
     }
 
