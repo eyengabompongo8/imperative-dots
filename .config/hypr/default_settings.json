@@ -264,7 +264,7 @@
     {
       "type": "bind",
       "mods": "$mainMod",
-      "key": "K",
+      "key": "P",
       "dispatcher": "exec",
       "command": "bash ~/.config/hypr/scripts/qs_manager.sh toggle windowpicker"
     },
