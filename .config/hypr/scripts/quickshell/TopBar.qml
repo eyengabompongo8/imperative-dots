@@ -1283,8 +1283,8 @@ Variants {
                         hasBottomRightRadius: true
                         earRadius: barWindow.s(14)
                         bottomRadius: barWindow.s(14)
-                        fillColor: barWindow.isBarEffectiveFullscreen ? "#000000" : Qt.rgba(mocha.base.r, mocha.base.g, mocha.base.b, 0.75)
-                        strokeColor: barWindow.isBarEffectiveFullscreen ? Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.15) : Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.12)
+                        fillColor: Qt.rgba(mocha.base.r, mocha.base.g, mocha.base.b, 0.75)
+                        strokeColor: Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.12)
                         Behavior on fillColor { ColorAnimation { duration: 200 } }
                         Behavior on strokeColor { ColorAnimation { duration: 200 } }
                     }
@@ -1658,7 +1658,7 @@ Variants {
                         hasBottomRightEar: false
                         earRadius: barWindow.s(14)
                         bottomRadius: barWindow.s(14)
-                        fillColor: barWindow.isBarEffectiveFullscreen ? (centerBox.isHovered ? Qt.rgba(0.08, 0.08, 0.08, 1.0) : "#000000") : (centerBox.isHovered ? Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, 0.85) : Qt.rgba(mocha.base.r, mocha.base.g, mocha.base.b, 0.75))
+                        fillColor: centerBox.isHovered ? Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, 0.85) : Qt.rgba(mocha.base.r, mocha.base.g, mocha.base.b, 0.75)
                         strokeColor: Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, centerBox.isHovered ? 0.18 : 0.12)
                         Behavior on fillColor { ColorAnimation { duration: 200 } }
                         Behavior on strokeColor { ColorAnimation { duration: 200 } }
@@ -2141,8 +2141,8 @@ Variants {
                         opacity: barWindow.isRightHidden ? 0.0 : 1.0
                         earRadius: barWindow.s(14)
                         bottomRadius: barWindow.s(14)
-                        fillColor: barWindow.isBarEffectiveFullscreen ? "#000000" : Qt.rgba(mocha.base.r, mocha.base.g, mocha.base.b, 0.75)
-                        strokeColor: barWindow.isBarEffectiveFullscreen ? Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.15) : Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.12)
+                        fillColor: Qt.rgba(mocha.base.r, mocha.base.g, mocha.base.b, 0.75)
+                        strokeColor: Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.12)
                         strokeWidth: 1.2
                         Behavior on opacity { NumberAnimation { duration: 200 } }
                         Behavior on fillColor { ColorAnimation { duration: 200 } }
