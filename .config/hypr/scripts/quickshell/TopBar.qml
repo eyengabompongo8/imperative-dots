@@ -240,16 +240,32 @@ Variants {
             property real animToastWidth: targetToastWidth
 
             Behavior on animPanelHeight {
-                NumberAnimation { duration: 160; easing.type: barWindow.targetPanelHeight > 0 ? Easing.OutExpo : Easing.InCubic }
+                SpringAnimation {
+                    spring: 3.6
+                    damping: 0.32
+                    epsilon: 0.25
+                }
             }
             Behavior on animPanelWidth {
-                NumberAnimation { duration: 160; easing.type: barWindow.targetPanelWidth > 0 ? Easing.OutExpo : Easing.InCubic }
+                SpringAnimation {
+                    spring: 3.4
+                    damping: 0.30
+                    epsilon: 0.25
+                }
             }
             Behavior on animToastHeight {
-                NumberAnimation { duration: 160; easing.type: barWindow.targetToastHeight > 0 ? Easing.OutExpo : Easing.InCubic }
+                SpringAnimation {
+                    spring: 4.0
+                    damping: 0.34
+                    epsilon: 0.25
+                }
             }
             Behavior on animToastWidth {
-                NumberAnimation { duration: 160; easing.type: barWindow.targetToastWidth > 0 ? Easing.OutExpo : Easing.InCubic }
+                SpringAnimation {
+                    spring: 3.6
+                    damping: 0.32
+                    epsilon: 0.25
+                }
             }
 
             property string latchedWidgetSource: ""
@@ -1302,8 +1318,20 @@ Variants {
                     transform: Translate {
                         x: barWindow.isLeftHidden ? -(leftBox.width + barWindow.s(20)) : 0
                         y: barWindow.isLeftHidden ? -(barWindow.barHeight + barWindow.s(20)) : 0
-                        Behavior on x { NumberAnimation { duration: 300; easing.type: barWindow.isLeftHidden ? Easing.InCubic : Easing.OutCubic } }
-                        Behavior on y { NumberAnimation { duration: 300; easing.type: barWindow.isLeftHidden ? Easing.InCubic : Easing.OutCubic } }
+                        Behavior on x {
+                            SpringAnimation {
+                                spring: 3.8
+                                damping: 0.32
+                                epsilon: 0.25
+                            }
+                        }
+                        Behavior on y {
+                            SpringAnimation {
+                                spring: 3.8
+                                damping: 0.32
+                                epsilon: 0.25
+                            }
+                        }
                     }
                     
                     
@@ -1673,7 +1701,13 @@ Variants {
                     opacity: barWindow.isCenterHidden ? 0.0 : (showLayout ? 1 : 0)
                     transform: Translate {
                         y: barWindow.isCenterHidden ? -(barWindow.barHeight + barWindow.s(20)) : (centerBox.showLayout ? 0 : barWindow.s(-30))
-                        Behavior on y { NumberAnimation { duration: 300; easing.type: barWindow.isCenterHidden ? Easing.InCubic : Easing.OutCubic } }
+                        Behavior on y {
+                            SpringAnimation {
+                                spring: 3.8
+                                damping: 0.32
+                                epsilon: 0.25
+                            }
+                        }
                     }
 
                     Timer {
@@ -2154,8 +2188,21 @@ Variants {
                     transform: Translate {
                         x: barWindow.isRightHidden ? (rightBox.width + barWindow.s(20)) : (rightBox.showLayout ? 0 : barWindow.s(30))
                         y: barWindow.isRightHidden ? -(barWindow.barHeight + barWindow.s(20)) : 0
-                        Behavior on x { enabled: barWindow.isRightHidden || !rightBox.showLayout; NumberAnimation { duration: 300; easing.type: barWindow.isRightHidden ? Easing.InCubic : Easing.OutCubic } }
-                        Behavior on y { NumberAnimation { duration: 300; easing.type: barWindow.isRightHidden ? Easing.InCubic : Easing.OutCubic } }
+                        Behavior on x {
+                            enabled: barWindow.isRightHidden || !rightBox.showLayout
+                            SpringAnimation {
+                                spring: 3.8
+                                damping: 0.32
+                                epsilon: 0.25
+                            }
+                        }
+                        Behavior on y {
+                            SpringAnimation {
+                                spring: 3.8
+                                damping: 0.32
+                                epsilon: 0.25
+                            }
+                        }
                     }
                     
                     Timer {
@@ -2699,6 +2746,8 @@ Variants {
                             visible: barWindow.animPanelHeight > 1
                             clip: true
                             opacity: Math.max(0, Math.min(1.0, barWindow.animPanelHeight / barWindow.s(50)))
+                            scale: 0.94 + 0.06 * opacity
+                            transformOrigin: Item.TopRight
 
                             Loader {
                                 id: panelWidgetLoader
@@ -2769,6 +2818,8 @@ Variants {
                             visible: barWindow.animToastHeight > 1
                             clip: true
                             opacity: Math.max(0, Math.min(1.0, barWindow.animToastHeight / barWindow.s(30)))
+                            scale: 0.94 + 0.06 * opacity
+                            transformOrigin: Item.TopRight
 
                             Loader {
                                 id: toastLoader

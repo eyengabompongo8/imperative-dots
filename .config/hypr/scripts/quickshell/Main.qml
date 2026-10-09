@@ -40,7 +40,13 @@ PanelWindow {
         }
 
         function switcherCycle(dir: string): void {
-            if (masterWindow.currentActive === "windowswitcher") {
+            if (masterWindow.currentActive !== "windowswitcher") {
+                switchWidget("windowswitcher", dir);
+                let currentItem = widgetStack.currentItem;
+                if (currentItem && typeof currentItem.openWithDirection === "function") {
+                    currentItem.openWithDirection(dir);
+                }
+            } else {
                 let currentItem = widgetStack.currentItem;
                 if (currentItem && typeof currentItem.cycleNext === "function") {
                     if (dir === "prev") currentItem.cyclePrev();
@@ -174,6 +180,7 @@ PanelWindow {
 
     Component.onCompleted: {
         Qt.callLater(() => preloadWidget("settings"));
+        Qt.callLater(() => preloadWidget("windowswitcher"));
         preloadStaggerTimer.start();
     }
 
@@ -310,26 +317,43 @@ PanelWindow {
 
         Behavior on x {
             enabled: !masterWindow.disableMorph
-            NumberAnimation { duration: masterWindow.morphDuration; easing.type: Easing.OutCubic }
+            SpringAnimation {
+                spring: 3.5
+                damping: 0.32
+                epsilon: 0.25
+            }
         }
         Behavior on y {
             enabled: !masterWindow.disableMorph
-            NumberAnimation { duration: masterWindow.morphDuration; easing.type: Easing.OutCubic }
+            SpringAnimation {
+                spring: 3.5
+                damping: 0.32
+                epsilon: 0.25
+            }
         }
         Behavior on width {
             enabled: !masterWindow.disableMorph
-            NumberAnimation { duration: masterWindow.morphDuration; easing.type: Easing.OutCubic }
+            SpringAnimation {
+                spring: 3.4
+                damping: 0.30
+                epsilon: 0.25
+            }
         }
         Behavior on height {
             enabled: !masterWindow.disableMorph
-            NumberAnimation { duration: masterWindow.morphDuration; easing.type: Easing.OutCubic }
+            SpringAnimation {
+                spring: 3.6
+                damping: 0.32
+                epsilon: 0.25
+            }
         }
 
-        scale: masterWindow.isVisible ? 1.0 : 0.96
+        scale: masterWindow.isVisible ? 1.0 : 0.94
         Behavior on scale {
             NumberAnimation {
-                duration: masterWindow.isVisible ? 140 : 90
-                easing.type: masterWindow.isVisible ? Easing.OutCubic : Easing.InCubic
+                duration: masterWindow.isVisible ? 240 : 120
+                easing.type: masterWindow.isVisible ? Easing.OutBack : Easing.InCubic
+                easing.overshoot: 1.12
             }
         }
 
@@ -384,11 +408,8 @@ PanelWindow {
                 Keys.onReleased: (event) => {
                     if (masterWindow.currentActive === "windowswitcher") {
                         if (event.key === Qt.Key_Alt || event.key === Qt.Key_AltGr || event.key === Qt.Key_Meta) {
-                            let currentItem = widgetStack.currentItem;
-                            if (currentItem && typeof currentItem.activateSelected === "function") {
-                                currentItem.activateSelected();
-                                event.accepted = true;
-                            }
+                            switcherRelease();
+                            event.accepted = true;
                         }
                     }
                 }
@@ -402,14 +423,15 @@ PanelWindow {
                         NumberAnimation {
                             property: "opacity"
                             from: 0.0; to: 1.0
-                            duration: masterWindow.morphDurationSwitch
-                            easing.type: Easing.OutQuint
+                            duration: 220
+                            easing.type: Easing.OutCubic
                         }
                         NumberAnimation {
                             property: "scale"
-                            from: 0.98; to: 1.0
-                            duration: masterWindow.morphDurationSwitch
-                            easing.type: Easing.OutCubic
+                            from: 0.94; to: 1.0
+                            duration: 280
+                            easing.type: Easing.OutBack
+                            easing.overshoot: 1.15
                         }
                     }
                 }
@@ -451,14 +473,15 @@ PanelWindow {
         } else {
             let isOverview = (newWidget === "overview");
             if (currentActive === "hidden" || !masterWindow.isVisible) {
-                masterWindow.morphDuration = 150;
-                masterWindow.disableMorph = true;
+                masterWindow.morphDuration = 320;
+                masterWindow.disableMorph = false;
 
                 let t = getLayout(newWidget);
-                masterWindow.animX = t.rx;
-                masterWindow.animY = t.ry;
-                masterWindow.animW = t.w;
-                masterWindow.animH = t.h;
+                // Start smaller from the center/top bar origin and spring expand into final dimensions
+                masterWindow.animX = t.rx + Math.floor(t.w * 0.05);
+                masterWindow.animY = t.ry + Math.floor(t.h * 0.05);
+                masterWindow.animW = Math.floor(t.w * 0.9);
+                masterWindow.animH = Math.floor(t.h * 0.9);
                 masterWindow.targetW = t.w;
                 masterWindow.targetH = t.h;
             } else {
@@ -528,14 +551,16 @@ PanelWindow {
                 let dynH = currentItem.targetMasterHeight;
                 masterWindow.animH = dynH;
                 masterWindow.targetH = dynH;
-                if (newWidget === "overview") {
+                if (newWidget === "overview" || newWidget === "windowswitcher") {
                     masterWindow.animY = Math.floor((masterWindow.height / 2) - (dynH / 2));
                 }
             }
         }
 
         masterWindow.isVisible = true;
-        Quickshell.execDetached(["quickshell", "-p", paths.shellQmlPath, "ipc", "call", "topbar", "handleRightPanel", "close", ""]);
+        if (newWidget !== "windowswitcher") {
+            Quickshell.execDetached(["quickshell", "-p", paths.shellQmlPath, "ipc", "call", "topbar", "handleRightPanel", "close", ""]);
+        }
     }
 
     Timer {

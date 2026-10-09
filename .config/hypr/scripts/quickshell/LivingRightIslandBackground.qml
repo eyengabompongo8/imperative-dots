@@ -31,11 +31,11 @@ Item {
     readonly property real yWidgetBottom: topBarHeight + widgetHeight
     readonly property real yToastBottom: yWidgetBottom + toastHeight
 
-    // Continuous mode determination
+    // Continuous mode determination (with hysteresis during spring bounce)
     readonly property bool isStandalone: (topBarHeight <= 4) && (widgetHeight > 4)
     readonly property bool hasSteppedToastWide: !isStandalone && (widgetHeight > 4 && toastHeight > 4 && widgetWidth > (toastWidth + 10) && widgetWidth > (pillWidth + 4))
     readonly property bool hasSteppedToastNarrow: !isStandalone && (widgetHeight > 4 && toastHeight > 4 && widgetWidth > (toastWidth + 10) && !hasSteppedToastWide)
-    readonly property bool isWider: !isStandalone && !hasSteppedToastWide && !hasSteppedToastNarrow && (widgetHeight > 4) && (widgetWidth > (pillWidth + 4))
+    readonly property bool isWider: !isStandalone && !hasSteppedToastWide && !hasSteppedToastNarrow && (widgetHeight > 4) && (widgetWidth >= (pillWidth - 1))
     readonly property bool isNarrower: !isStandalone && !hasSteppedToastWide && !hasSteppedToastNarrow && !isWider && (widgetHeight > 4)
     readonly property bool isCollapsed: !isStandalone && !hasSteppedToastWide && !hasSteppedToastNarrow && !isWider && !isNarrower
 

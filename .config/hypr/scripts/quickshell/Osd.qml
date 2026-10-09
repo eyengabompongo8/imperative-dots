@@ -67,7 +67,7 @@ Variants {
                 return s(300);
             }
 
-            implicitWidth: pillWidth + s(36)
+            implicitWidth: s(340)
             implicitHeight: pillHeight + s(14)
 
             // Center window at the bottom of the screen
@@ -329,7 +329,11 @@ Variants {
                 height: osdWindow.pillHeight
 
                 Behavior on width {
-                    NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
+                    SpringAnimation {
+                        spring: 3.5
+                        damping: 0.32
+                        epsilon: 0.25
+                    }
                 }
 
                 // Inverted Island Background (matching TopBar ears)
@@ -346,21 +350,30 @@ Variants {
                     Behavior on strokeColor { ColorAnimation { duration: 200 } }
                 }
 
-                // Slide up / down physics
+                // Fluid bottom-island slide up / down physics
                 transform: Translate {
-                    y: osdWindow.isRevealed ? 0 : (osdBox.height + osdWindow.s(20))
+                    y: osdWindow.isRevealed ? 0 : (osdBox.height + osdWindow.s(24))
                     Behavior on y {
-                        NumberAnimation {
-                            duration: osdWindow.isRevealed ? 250 : 180
-                            easing.type: osdWindow.isRevealed ? Easing.OutBack : Easing.InCubic
-                            easing.overshoot: 1.05
+                        SpringAnimation {
+                            spring: 3.8
+                            damping: 0.32
+                            epsilon: 0.25
                         }
+                    }
+                }
+
+                scale: osdWindow.isRevealed ? 1.0 : 0.94
+                Behavior on scale {
+                    SpringAnimation {
+                        spring: 3.5
+                        damping: 0.32
+                        epsilon: 0.01
                     }
                 }
 
                 opacity: osdWindow.isRevealed ? 1.0 : 0.0
                 Behavior on opacity {
-                    NumberAnimation { duration: 180; easing.type: Easing.OutCubic }
+                    NumberAnimation { duration: osdWindow.isRevealed ? 220 : 160; easing.type: Easing.OutCubic }
                 }
 
                 // Content Layout
@@ -372,6 +385,7 @@ Variants {
 
                     // Leading Icon inside subtle rounded badge
                     Rectangle {
+                        id: iconBadge
                         Layout.preferredWidth: osdWindow.s(28)
                         Layout.preferredHeight: osdWindow.s(28)
                         Layout.alignment: Qt.AlignVCenter
@@ -383,7 +397,42 @@ Variants {
                             return Qt.rgba(mocha.blue.r, mocha.blue.g, mocha.blue.b, 0.20);
                         }
 
+                        Behavior on color {
+                            ColorAnimation { duration: 180 }
+                        }
+
+                        // Pop animation on icon / state update
+                        property real iconScale: 1.0
+                        scale: iconScale
+                        Behavior on iconScale {
+                            SpringAnimation {
+                                spring: 4.0
+                                damping: 0.28
+                                epsilon: 0.01
+                            }
+                        }
+
+                        SequentialAnimation {
+                            id: iconPopAnim
+                            PropertyAnimation {
+                                target: iconBadge
+                                property: "iconScale"
+                                to: 1.2
+                                duration: 80
+                                easing.type: Easing.OutQuad
+                            }
+                            PropertyAnimation {
+                                target: iconBadge
+                                property: "iconScale"
+                                to: 1.0
+                                duration: 160
+                                easing.type: Easing.OutBack
+                                easing.overshoot: 1.2
+                            }
+                        }
+
                         Text {
+                            id: iconGlyph
                             anchors.centerIn: parent
                             text: osdWindow.osdIcon
                             font.family: "SF Pro , Liga SFMono Nerd Font, Iosevka Nerd Font"
@@ -393,6 +442,16 @@ Variants {
                                 if (osdWindow.osdType === "power") return osdWindow.currentProfileColor;
                                 if (osdWindow.isToggleType && !osdWindow.osdState) return mocha.subtext0;
                                 return mocha.blue;
+                            }
+
+                            Behavior on color {
+                                ColorAnimation { duration: 180 }
+                            }
+
+                            onTextChanged: {
+                                if (osdWindow.isRevealed) {
+                                    iconPopAnim.restart();
+                                }
                             }
                         }
                     }
@@ -424,6 +483,10 @@ Variants {
                                 font.pixelSize: osdWindow.s(12)
                                 font.weight: Font.Black
                                 color: osdWindow.osdMuted ? mocha.red : mocha.subtext0
+
+                                Behavior on color {
+                                    ColorAnimation { duration: 180 }
+                                }
                             }
                         }
 
@@ -449,7 +512,15 @@ Variants {
                                     color: osdWindow.osdMuted ? mocha.red : mocha.blue
 
                                     Behavior on width {
-                                        NumberAnimation { duration: 90; easing.type: Easing.OutQuad }
+                                        SpringAnimation {
+                                            spring: 4.2
+                                            damping: 0.36
+                                            epsilon: 0.25
+                                        }
+                                    }
+
+                                    Behavior on color {
+                                        ColorAnimation { duration: 180 }
                                     }
                                 }
                             }
@@ -475,6 +546,7 @@ Variants {
 
                         // State pill badge (matching BatteryPopup power profile colors)
                         Rectangle {
+                            id: badgeBox
                             Layout.alignment: Qt.AlignVCenter
                             implicitWidth: badgeText.implicitWidth + osdWindow.s(18)
                             implicitHeight: osdWindow.s(22)
@@ -485,6 +557,43 @@ Variants {
                                 return Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, 0.40);
                             }
 
+                            Behavior on implicitWidth {
+                                SpringAnimation {
+                                    spring: 3.5
+                                    damping: 0.32
+                                    epsilon: 0.25
+                                }
+                            }
+
+                            property real badgeScale: 1.0
+                            scale: badgeScale
+                            Behavior on badgeScale {
+                                SpringAnimation {
+                                    spring: 4.0
+                                    damping: 0.28
+                                    epsilon: 0.01
+                                }
+                            }
+
+                            SequentialAnimation {
+                                id: badgePopAnim
+                                PropertyAnimation {
+                                    target: badgeBox
+                                    property: "badgeScale"
+                                    to: 1.15
+                                    duration: 80
+                                    easing.type: Easing.OutQuad
+                                }
+                                PropertyAnimation {
+                                    target: badgeBox
+                                    property: "badgeScale"
+                                    to: 1.0
+                                    duration: 160
+                                    easing.type: Easing.OutBack
+                                    easing.overshoot: 1.2
+                                }
+                            }
+
                             Text {
                                 id: badgeText
                                 anchors.centerIn: parent
@@ -493,10 +602,16 @@ Variants {
                                 font.pixelSize: osdWindow.s(11)
                                 font.weight: Font.Black
                                 color: (osdWindow.osdType === "power" || osdWindow.osdState) ? mocha.crust : mocha.subtext0
+
+                                onTextChanged: {
+                                    if (osdWindow.isRevealed && osdWindow.isBadgeOnlyType) {
+                                        badgePopAnim.restart();
+                                    }
+                                }
                             }
 
                             Behavior on color {
-                                ColorAnimation { duration: 150 }
+                                ColorAnimation { duration: 180 }
                             }
                         }
                     }
