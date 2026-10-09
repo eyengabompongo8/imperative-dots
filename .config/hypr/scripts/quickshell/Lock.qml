@@ -3,6 +3,7 @@ import QtQuick.Window
 import QtQuick.Controls
 import QtQuick.Layouts
 import QtQuick.Effects
+import QtQuick.Shapes
 import QtCore
 import Quickshell
 import Quickshell.Io
@@ -1851,6 +1852,114 @@ ShellRoot {
 
                         PropertyAction { target: screenRoot; property: "isPlayingIntro"; value: false }
                         ScriptAction { script: { inputField.text = ""; inputField.forceActiveFocus(); } }
+                    }
+                }
+
+                // ---------------------------------------------------------
+                // 6. SCREEN CORNERS (ROUNDED OVERLAY)
+                // ---------------------------------------------------------
+                property bool screenCornersEnabled: true
+                property real screenCornerRadius: 14
+                property color screenCornerColor: "#000000"
+                property real effectiveScreenRadius: scaler.s(screenCornerRadius)
+
+                Process {
+                    id: cornersSettingsReader
+                    command: ["bash", "-c", "cat ~/.config/hypr/settings.json 2>/dev/null || echo '{}'"]
+                    running: true
+                    stdout: StdioCollector {
+                        onStreamFinished: {
+                            try {
+                                if (this.text && this.text.trim().length > 0 && this.text.trim() !== "{}") {
+                                    let parsed = JSON.parse(this.text);
+                                    if (parsed.screenCornersEnabled !== undefined) {
+                                        screenRoot.screenCornersEnabled = parsed.screenCornersEnabled;
+                                    }
+                                    if (parsed.screenCornerRadius !== undefined) {
+                                        screenRoot.screenCornerRadius = parsed.screenCornerRadius;
+                                    }
+                                    if (parsed.screenCornerColor !== undefined) {
+                                        screenRoot.screenCornerColor = parsed.screenCornerColor;
+                                    }
+                                }
+                            } catch (e) {}
+                        }
+                    }
+                }
+
+                Process {
+                    id: cornersSettingsWatcher
+                    command: ["bash", "-c", "while [ ! -f ~/.config/hypr/settings.json ]; do sleep 1; done; inotifywait -qq -e modify,close_write ~/.config/hypr/settings.json"]
+                    running: true
+                    stdout: StdioCollector {
+                        onStreamFinished: {
+                            cornersSettingsReader.running = false;
+                            cornersSettingsReader.running = true;
+                            cornersSettingsWatcher.running = false;
+                            cornersSettingsWatcher.running = true;
+                        }
+                    }
+                }
+
+                Item {
+                    id: screenCornersItem
+                    anchors.fill: parent
+                    z: 9999
+                    visible: screenRoot.screenCornersEnabled && screenRoot.effectiveScreenRadius > 0
+
+                    component CornerPiece: Shape {
+                        id: piece
+                        property real radiusVal: screenRoot.effectiveScreenRadius
+                        property color fillCol: screenRoot.screenCornerColor
+
+                        width: radiusVal
+                        height: radiusVal
+                        layer.enabled: true
+                        layer.samples: 4
+
+                        ShapePath {
+                            fillColor: piece.fillCol
+                            strokeColor: "transparent"
+                            startX: 0
+                            startY: 0
+                            PathLine { x: piece.radiusVal; y: 0 }
+                            PathArc {
+                                x: 0
+                                y: piece.radiusVal
+                                radiusX: piece.radiusVal
+                                radiusY: piece.radiusVal
+                                direction: PathArc.Counterclockwise
+                            }
+                            PathLine { x: 0; y: 0 }
+                        }
+                    }
+
+                    // Top-Left
+                    CornerPiece {
+                        anchors.top: parent.top
+                        anchors.left: parent.left
+                        rotation: 0
+                    }
+
+                    // Top-Right
+                    CornerPiece {
+                        anchors.top: parent.top
+                        anchors.right: parent.right
+                        rotation: 90
+                    }
+
+                    // Bottom-Right
+                    CornerPiece {
+                        anchors.bottom: parent.bottom
+                        anchors.right: parent.right
+                        rotation: 180
+                    }
+
+                    // Bottom-Left
+                    CornerPiece {
+                        anchors.bottom: parent.bottom
+                        anchors.left: parent.left
+                        rotation: 270
                     }
                 }
             }
