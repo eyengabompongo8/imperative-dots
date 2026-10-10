@@ -1,48 +1,50 @@
 #!/usr/bin/env bash
 
-# 1. Read initial values for time-sensitive metrics (CPU and Network)
-read -r _ u1 n1 s1 i1 io1 ir1 so1 st1 g1 gn1 <<< "$(grep '^cpu ' /proc/stat)"
-read rx1 tx1 <<< "$(awk -v IGNORECASE=1 '/^ *[ew]/{rx+=$2; tx+=$10} END{print rx, tx}' /proc/net/dev)"
+# State file for lightweight, delta-based stats across ticks
+STATE_FILE="${QS_CACHE_SYSDATA:-${XDG_RUNTIME_DIR:-/tmp}}/quickshell_sys_state"
+NOW=$(date +%s%N)
 
-# 2. Small delay to calculate precise usage deltas
-sleep 0.5
+# 1. Read current CPU counters directly using bash read
+read -r _ u n s i io ir so st g gn < /proc/stat
+IDLE=$i
+TOTAL=$((u + n + s + i + io + ir + so + st))
 
-# 3. Read final values
-read -r _ u2 n2 s2 i2 io2 ir2 so2 st2 g2 gn2 <<< "$(grep '^cpu ' /proc/stat)"
-read rx2 tx2 <<< "$(awk -v IGNORECASE=1 '/^ *[ew]/{rx+=$2; tx+=$10} END{print rx, tx}' /proc/net/dev)"
+# 2. Read network dev counters using awk
+read -r rx tx < <(awk -v IGNORECASE=1 '/^ *[ew]/{rx+=$2; tx+=$10} END{print rx, tx}' /proc/net/dev)
 
-# --- CPU Calculation ---
-IDLE1=$i1; TOTAL1=$((u1 + n1 + s1 + i1 + io1 + ir1 + so1 + st1))
-IDLE2=$i2; TOTAL2=$((u2 + n2 + s2 + i2 + io2 + ir2 + so2 + st2))
-DIFF_IDLE=$((IDLE2 - IDLE1))
-DIFF_TOTAL=$((TOTAL2 - TOTAL1))
-if [ "$DIFF_TOTAL" -eq 0 ]; then CPU_USAGE=0; else CPU_USAGE=$(( 100 * (DIFF_TOTAL - DIFF_IDLE) / DIFF_TOTAL )); fi
+# 3. Read physical disk sectors (512 bytes each) using awk
+read -r disk_r disk_w < <(awk '{dev=$3; if (dev ~ /^(sd[a-z]+|nvme[0-9]+n[0-9]+|vd[a-z]+|mmcblk[0-9]+|xvd[a-z]+)$/) {r+=$6; w+=$10}} END {print r*512, w*512}' /proc/diskstats)
 
-# --- Network Calculation ---
-# Bytes across 0.5 seconds multiplied by 2 = Bytes per second
-RX_RATE=$(((rx2 - rx1) * 2))
-TX_RATE=$(((tx2 - tx1) * 2))
-
-# --- RAM Calculation ---
+# 4. Read memory info directly using bash
+TOTAL_MEM=0
+AVAIL_MEM=0
 while IFS=":" read -r key val; do
     case "$key" in
-        MemTotal) TOTAL_MEM=$(echo "$val" | awk '{print $1}') ;;
-        MemAvailable) AVAIL_MEM=$(echo "$val" | awk '{print $1}') ;;
+        MemTotal) TOTAL_MEM=${val//[!0-9]/} ;;
+        MemAvailable) AVAIL_MEM=${val//[!0-9]/} ;;
     esac
+    if [ $TOTAL_MEM -gt 0 ] && [ $AVAIL_MEM -gt 0 ]; then
+        break
+    fi
 done < /proc/meminfo
+
 USED_MEM=$((TOTAL_MEM - AVAIL_MEM))
-RAM_PCT=$(( 100 * USED_MEM / TOTAL_MEM ))
-RAM_GB=$(awk "BEGIN {printf \"%.1f\", $USED_MEM / 1024 / 1024}")
+if [ "$TOTAL_MEM" -gt 0 ]; then
+    RAM_PCT=$(( 100 * USED_MEM / TOTAL_MEM ))
+    RAM_GB=$(( USED_MEM / 1048576 ))
+    RAM_GB_DEC=$(( (USED_MEM * 10 / 1048576) % 10 ))
+    RAM_GB_STR="${RAM_GB}.${RAM_GB_DEC}"
+else
+    RAM_PCT=0
+    RAM_GB_STR="0.0"
+fi
 
-# --- Temperature Calculation ---
+# 5. Temperature calculation
 TEMP_RAW=""
-
-# Attempt 1: Check hwmon for known CPU temperature drivers (Intel, AMD, ARM)
 for hwmon in /sys/class/hwmon/hwmon*; do
     if [ -f "$hwmon/name" ]; then
         hwmon_name=$(cat "$hwmon/name" 2>/dev/null)
         if [[ "$hwmon_name" =~ ^(coretemp|k10temp|zenpower|cpu_thermal|bcm2835_thermal)$ ]]; then
-            # Usually temp1_input is the main package/die temp
             if [ -f "$hwmon/temp1_input" ]; then
                 TEMP_RAW=$(cat "$hwmon/temp1_input" 2>/dev/null)
                 break
@@ -51,7 +53,6 @@ for hwmon in /sys/class/hwmon/hwmon*; do
     fi
 done
 
-# Attempt 2: Fallback to thermal_zone for known CPU identifiers
 if [ -z "$TEMP_RAW" ]; then
     for tz in /sys/class/thermal/thermal_zone*; do
         if [ -f "$tz/type" ]; then
@@ -64,18 +65,54 @@ if [ -z "$TEMP_RAW" ]; then
     done
 fi
 
-# Attempt 3: Ultimate fallback to the first available hardware monitor or thermal zone
 if [ -z "$TEMP_RAW" ]; then
     TEMP_RAW=$(cat /sys/class/hwmon/hwmon0/temp1_input 2>/dev/null || cat /sys/class/thermal/thermal_zone0/temp 2>/dev/null || echo 0)
 fi
 
-# Normalize to degrees Celsius
 if [ "$TEMP_RAW" -gt 1000 ]; then
     TEMP=$((TEMP_RAW / 1000))
 else
     TEMP=$TEMP_RAW
 fi
 
-# --- Output formatted string ---
-# Format: CPU|RAM_PCT|RAM_GB|TEMP|RX_RATE|TX_RATE
-echo "$CPU_USAGE|$RAM_PCT|$RAM_GB|$TEMP|$RX_RATE|$TX_RATE"
+# 6. Compute deltas from previous tick
+if [ -f "$STATE_FILE" ]; then
+    read -r prev_time prev_total prev_idle prev_rx prev_tx prev_dr prev_dw < "$STATE_FILE"
+    
+    time_diff_ms=$(( (NOW - prev_time) / 1000000 ))
+    if [ "$time_diff_ms" -gt 100 ]; then
+        diff_total=$((TOTAL - prev_total))
+        diff_idle=$((IDLE - prev_idle))
+        if [ "$diff_total" -gt 0 ]; then
+            CPU_USAGE=$(( 100 * (diff_total - diff_idle) / diff_total ))
+        else
+            CPU_USAGE=0
+        fi
+        
+        RX_RATE=$(( (rx - prev_rx) * 1000 / time_diff_ms ))
+        TX_RATE=$(( (tx - prev_tx) * 1000 / time_diff_ms ))
+        DISK_RATE=$(( ((disk_r - prev_dr) + (disk_w - prev_dw)) * 1000 / time_diff_ms ))
+    else
+        CPU_USAGE=0
+        RX_RATE=0
+        TX_RATE=0
+        DISK_RATE=0
+    fi
+else
+    CPU_USAGE=0
+    RX_RATE=0
+    TX_RATE=0
+    DISK_RATE=0
+fi
+
+# Save state for next tick
+echo "$NOW $TOTAL $IDLE $rx $tx $disk_r $disk_w" > "$STATE_FILE"
+
+# Sanitize lower bounds
+[ "$CPU_USAGE" -lt 0 ] && CPU_USAGE=0
+[ "$RX_RATE" -lt 0 ] && RX_RATE=0
+[ "$TX_RATE" -lt 0 ] && TX_RATE=0
+[ "$DISK_RATE" -lt 0 ] && DISK_RATE=0
+
+# Format: CPU|RAM_PCT|RAM_GB|TEMP|RX_RATE|TX_RATE|DISK_RATE
+echo "$CPU_USAGE|$RAM_PCT|$RAM_GB_STR|$TEMP|$RX_RATE|$TX_RATE|$DISK_RATE"

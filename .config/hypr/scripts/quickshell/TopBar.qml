@@ -27,7 +27,12 @@ Variants {
  	            barWindow.trackedSpecialWorkspaceId = barWindow.hyprMon.lastIpcObject.specialWorkspace.id || 0;
  	            barWindow.trackedSpecialWorkspaceName = barWindow.hyprMon.lastIpcObject.specialWorkspace.name || "";
  	        }
-	    }	     	
+                SysData.subscribe();
+	    }
+
+            Component.onDestruction: {
+                SysData.unsubscribe();
+            }	     	
         
             IpcHandler {
                 target: "topbar"
@@ -2217,6 +2222,117 @@ Variants {
                         }
                         Behavior on opacity { NumberAnimation { duration: 250; easing.type: Easing.OutCubic } }
 
+
+                        // High Resource Usage Alert Pill (CPU, RAM, Disk I/O)
+                        Rectangle {
+                            id: resourceAlertPill
+                            property bool isHovered: resAlertMouse.containsMouse
+
+                            readonly property bool isCpuHigh: SysData.cpu >= 80
+                            readonly property bool isRamHigh: SysData.ramPercent >= 85
+                            readonly property bool isDiskHigh: SysData.diskIoRate >= (25 * 1024 * 1024)
+                            readonly property bool hasAlert: isCpuHigh || isRamHigh || isDiskHigh
+
+                            property real targetWidth: hasAlert ? resAlertLayoutRow.implicitWidth + barWindow.s(24) : 0
+                            width: targetWidth
+                            height: sysLayout.pillHeight
+                            radius: barWindow.s(10)
+                            clip: true
+
+                            visible: targetWidth > 0 || opacity > 0
+                            opacity: hasAlert ? 1.0 : 0.0
+
+                            color: isHovered ? Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, 0.6) : Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.4)
+                            border.width: 1
+                            border.color: isHovered ? Qt.rgba(mocha.red.r, mocha.red.g, mocha.red.b, 0.85) : Qt.rgba(mocha.red.r, mocha.red.g, mocha.red.b, 0.45)
+
+                            scale: isHovered ? 1.05 : 1.0
+                            Behavior on width { NumberAnimation { duration: 500; easing.type: Easing.OutQuint } }
+                            Behavior on opacity { NumberAnimation { duration: 300; easing.type: Easing.OutCubic } }
+                            Behavior on scale { NumberAnimation { duration: 250; easing.type: Easing.OutExpo } }
+                            Behavior on color { ColorAnimation { duration: 200 } }
+                            Behavior on border.color { ColorAnimation { duration: 200 } }
+
+                            Row {
+                                id: resAlertLayoutRow
+                                anchors.centerIn: parent
+                                spacing: barWindow.s(8)
+
+                                // CPU Indicator
+                                Row {
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    spacing: barWindow.s(6)
+                                    visible: resourceAlertPill.isCpuHigh
+                                    Text {
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        text: ""
+                                        font.family: "SF Pro "
+                                        font.pixelSize: barWindow.s(16)
+                                        color: mocha.red
+                                    }
+                                    Text {
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        text: SysData.cpu + "%"
+                                        font.family: "SF Pro Text"
+                                        font.pixelSize: barWindow.s(13)
+                                        font.weight: Font.Black
+                                        color: mocha.text
+                                    }
+                                }
+
+                                // RAM Indicator
+                                Row {
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    spacing: barWindow.s(6)
+                                    visible: resourceAlertPill.isRamHigh
+                                    Text {
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        text: "󰍛"
+                                        font.family: "SF Pro "
+                                        font.pixelSize: barWindow.s(16)
+                                        color: mocha.peach
+                                    }
+                                    Text {
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        text: SysData.ramPercent + "%"
+                                        font.family: "SF Pro Text"
+                                        font.pixelSize: barWindow.s(13)
+                                        font.weight: Font.Black
+                                        color: mocha.text
+                                    }
+                                }
+
+                                // Disk I/O Indicator
+                                Row {
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    spacing: barWindow.s(6)
+                                    visible: resourceAlertPill.isDiskHigh
+                                    Text {
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        text: "󰋊"
+                                        font.family: "SF Pro "
+                                        font.pixelSize: barWindow.s(16)
+                                        color: mocha.yellow
+                                    }
+                                    Text {
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        text: (SysData.diskIoRate / (1024 * 1024)).toFixed(0) + "M/s"
+                                        font.family: "SF Pro Text"
+                                        font.pixelSize: barWindow.s(13)
+                                        font.weight: Font.Black
+                                        color: mocha.text
+                                    }
+                                }
+                            }
+
+                            MouseArea {
+                                id: resAlertMouse
+                                hoverEnabled: true
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: Quickshell.execDetached(["kitty", "-e", "btop"])
+                            }
+                        }
 
                         Rectangle {
                             id: wifiPill

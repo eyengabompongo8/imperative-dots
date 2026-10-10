@@ -15,6 +15,7 @@ Item {
     property int temp: 0
     property real netRx: 0
     property real netTx: 0
+    property real diskIoRate: 0
     
     // --- Lifecycle Management ---
     property int subscribers: 0
@@ -65,6 +66,9 @@ Item {
                     root.temp = parseInt(p[3]);
                     root.netRx = parseFloat(p[4]);
                     root.netTx = parseFloat(p[5]);
+                    if (p.length >= 7) {
+                        root.diskIoRate = parseFloat(p[6]);
+                    }
                 }
             }
         }
