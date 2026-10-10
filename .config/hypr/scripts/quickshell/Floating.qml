@@ -771,6 +771,7 @@ Variants {
 
                 SideIslandBackground {
                     id: peekBg
+                    overshootExtension: floatingWidget.s(40)
                     pillWidth: parent.width
                     pillHeight: parent.height
                     earRadius: floatingWidget.s(10)
@@ -895,6 +896,7 @@ Variants {
 
                     SideIslandBackground {
                         id: morphingBackground
+                        overshootExtension: floatingWidget.s(40)
                         pillWidth: parent.width
                         pillHeight: parent.height
                         earRadius: floatingWidget.s(14)

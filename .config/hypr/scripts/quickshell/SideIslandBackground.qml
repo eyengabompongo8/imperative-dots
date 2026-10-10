@@ -27,13 +27,15 @@ Item {
     property color strokeColor: Qt.rgba(1, 1, 1, 0.12)
     property real strokeWidth: 1.2
 
+    property real overshootExtension: 0
+
     anchors.top: parent ? parent.top : undefined
     anchors.bottom: parent ? parent.bottom : undefined
     anchors.left: parent ? parent.left : undefined
     anchors.right: parent ? parent.right : undefined
     anchors.topMargin: -root.topOffset
     anchors.bottomMargin: -root.bottomOffset
-    anchors.leftMargin: 0
+    anchors.leftMargin: -root.overshootExtension
     anchors.rightMargin: 0
 
     z: -1
@@ -51,65 +53,77 @@ Item {
             strokeColor: "transparent"
             strokeWidth: 0
 
-            // 1. Start on bezel at top ear tip (0, 0)
+            // 1. Start on bezel extension (0, 0)
             startX: 0
             startY: 0
 
-            // 2. Top-Left concave ear curving into top edge at (effectiveEar, effectiveEar)
+            // 2. Straight to top ear tip on screen bezel (overshootExtension, 0)
+            PathLine {
+                x: root.overshootExtension
+                y: 0
+            }
+
+            // 3. Top-Left concave ear curving into top edge at (overshootExtension + effectiveEar, topOffset)
             PathArc {
-                x: root.effectiveEar
+                x: root.overshootExtension + root.effectiveEar
                 y: root.topOffset
                 radiusX: root.effectiveEar
                 radiusY: root.effectiveEar
                 direction: PathArc.Counterclockwise
             }
 
-            // 3. Top horizontal edge to outer corner
+            // 4. Top horizontal edge to outer corner
             PathLine {
-                x: Math.max(root.effectiveEar, root.pillWidth - root.effectiveCorner)
+                x: root.overshootExtension + Math.max(root.effectiveEar, root.pillWidth - root.effectiveCorner)
                 y: root.topOffset
             }
 
-            // 4. Top-Right convex corner curving into outer vertical wall
+            // 5. Top-Right convex corner curving into outer vertical wall
             PathArc {
-                x: root.pillWidth
+                x: root.overshootExtension + root.pillWidth
                 y: root.topOffset + root.effectiveCorner
                 radiusX: root.effectiveCorner
                 radiusY: root.effectiveCorner
                 direction: PathArc.Clockwise
             }
 
-            // 5. Outer vertical wall
+            // 6. Outer vertical wall
             PathLine {
-                x: root.pillWidth
+                x: root.overshootExtension + root.pillWidth
                 y: Math.max(root.topOffset + root.effectiveCorner, root.topOffset + root.pillHeight - root.effectiveCorner)
             }
 
-            // 6. Bottom-Right convex corner curving into bottom horizontal edge
+            // 7. Bottom-Right convex corner curving into bottom horizontal edge
             PathArc {
-                x: Math.max(root.effectiveEar, root.pillWidth - root.effectiveCorner)
+                x: root.overshootExtension + Math.max(root.effectiveEar, root.pillWidth - root.effectiveCorner)
                 y: root.topOffset + root.pillHeight
                 radiusX: root.effectiveCorner
                 radiusY: root.effectiveCorner
                 direction: PathArc.Clockwise
             }
 
-            // 7. Bottom horizontal edge back towards bezel
+            // 8. Bottom horizontal edge back towards bezel
             PathLine {
-                x: root.effectiveEar
+                x: root.overshootExtension + root.effectiveEar
                 y: root.topOffset + root.pillHeight
             }
 
-            // 8. Bottom-Left concave ear curving down to bezel
+            // 9. Bottom-Left concave ear curving down to bezel
             PathArc {
-                x: 0
+                x: root.overshootExtension
                 y: root.topOffset + root.pillHeight + root.effectiveEar
                 radiusX: root.effectiveEar
                 radiusY: root.effectiveEar
                 direction: PathArc.Counterclockwise
             }
 
-            // 9. Close along monitor bezel back to (0, 0)
+            // 10. Straight into bezel extension
+            PathLine {
+                x: 0
+                y: root.topOffset + root.pillHeight + root.effectiveEar
+            }
+
+            // 11. Close along monitor bezel extension back to (0, 0)
             PathLine {
                 x: 0
                 y: 0
@@ -131,13 +145,19 @@ Item {
             strokeWidth: root.strokeWidth
             capStyle: ShapePath.RoundCap
 
-            // Start on bezel at top ear tip (0, 0)
+            // Start on bezel extension (0, 0)
             startX: 0
             startY: 0
 
+            // Straight to top ear tip on screen bezel (overshootExtension, 0)
+            PathLine {
+                x: root.overshootExtension
+                y: 0
+            }
+
             // Top-Left concave ear
             PathArc {
-                x: root.effectiveEar
+                x: root.overshootExtension + root.effectiveEar
                 y: root.topOffset
                 radiusX: root.effectiveEar
                 radiusY: root.effectiveEar
@@ -146,13 +166,13 @@ Item {
 
             // Top horizontal edge
             PathLine {
-                x: Math.max(root.effectiveEar, root.pillWidth - root.effectiveCorner)
+                x: root.overshootExtension + Math.max(root.effectiveEar, root.pillWidth - root.effectiveCorner)
                 y: root.topOffset
             }
 
             // Top-Right convex corner
             PathArc {
-                x: root.pillWidth
+                x: root.overshootExtension + root.pillWidth
                 y: root.topOffset + root.effectiveCorner
                 radiusX: root.effectiveCorner
                 radiusY: root.effectiveCorner
@@ -161,13 +181,13 @@ Item {
 
             // Outer vertical wall
             PathLine {
-                x: root.pillWidth
+                x: root.overshootExtension + root.pillWidth
                 y: Math.max(root.topOffset + root.effectiveCorner, root.topOffset + root.pillHeight - root.effectiveCorner)
             }
 
             // Bottom-Right convex corner
             PathArc {
-                x: Math.max(root.effectiveEar, root.pillWidth - root.effectiveCorner)
+                x: root.overshootExtension + Math.max(root.effectiveEar, root.pillWidth - root.effectiveCorner)
                 y: root.topOffset + root.pillHeight
                 radiusX: root.effectiveCorner
                 radiusY: root.effectiveCorner
@@ -176,17 +196,23 @@ Item {
 
             // Bottom horizontal edge
             PathLine {
-                x: root.effectiveEar
+                x: root.overshootExtension + root.effectiveEar
                 y: root.topOffset + root.pillHeight
             }
 
             // Bottom-Left concave ear curving down to bezel
             PathArc {
-                x: 0
+                x: root.overshootExtension
                 y: root.topOffset + root.pillHeight + root.effectiveEar
                 radiusX: root.effectiveEar
                 radiusY: root.effectiveEar
                 direction: PathArc.Counterclockwise
+            }
+
+            // Straight into bezel extension
+            PathLine {
+                x: 0
+                y: root.topOffset + root.pillHeight + root.effectiveEar
             }
         }
     }

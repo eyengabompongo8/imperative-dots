@@ -338,6 +338,7 @@ Variants {
 
                 // Inverted Island Background (matching TopBar ears)
                 BottomIslandBackground {
+                    overshootExtension: osdWindow.s(40)
                     pillWidth: osdBox.width
                     pillHeight: osdBox.height
                     earRadius: osdWindow.s(14)

@@ -1281,6 +1281,7 @@ Variants {
                     }
 
                     IslandBackground {
+                        overshootExtension: barWindow.s(40)
                         hasTopLeftEar: false
                         hasTopRightEar: true
                         hasBottomLeftEar: true
@@ -1669,6 +1670,7 @@ Variants {
                     }
 
                     IslandBackground {
+                        overshootExtension: barWindow.s(40)
                         hasTopLeftEar: true
                         hasTopRightEar: true
                         hasBottomLeftEar: false
@@ -2144,6 +2146,7 @@ Variants {
 
                     // Single Continuous Living Dynamic Island Background
                     LivingRightIslandBackground {
+                        overshootExtension: barWindow.s(40)
                         pillWidth: barWindow.isRightPillHidden
                             ? (barWindow.animPanelHeight > 2 ? (barWindow.animPanelWidth + 2 * rightBox.padSide) : (barWindow.animToastWidth + 2 * rightBox.padSide))
                             : rightBox.basePillWidth

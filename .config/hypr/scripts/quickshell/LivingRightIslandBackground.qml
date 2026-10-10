@@ -19,6 +19,10 @@ Item {
     property color strokeColor: Qt.rgba(1, 1, 1, 0.12)
     property real strokeWidth: 1.2
 
+    property real overshootExtension: 0
+    readonly property real topExtension: root.overshootExtension
+    readonly property real rightBezelExtension: root.overshootExtension
+
     // Geometry anchors
     readonly property real currentBoxW: parent ? parent.width : pillWidth
     readonly property real currentBoxH: parent ? parent.height : topBarHeight
@@ -63,7 +67,12 @@ Item {
             strokeWidth: 0
 
             startX: root.xWidgetLeft
-            startY: 0
+            startY: -root.topExtension
+
+            PathLine {
+                x: root.xWidgetLeft
+                y: 0
+            }
 
             // 1. Top-Left concave ear
             PathArc {
@@ -104,16 +113,20 @@ Item {
                 direction: PathArc.Clockwise
             }
 
-            // 6. Right vertical bezel edge up to top bezel
+            // 6. Right vertical bezel edge into right extension
             PathLine {
-                x: root.xRight + root.earRadius
-                y: 0
+                x: root.xRight + root.earRadius + root.rightBezelExtension
+                y: root.yWidgetBottom + root.earRadius
+            }
+            PathLine {
+                x: root.xRight + root.earRadius + root.rightBezelExtension
+                y: -root.topExtension
             }
 
-            // 7. Close along top screen bezel
+            // 7. Close along top screen bezel extension
             PathLine {
                 x: root.xWidgetLeft
-                y: 0
+                y: -root.topExtension
             }
         }
 
@@ -126,7 +139,12 @@ Item {
             strokeWidth: 0
 
             startX: root.xPillLeft
-            startY: 0
+            startY: -root.topExtension
+
+            PathLine {
+                x: root.xPillLeft
+                y: 0
+            }
 
             // 1. Top-Left concave ear
             PathArc {
@@ -167,16 +185,20 @@ Item {
                 direction: PathArc.Clockwise
             }
 
-            // 6. Right vertical bezel edge up to top bezel
+            // 6. Right vertical bezel edge into right extension
             PathLine {
-                x: root.xRight + root.earRadius
-                y: 0
+                x: root.xRight + root.earRadius + root.rightBezelExtension
+                y: root.topBarHeight + root.earRadius
+            }
+            PathLine {
+                x: root.xRight + root.earRadius + root.rightBezelExtension
+                y: -root.topExtension
             }
 
-            // 7. Close along top screen bezel
+            // 7. Close along top screen bezel extension
             PathLine {
                 x: root.xPillLeft
-                y: 0
+                y: -root.topExtension
             }
         }
 
@@ -189,7 +211,12 @@ Item {
             strokeWidth: 0
 
             startX: root.xPillLeft
-            startY: 0
+            startY: -root.topExtension
+
+            PathLine {
+                x: root.xPillLeft
+                y: 0
+            }
 
             // 1. Pill Top-Left concave ear
             PathArc {
@@ -260,16 +287,20 @@ Item {
                 direction: PathArc.Clockwise
             }
 
-            // 10. Right vertical bezel edge up to top
+            // 10. Right vertical bezel edge into right extension
             PathLine {
-                x: root.xRight + root.earRadius
-                y: 0
+                x: root.xRight + root.earRadius + root.rightBezelExtension
+                y: root.yWidgetBottom + root.earRadius
+            }
+            PathLine {
+                x: root.xRight + root.earRadius + root.rightBezelExtension
+                y: -root.topExtension
             }
 
-            // 11. Close along top screen bezel
+            // 11. Close along top screen bezel extension
             PathLine {
                 x: root.xPillLeft
-                y: 0
+                y: -root.topExtension
             }
         }
 
@@ -282,7 +313,12 @@ Item {
             strokeWidth: 0
 
             startX: root.xPillLeft
-            startY: 0
+            startY: -root.topExtension
+
+            PathLine {
+                x: root.xPillLeft
+                y: 0
+            }
 
             // 1. Pill top-left concave ear
             PathArc {
@@ -353,16 +389,20 @@ Item {
                 direction: PathArc.Clockwise
             }
 
-            // 10. Right vertical bezel edge
+            // 10. Right vertical bezel edge into right extension
             PathLine {
-                x: root.xRight + root.earRadius
-                y: 0
+                x: root.xRight + root.earRadius + root.rightBezelExtension
+                y: root.yWidgetBottom + root.earRadius
+            }
+            PathLine {
+                x: root.xRight + root.earRadius + root.rightBezelExtension
+                y: -root.topExtension
             }
 
-            // 11. Close along top screen bezel
+            // 11. Close along top screen bezel extension
             PathLine {
                 x: root.xPillLeft
-                y: 0
+                y: -root.topExtension
             }
         }
 
@@ -375,7 +415,12 @@ Item {
             strokeWidth: 0
 
             startX: root.xPillLeft
-            startY: 0
+            startY: -root.topExtension
+
+            PathLine {
+                x: root.xPillLeft
+                y: 0
+            }
 
             // 1. Pill top-left concave ear
             PathArc {
@@ -476,16 +521,20 @@ Item {
                 direction: PathArc.Clockwise
             }
 
-            // 14. Right vertical bezel edge
+            // 14. Right vertical bezel edge into right extension
             PathLine {
-                x: root.xRight + root.earRadius
-                y: 0
+                x: root.xRight + root.earRadius + root.rightBezelExtension
+                y: root.yToastBottom + root.earRadius
+            }
+            PathLine {
+                x: root.xRight + root.earRadius + root.rightBezelExtension
+                y: -root.topExtension
             }
 
-            // 15. Close along top screen bezel
+            // 15. Close along top screen bezel extension
             PathLine {
                 x: root.xPillLeft
-                y: 0
+                y: -root.topExtension
             }
         }
 
@@ -498,7 +547,12 @@ Item {
             strokeWidth: 0
 
             startX: root.xPillLeft
-            startY: 0
+            startY: -root.topExtension
+
+            PathLine {
+                x: root.xPillLeft
+                y: 0
+            }
 
             // 1. Pill Top-Left concave ear
             PathArc {
@@ -599,16 +653,20 @@ Item {
                 direction: PathArc.Clockwise
             }
 
-            // 14. Right vertical bezel edge
+            // 14. Right vertical bezel edge into right extension
             PathLine {
-                x: root.xRight + root.earRadius
-                y: 0
+                x: root.xRight + root.earRadius + root.rightBezelExtension
+                y: root.yToastBottom + root.earRadius
+            }
+            PathLine {
+                x: root.xRight + root.earRadius + root.rightBezelExtension
+                y: -root.topExtension
             }
 
-            // 15. Close along top screen bezel
+            // 15. Close along top screen bezel extension
             PathLine {
                 x: root.xPillLeft
-                y: 0
+                y: -root.topExtension
             }
         }
     }
@@ -629,7 +687,12 @@ Item {
             capStyle: ShapePath.RoundCap
 
             startX: root.xWidgetLeft
-            startY: 0
+            startY: -root.topExtension
+
+            PathLine {
+                x: root.xWidgetLeft
+                y: 0
+            }
 
             // 1. Top-Left concave ear
             PathArc {
@@ -669,6 +732,12 @@ Item {
                 radiusY: root.earRadius
                 direction: PathArc.Clockwise
             }
+
+            // Straight into right bezel extension
+            PathLine {
+                x: root.xRight + root.earRadius + root.rightBezelExtension
+                y: root.yWidgetBottom + root.earRadius
+            }
         }
 
         // -------------------------------------------------------------
@@ -681,7 +750,12 @@ Item {
             capStyle: ShapePath.RoundCap
 
             startX: root.xPillLeft
-            startY: 0
+            startY: -root.topExtension
+
+            PathLine {
+                x: root.xPillLeft
+                y: 0
+            }
 
             // Top-Left concave ear
             PathArc {
@@ -721,6 +795,12 @@ Item {
                 radiusY: root.earRadius
                 direction: PathArc.Clockwise
             }
+
+            // Straight into right bezel extension
+            PathLine {
+                x: root.xRight + root.earRadius + root.rightBezelExtension
+                y: root.topBarHeight + root.earRadius
+            }
         }
 
         // -------------------------------------------------------------
@@ -733,7 +813,12 @@ Item {
             capStyle: ShapePath.RoundCap
 
             startX: root.xPillLeft
-            startY: 0
+            startY: -root.topExtension
+
+            PathLine {
+                x: root.xPillLeft
+                y: 0
+            }
 
             // 1. Pill Top-Left concave ear
             PathArc {
@@ -803,6 +888,12 @@ Item {
                 radiusY: root.earRadius
                 direction: PathArc.Clockwise
             }
+
+            // Straight into right bezel extension
+            PathLine {
+                x: root.xRight + root.earRadius + root.rightBezelExtension
+                y: root.yWidgetBottom + root.earRadius
+            }
         }
 
         // -------------------------------------------------------------
@@ -815,7 +906,12 @@ Item {
             capStyle: ShapePath.RoundCap
 
             startX: root.xPillLeft
-            startY: 0
+            startY: -root.topExtension
+
+            PathLine {
+                x: root.xPillLeft
+                y: 0
+            }
 
             // 1. Pill top-left concave ear
             PathArc {
@@ -885,6 +981,12 @@ Item {
                 radiusY: root.earRadius
                 direction: PathArc.Clockwise
             }
+
+            // Straight into right bezel extension
+            PathLine {
+                x: root.xRight + root.earRadius + root.rightBezelExtension
+                y: root.yWidgetBottom + root.earRadius
+            }
         }
 
         // -------------------------------------------------------------
@@ -897,7 +999,12 @@ Item {
             capStyle: ShapePath.RoundCap
 
             startX: root.xPillLeft
-            startY: 0
+            startY: -root.topExtension
+
+            PathLine {
+                x: root.xPillLeft
+                y: 0
+            }
 
             // 1. Pill top-left concave ear
             PathArc {
@@ -997,6 +1104,12 @@ Item {
                 radiusY: root.earRadius
                 direction: PathArc.Clockwise
             }
+
+            // Straight into right bezel extension
+            PathLine {
+                x: root.xRight + root.earRadius + root.rightBezelExtension
+                y: root.yToastBottom + root.earRadius
+            }
         }
 
         // -------------------------------------------------------------
@@ -1009,7 +1122,12 @@ Item {
             capStyle: ShapePath.RoundCap
 
             startX: root.xPillLeft
-            startY: 0
+            startY: -root.topExtension
+
+            PathLine {
+                x: root.xPillLeft
+                y: 0
+            }
 
             // 1. Pill Top-Left concave ear
             PathArc {
@@ -1108,6 +1226,12 @@ Item {
                 radiusX: root.earRadius
                 radiusY: root.earRadius
                 direction: PathArc.Clockwise
+            }
+
+            // Straight into right bezel extension
+            PathLine {
+                x: root.xRight + root.earRadius + root.rightBezelExtension
+                y: root.yToastBottom + root.earRadius
             }
         }
     }
