@@ -847,8 +847,6 @@ Variants {
             property string batIcon: "󰁹"
             property string batStatus: "Unknown"
             
-            property string kbLayout: "us"
-            
             ListModel { 
                 id: workspacesModel 
                 property int activeIndex: 0
@@ -1032,20 +1030,6 @@ Variants {
                 }
             }
 
-            Process {
-                id: kbPoller; running: true
-                command: ["bash", "-c", "~/.config/hypr/scripts/quickshell/watchers/kb_fetch.sh"]
-                stdout: StdioCollector {
-                    onStreamFinished: {
-                        let txt = this.text.trim();
-                        if (txt !== "" && barWindow.kbLayout !== txt) barWindow.kbLayout = txt;
-                        kbWaiter.running = false;
-                        kbWaiter.running = true;
-                        barWindow.fastPollerLoaded = true; 
-                    }
-                }
-            }
-            Process { id: kbWaiter; command: ["bash", "-c", "~/.config/hypr/scripts/quickshell/watchers/kb_wait.sh"]; onExited: { kbPoller.running = false; kbPoller.running = true; } }
 
             Process {
                 id: audioPoller; running: true
@@ -2233,38 +2217,6 @@ Variants {
                         }
                         Behavior on opacity { NumberAnimation { duration: 250; easing.type: Easing.OutCubic } }
 
-                        Rectangle {
-                            id: kbPill
-                            property bool isHovered: kbMouse.containsMouse
-                            color: isHovered ? Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, 0.6) : Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.4)
-                            radius: barWindow.s(10); height: sysLayout.pillHeight;
-                            clip: true
-                            
-                            property real targetWidth: kbLayoutRow.implicitWidth + barWindow.s(24)
-                            width: targetWidth
-                            Behavior on width { NumberAnimation { duration: 500; easing.type: Easing.OutQuint } }
-                            
-                            scale: isHovered ? 1.05 : 1.0
-                            Behavior on scale { NumberAnimation { duration: 250; easing.type: Easing.OutExpo } }
-                            Behavior on color { ColorAnimation { duration: 200 } }
-
-                            property bool initAnimTrigger: false
-                            Timer { running: rightBox.showLayout && !kbPill.initAnimTrigger; interval: 0; onTriggered: kbPill.initAnimTrigger = true }
-                            opacity: initAnimTrigger ? 1 : 0
-                            transform: Translate { y: kbPill.initAnimTrigger ? 0 : barWindow.s(15); Behavior on y { NumberAnimation { duration: 500; easing.type: Easing.OutBack } } }
-                            Behavior on opacity { NumberAnimation { duration: 400; easing.type: Easing.OutCubic } }
-
-                            Row { 
-                                id: kbLayoutRow
-                                anchors.verticalCenter: parent.verticalCenter
-                                anchors.left: parent.left
-                                anchors.leftMargin: barWindow.s(12)
-                                spacing: barWindow.s(8)
-                                Text { anchors.verticalCenter: parent.verticalCenter; text: "󰌌"; font.family: "SF Pro "; font.pixelSize: barWindow.s(16); color: mocha.text }
-                                Text { anchors.verticalCenter: parent.verticalCenter; text: barWindow.kbLayout; font.family: "SF Pro Text"; font.pixelSize: barWindow.s(13); font.weight: Font.Black; color: mocha.text }
-                            }
-                            MouseArea { id: kbMouse; anchors.fill: parent; hoverEnabled: true; onClicked: Quickshell.execDetached(["hyprctl", "switchxkblayout", "main", "next"]) }
-                        }
 
                         Rectangle {
                             id: wifiPill
