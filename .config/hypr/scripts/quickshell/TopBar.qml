@@ -1307,12 +1307,16 @@ Variants {
                     
                     transform: Translate {
                         x: barWindow.isLeftHidden ? -(leftBox.width + barWindow.s(20)) : 0
-                        y: barWindow.isLeftHidden ? -(barWindow.barHeight + barWindow.s(20)) : 0
+                        y: barWindow.isLeftHidden ? -(barWindow.barHeight + barWindow.s(20)) : (leftBox.showLayout ? 0 : barWindow.s(-30))
                         Behavior on x {
                             NumberAnimation { duration: 320; easing.type: Easing.OutExpo }
                         }
                         Behavior on y {
-                            NumberAnimation { duration: 320; easing.type: Easing.OutExpo }
+                            SpringAnimation {
+                                spring: 3.8
+                                damping: 0.32
+                                epsilon: 0.25
+                            }
                         }
                     }
                     
@@ -2031,8 +2035,7 @@ Variants {
                     id: rightBox
                     property bool showLayout: false
                     anchors.right: parent.right
-                    anchors.rightMargin: showLayout ? 0 : barWindow.s(-400)
-                    Behavior on anchors.rightMargin { NumberAnimation { duration: 600; easing.type: Easing.OutExpo } }
+                    anchors.rightMargin: 0
                     y: 0
 
                     readonly property real padSide: barWindow.padSide
@@ -2172,13 +2175,17 @@ Variants {
                     
                     opacity: barWindow.isRightHidden ? 0.0 : (showLayout ? 1 : 0)
                     transform: Translate {
-                        x: barWindow.isRightHidden ? (rightBox.width + barWindow.s(20)) : 0
-                        y: barWindow.isRightHidden ? -(barWindow.barHeight + barWindow.s(20)) : 0
+                        x: barWindow.isRightHidden ? (rightBox.width + barWindow.s(20)) : (rightBox.showLayout ? 0 : barWindow.s(400))
+                        y: barWindow.isRightHidden ? -(barWindow.barHeight + barWindow.s(20)) : (rightBox.showLayout ? 0 : barWindow.s(-30))
                         Behavior on x {
-                            NumberAnimation { duration: 320; easing.type: Easing.OutExpo }
+                            NumberAnimation { duration: 600; easing.type: Easing.OutExpo }
                         }
                         Behavior on y {
-                            NumberAnimation { duration: 320; easing.type: Easing.OutExpo }
+                            SpringAnimation {
+                                spring: 3.8
+                                damping: 0.32
+                                epsilon: 0.25
+                            }
                         }
                     }
                     
