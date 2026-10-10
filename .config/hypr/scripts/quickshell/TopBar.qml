@@ -2291,7 +2291,7 @@ Variants {
                                     visible: resourceAlertPill.isRamHigh
                                     Text {
                                         anchors.verticalCenter: parent.verticalCenter
-                                        text: "󰍛"
+                                        text: ""
                                         font.family: "SF Pro "
                                         font.pixelSize: barWindow.s(16)
                                         color: mocha.peach
