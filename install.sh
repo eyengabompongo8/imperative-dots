@@ -1220,39 +1220,42 @@ else
 fi
 
 # ==============================================================================
-# --- 3.5 GNOME macOS Tahoe Theme Installation ---
+# --- 3.5 WhiteSur macOS Theme & Icon Installation ---
 # ==============================================================================
-echo -e "\n${C_CYAN}[ INFO ]${RESET} Fetching and installing GNOME macOS Tahoe Theme..."
-TAHOE_CLONE_DIR="/tmp/GNOME-macOS-Tahoe"
+echo -e "\n${C_CYAN}[ INFO ]${RESET} Fetching and installing WhiteSur macOS Theme & Icons..."
+WHITESUR_THEME_DIR="/tmp/WhiteSur-gtk-theme"
+WHITESUR_ICON_DIR="/tmp/WhiteSur-icon-theme"
 
-if [ -d "$TAHOE_CLONE_DIR" ]; then
-  rm -rf "$TAHOE_CLONE_DIR"
+rm -rf "$WHITESUR_THEME_DIR" "$WHITESUR_ICON_DIR"
+
+if git clone --depth=1 https://github.com/vinceliuice/WhiteSur-gtk-theme "$WHITESUR_THEME_DIR" >/dev/null 2>&1; then
+  printf "  -> WhiteSur GTK theme repository downloaded successfully %-2s ${C_GREEN}[ OK ]${RESET}\n" ""
+
+  (
+    cd "$WHITESUR_THEME_DIR" || exit 1
+    chmod +x install.sh
+    echo -e "  -> Executing WhiteSur GTK theme installation..."
+    ./install.sh -c dark -c light -t default -N mojave -l --darker
+  )
+  rm -rf "$WHITESUR_THEME_DIR"
+  printf "  -> WhiteSur GTK theme applied %-15s ${C_GREEN}[ OK ]${RESET}\n" ""
+else
+  echo -e "  -> ${C_RED}[ FAILED ] Could not reach WhiteSur-gtk-theme upstream source.${RESET}"
 fi
 
-if git clone --depth=1 https://github.com/kayozxo/GNOME-macOS-Tahoe "$TAHOE_CLONE_DIR" >/dev/null 2>&1; then
-  printf "  -> Theme repository downloaded successfully %-2s ${C_GREEN}[ OK ]${RESET}\n" ""
+if git clone --depth=1 https://github.com/vinceliuice/WhiteSur-icon-theme "$WHITESUR_ICON_DIR" >/dev/null 2>&1; then
+  printf "  -> WhiteSur icon theme repository downloaded successfully %-2s ${C_GREEN}[ OK ]${RESET}\n" ""
 
-  # Run the execution inside a subshell so 'cd' actions don't derail script execution scope
   (
-    cd "$TAHOE_CLONE_DIR" || exit 1
+    cd "$WHITESUR_ICON_DIR" || exit 1
     chmod +x install.sh
-    echo -e "  -> Executing theme configuration setup..."
-    ./install.sh -la --install-both
-
-    # Fix upstream Tahoe-Light popover styling bug
-    for f in "$HOME/.themes/Tahoe-Light/gtk-4.0/gtk.css" "$HOME/.themes/Tahoe-Light/gtk-4.0/gtk-dark.css"; do
-      if [ -f "$f" ]; then
-        sed -i '/popover > contents {/,/border-radius: 16px;/c\popover > contents {\n  background-color: rgba(255, 255, 255, 0.92);\n  background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.43));\n  box-shadow: inset 2px 2px 4px -2.8px rgb(255, 255, 255), inset -2px -2px 4px -2.8px rgb(255, 255, 255), 0 2px 12px rgba(0, 0, 0, 0.12);\n  border-radius: 16px;\n}' "$f"
-        sed -i '/popover > arrow {/,/}/c\popover > arrow {\n  background-color: rgba(255, 255, 255, 0.92);\n  background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.43));\n}' "$f"
-      fi
-    done
+    echo -e "  -> Executing WhiteSur icon theme installation..."
+    ./install.sh -t default -a
   )
-
-  # Clean up /tmp to prevent stale directory cluttering subsequent script runs
-  rm -rf "$TAHOE_CLONE_DIR"
-  printf "  -> GNOME macOS Tahoe Theme applied %-15s ${C_GREEN}[ OK ]${RESET}\n" ""
+  rm -rf "$WHITESUR_ICON_DIR"
+  printf "  -> WhiteSur icon theme applied %-15s ${C_GREEN}[ OK ]${RESET}\n" ""
 else
-  echo -e "  -> ${C_RED}[ FAILED ] Could not reach GNOME-macOS-Tahoe upstream source.${RESET}"
+  echo -e "  -> ${C_RED}[ FAILED ] Could not reach WhiteSur-icon-theme upstream source.${RESET}"
 fi
 
 # --- 4. Copying Dotfiles & Backups ---
@@ -1570,22 +1573,27 @@ fi
 echo -e "\n${C_CYAN}[ INFO ]${RESET} Configuring GTK and Qt Theming Engines..."
 
 gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark' 2>/dev/null || true
-gsettings set org.gnome.desktop.interface gtk-theme 'adw-gtk3-dark' 2>/dev/null || true
+gsettings set org.gnome.desktop.interface gtk-theme 'WhiteSur-Dark' 2>/dev/null || true
+gsettings set org.gnome.desktop.interface icon-theme 'WhiteSur-dark' 2>/dev/null || true
+gsettings set org.gnome.desktop.wm.preferences button-layout 'close,minimize,maximize:' 2>/dev/null || true
+gsettings set org.gnome.nautilus.preferences default-folder-viewer 'list-view' 2>/dev/null || true
 
 mkdir -p "$HOME/.config/gtk-3.0" "$HOME/.config/gtk-4.0"
 
 echo '@import url("file://'"$HOME"'/.cache/matugen/colors-gtk.css");' >"$HOME/.config/gtk-3.0/gtk.css"
-echo '@import url("file://'"$HOME"'/.cache/matugen/colors-gtk.css");' >"$HOME/.config/gtk-4.0/gtk.css"
 
 cat <<EOF >"$HOME/.config/gtk-3.0/settings.ini"
 [Settings]
 gtk-application-prefer-dark-theme=1
-gtk-theme-name=adw-gtk3-dark
+gtk-theme-name=WhiteSur-Dark
+gtk-icon-theme-name=WhiteSur-dark
 EOF
 
 cat <<EOF >"$HOME/.config/gtk-4.0/settings.ini"
 [Settings]
 gtk-application-prefer-dark-theme=1
+gtk-theme-name=WhiteSur-Dark
+gtk-icon-theme-name=WhiteSur-dark
 EOF
 
 mkdir -p "$HOME/.config/qt5ct/colors" "$HOME/.config/qt5ct/qss"
@@ -1664,6 +1672,13 @@ if [ -f "$HOME/.config/systemd/user/easyeffects.service" ]; then
 fi
 systemctl --user enable easyeffects.service 2>/dev/null || true
 printf "  -> EasyEffects daemon service enabled %-12s ${C_GREEN}[ OK ]${RESET}\n" ""
+
+# --- Enable Darkman user service & initialize theme ---
+systemctl --user enable --now darkman.service 2>/dev/null || true
+if [ -x "$HOME/.local/share/darkman/set_system_theme.sh" ]; then
+  "$HOME/.local/share/darkman/set_system_theme.sh" dark 2>/dev/null || true
+fi
+printf "  -> Darkman service enabled and theme initialized %-5s ${C_GREEN}[ OK ]${RESET}\n" ""
 
 if [ "$INSTALL_ZSH" = true ] && command -v zsh &>/dev/null; then
   echo -e "\n${C_CYAN}[ INFO ]${RESET} Configuring Oh My Zsh & Powerlevel10k..."
