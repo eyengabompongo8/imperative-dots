@@ -32,6 +32,15 @@ PanelWindow {
         }
     }
 
+    function switcherRelease(): void {
+        if (masterWindow.currentActive !== "windowswitcher") return;
+        let currentItem = widgetStack.currentItem;
+        if (currentItem && typeof currentItem.activateSelected === "function") {
+            currentItem.activateSelected();
+        }
+        switchWidget("hidden", "");
+    }
+
     IpcHandler {
         target: "main"
 
@@ -45,6 +54,18 @@ PanelWindow {
                 let currentItem = widgetStack.currentItem;
                 if (currentItem && typeof currentItem.openWithDirection === "function") {
                     currentItem.openWithDirection(dir);
+                    if (currentItem.targetMasterWidth !== undefined) {
+                        let dynW = currentItem.targetMasterWidth;
+                        masterWindow.animW = dynW;
+                        masterWindow.targetW = dynW;
+                        masterWindow.animX = Math.floor((masterWindow.width / 2) - (dynW / 2));
+                    }
+                    if (currentItem.targetMasterHeight !== undefined) {
+                        let dynH = currentItem.targetMasterHeight;
+                        masterWindow.animH = dynH;
+                        masterWindow.targetH = dynH;
+                        masterWindow.animY = Math.floor((masterWindow.height / 2) - (dynH / 2));
+                    }
                 }
             } else {
                 let currentItem = widgetStack.currentItem;
@@ -56,12 +77,7 @@ PanelWindow {
         }
 
         function switcherRelease(): void {
-            if (masterWindow.currentActive !== "windowswitcher") return;
-            let currentItem = widgetStack.currentItem;
-            if (currentItem && typeof currentItem.activateSelected === "function") {
-                currentItem.activateSelected();
-            }
-            switchWidget("hidden", "");
+            masterWindow.switcherRelease();
         }
 
         function handleCommand(cmd: string, targetWidget: string, arg: string): void {

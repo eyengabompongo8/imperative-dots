@@ -30,7 +30,11 @@ fi
 # -----------------------------------------------------------------------------
 # FAST PATH: toggle / open / close / action_latest
 # Bypasses heavy setup so keybind activation is near-instant (<40ms)
-# -----------------------------------------------------------------------------
+if [[ "$ACTION" == "switcher" ]]; then
+    DIR="${TARGET:-next}"
+    timeout 0.3s quickshell -p "$SHELL_QML_PATH" ipc call main switcherCycle "$DIR" >/dev/null 2>&1
+    exit 0
+fi
 
 if [[ "$ACTION" == "action_latest" || "$ACTION" == "activate_latest" ]]; then
     timeout 0.3s quickshell -p "$SHELL_QML_PATH" ipc call topbar handleActionLatest >/dev/null 2>&1

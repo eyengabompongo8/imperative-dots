@@ -224,14 +224,14 @@
       "mods": "ALT",
       "key": "Tab",
       "dispatcher": "exec",
-      "command": "snappy-switcher next --workspace --mod alt"
+      "command": "~/.config/hypr/scripts/qs_manager.sh switcher next"
     },
     {
       "type": "bind",
       "mods": "ALT SHIFT",
       "key": "Tab",
       "dispatcher": "exec",
-      "command": "snappy-switcher prev --workspace --mod alt"
+      "command": "~/.config/hypr/scripts/qs_manager.sh switcher prev"
     },
     {
       "type": "bind",
@@ -819,9 +819,6 @@
     },
     {
       "command": "~/.config/hypr/scripts/startup_terminals.sh"
-    },
-    {
-      "command": "snappy-switcher --daemon"
     }
   ]
 }
