@@ -2161,13 +2161,13 @@ Variants {
                             ? (barWindow.animToastHeight + rightBox.itemGap + rightBox.padBottom)
                             : 0
                         isOpen: barWindow.rightPanelOpen || barWindow.animPanelHeight > 2 || barWindow.animToastHeight > 2
-                        opacity: barWindow.isRightHidden ? 0.0 : 1.0
+                        opacity: barWindow.isRightHidden ? 0.0 : (rightBox.showLayout ? 1.0 : 0.0)
                         earRadius: barWindow.s(14)
                         bottomRadius: barWindow.s(14)
                         fillColor: Qt.rgba(mocha.base.r, mocha.base.g, mocha.base.b, 0.75)
                         strokeColor: Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.12)
                         strokeWidth: 1.2
-                        Behavior on opacity { NumberAnimation { duration: 200 } }
+                        Behavior on opacity { NumberAnimation { duration: 300; easing.type: Easing.OutCubic } }
                         Behavior on fillColor { ColorAnimation { duration: 200 } }
                         Behavior on strokeColor { ColorAnimation { duration: 200 } }
                     }
@@ -2175,7 +2175,7 @@ Variants {
                     property bool showLayout: false
                     opacity: barWindow.isRightHidden ? 0.0 : (showLayout ? 1 : 0)
                     transform: Translate {
-                        x: barWindow.isRightHidden ? (rightBox.width + barWindow.s(20)) : (rightBox.showLayout ? 0 : barWindow.s(30))
+                        x: barWindow.isRightHidden ? (rightBox.width + barWindow.s(20)) : 0
                         y: barWindow.isRightHidden ? -(barWindow.barHeight + barWindow.s(20)) : 0
                         Behavior on x {
                             enabled: barWindow.isRightHidden || !rightBox.showLayout
@@ -2195,12 +2195,12 @@ Variants {
                     }
                     
                     Timer {
-                        running: barWindow.isStartupReady && barWindow.isDataReady
-                        interval: 250
+                        running: barWindow.isStartupReady
+                        interval: 10
                         onTriggered: rightBox.showLayout = true
                     }
 
-                    Behavior on opacity { NumberAnimation { duration: 600; easing.type: Easing.OutCubic } }
+                    Behavior on opacity { NumberAnimation { duration: 300; easing.type: Easing.OutCubic } }
 
                     Row {
                         id: sysLayout
@@ -2214,13 +2214,6 @@ Variants {
 
                         opacity: barWindow.isRightPillHidden ? 0.0 : (rightBox.showLayout ? 1 : 0)
                         visible: opacity > 0.01
-                        transform: Translate {
-                            x: barWindow.isRightPillHidden ? (sysLayout.implicitWidth + barWindow.s(20)) : 0
-                            y: barWindow.isRightPillHidden ? -(barWindow.barHeight + barWindow.s(20)) : 0
-                            Behavior on x { NumberAnimation { duration: 300; easing.type: barWindow.isRightPillHidden ? Easing.InCubic : Easing.OutCubic } }
-                            Behavior on y { NumberAnimation { duration: 300; easing.type: barWindow.isRightPillHidden ? Easing.InCubic : Easing.OutCubic } }
-                        }
-                        Behavior on opacity { NumberAnimation { duration: 250; easing.type: Easing.OutCubic } }
 
 
                         // High Resource Usage Alert Pill (CPU, RAM, Disk I/O)
@@ -2355,17 +2348,11 @@ Variants {
 
                             property real targetWidth: wifiLayoutRow.implicitWidth + barWindow.s(24)
                             width: targetWidth
-                            Behavior on width { NumberAnimation { duration: 500; easing.type: Easing.OutQuint } }
+                            Behavior on width { enabled: barWindow.startupCascadeFinished; NumberAnimation { duration: 500; easing.type: Easing.OutQuint } }
                             
                             scale: isHovered ? 1.05 : 1.0
                             Behavior on scale { NumberAnimation { duration: 250; easing.type: Easing.OutExpo } }
                             Behavior on color { ColorAnimation { duration: 200 } }
-
-                            property bool initAnimTrigger: false
-                            Timer { running: rightBox.showLayout && !wifiPill.initAnimTrigger; interval: 50; onTriggered: wifiPill.initAnimTrigger = true }
-                            opacity: initAnimTrigger ? 1 : 0
-                            transform: Translate { y: wifiPill.initAnimTrigger ? 0 : barWindow.s(15); Behavior on y { NumberAnimation { duration: 500; easing.type: Easing.OutBack } } }
-                            Behavior on opacity { NumberAnimation { duration: 400; easing.type: Easing.OutCubic } }
 
                             Row { 
                                 id: wifiLayoutRow
@@ -2419,17 +2406,11 @@ Variants {
                             property real targetWidth: barWindow.isDesktop ? 0 : btLayoutRow.implicitWidth + barWindow.s(24)
                             width: targetWidth
                             visible: targetWidth > 0
-                            Behavior on width { NumberAnimation { duration: 500; easing.type: Easing.OutQuint } }
+                            Behavior on width { enabled: barWindow.startupCascadeFinished; NumberAnimation { duration: 500; easing.type: Easing.OutQuint } }
 
                             scale: isHovered ? 1.05 : 1.0
                             Behavior on scale { NumberAnimation { duration: 250; easing.type: Easing.OutExpo } }
                             Behavior on color { ColorAnimation { duration: 200 } }
-
-                            property bool initAnimTrigger: false
-                            Timer { running: rightBox.showLayout && !btPill.initAnimTrigger; interval: 100; onTriggered: btPill.initAnimTrigger = true }
-                            opacity: initAnimTrigger ? 1 : 0
-                            transform: Translate { y: btPill.initAnimTrigger ? 0 : barWindow.s(15); Behavior on y { NumberAnimation { duration: 500; easing.type: Easing.OutBack } } }
-                            Behavior on opacity { NumberAnimation { duration: 400; easing.type: Easing.OutCubic } }
 
                             Row { 
                                 id: btLayoutRow
@@ -2477,17 +2458,11 @@ Variants {
                             
                             property real targetWidth: volLayoutRow.implicitWidth + barWindow.s(24)
                             width: targetWidth
-                            Behavior on width { NumberAnimation { duration: 500; easing.type: Easing.OutQuint } }
+                            Behavior on width { enabled: barWindow.startupCascadeFinished; NumberAnimation { duration: 500; easing.type: Easing.OutQuint } }
                             
                             scale: isHovered ? 1.05 : 1.0
                             Behavior on scale { NumberAnimation { duration: 250; easing.type: Easing.OutExpo } }
                             Behavior on color { ColorAnimation { duration: 200 } }
-
-                            property bool initAnimTrigger: false
-                            Timer { running: rightBox.showLayout && !volPill.initAnimTrigger; interval: 150; onTriggered: volPill.initAnimTrigger = true }
-                            opacity: initAnimTrigger ? 1 : 0
-                            transform: Translate { y: volPill.initAnimTrigger ? 0 : barWindow.s(15); Behavior on y { NumberAnimation { duration: 500; easing.type: Easing.OutBack } } }
-                            Behavior on opacity { NumberAnimation { duration: 400; easing.type: Easing.OutCubic } }
 
                             Row { 
                                 id: volLayoutRow
@@ -2524,17 +2499,11 @@ Variants {
                             
                             property real targetWidth: monLayoutRow.implicitWidth + barWindow.s(24)
                             width: targetWidth
-                            Behavior on width { NumberAnimation { duration: 500; easing.type: Easing.OutQuint } }
+                            Behavior on width { enabled: barWindow.startupCascadeFinished; NumberAnimation { duration: 500; easing.type: Easing.OutQuint } }
                             
                             scale: isHovered ? 1.05 : 1.0
                             Behavior on scale { NumberAnimation { duration: 250; easing.type: Easing.OutExpo } }
                             Behavior on color { ColorAnimation { duration: 200 } }
-
-                            property bool initAnimTrigger: false
-                            Timer { running: rightBox.showLayout && !monPill.initAnimTrigger; interval: 175; onTriggered: monPill.initAnimTrigger = true }
-                            opacity: initAnimTrigger ? 1 : 0
-                            transform: Translate { y: monPill.initAnimTrigger ? 0 : barWindow.s(15); Behavior on y { NumberAnimation { duration: 500; easing.type: Easing.OutBack } } }
-                            Behavior on opacity { NumberAnimation { duration: 400; easing.type: Easing.OutCubic } }
 
                             Row { 
                                 id: monLayoutRow
@@ -2569,17 +2538,11 @@ Variants {
 
                                 property real targetWidth: notifLayoutRow.implicitWidth + barWindow.s(24)
                                 width: targetWidth
-                                Behavior on width { NumberAnimation { duration: 500; easing.type: Easing.OutQuint } }
+                                Behavior on width { enabled: barWindow.startupCascadeFinished; NumberAnimation { duration: 500; easing.type: Easing.OutQuint } }
 
                                 scale: isHovered ? 1.05 : 1.0
                                 Behavior on scale { NumberAnimation { duration: 250; easing.type: Easing.OutExpo } }
                                 Behavior on color { ColorAnimation { duration: 200 } }
-
-                                property bool initAnimTrigger: false
-                                Timer { running: rightBox.showLayout && !notifPillRect.initAnimTrigger; interval: 190; onTriggered: notifPillRect.initAnimTrigger = true }
-                                opacity: initAnimTrigger ? 1 : 0
-                                transform: Translate { y: notifPillRect.initAnimTrigger ? 0 : barWindow.s(15); Behavior on y { NumberAnimation { duration: 500; easing.type: Easing.OutBack } } }
-                                Behavior on opacity { NumberAnimation { duration: 400; easing.type: Easing.OutCubic } }
 
                                 Row { 
                                     id: notifLayoutRow
@@ -2631,17 +2594,11 @@ Variants {
                             
                             property real targetWidth: barWindow.isDesktop ? barWindow.s(32) : batLayoutRow.implicitWidth + barWindow.s(24)
                             width: targetWidth
-                            Behavior on width { NumberAnimation { duration: 500; easing.type: Easing.OutQuint } }
+                            Behavior on width { enabled: barWindow.startupCascadeFinished; NumberAnimation { duration: 500; easing.type: Easing.OutQuint } }
                             
                             scale: isHovered ? 1.05 : 1.0
                             Behavior on scale { NumberAnimation { duration: 250; easing.type: Easing.OutExpo } }
                             Behavior on color { ColorAnimation { duration: 200 } }
-
-                            property bool initAnimTrigger: false
-                            Timer { running: rightBox.showLayout && !batPill.initAnimTrigger; interval: 195; onTriggered: batPill.initAnimTrigger = true }
-                            opacity: initAnimTrigger ? 1 : 0
-                            transform: Translate { y: batPill.initAnimTrigger ? 0 : barWindow.s(15); Behavior on y { NumberAnimation { duration: 500; easing.type: Easing.OutBack } } }
-                            Behavior on opacity { NumberAnimation { duration: 400; easing.type: Easing.OutCubic } }
 
                             Row { 
                                 id: batLayoutRow
@@ -2681,17 +2638,11 @@ Variants {
                             property real targetWidth: barWindow.hasHwFeatures ? hwLayoutRow.implicitWidth + barWindow.s(24) : 0
                             width: targetWidth
                             visible: targetWidth > 0
-                            Behavior on width { NumberAnimation { duration: 500; easing.type: Easing.OutQuint } }
+                            Behavior on width { enabled: barWindow.startupCascadeFinished; NumberAnimation { duration: 500; easing.type: Easing.OutQuint } }
 
                             scale: isHovered ? 1.05 : 1.0
                             Behavior on scale { NumberAnimation { duration: 250; easing.type: Easing.OutExpo } }
                             Behavior on color { ColorAnimation { duration: 200 } }
-
-                            property bool initAnimTrigger: false
-                            Timer { running: rightBox.showLayout && !hwPill.initAnimTrigger; interval: 205; onTriggered: hwPill.initAnimTrigger = true }
-                            opacity: initAnimTrigger ? 1 : 0
-                            transform: Translate { y: hwPill.initAnimTrigger ? 0 : barWindow.s(15); Behavior on y { NumberAnimation { duration: 500; easing.type: Easing.OutBack } } }
-                            Behavior on opacity { NumberAnimation { duration: 400; easing.type: Easing.OutCubic } }
 
                             Row {
                                 id: hwLayoutRow
