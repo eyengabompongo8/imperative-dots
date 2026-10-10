@@ -2045,7 +2045,7 @@ Variants {
                     readonly property real basePillWidth: sysLayout.implicitWidth + barWindow.s(22)
 
                     property real effectiveTopBarHeight: barWindow.isRightPillHidden ? 0 : barWindow.barHeight
-                    Behavior on effectiveTopBarHeight { NumberAnimation { duration: 160; easing.type: Easing.OutExpo } }
+                    Behavior on effectiveTopBarHeight { NumberAnimation { duration: 320; easing.type: Easing.OutExpo } }
 
                     readonly property real currentPanelW: barWindow.animPanelWidth + 2 * padSide
                     readonly property real currentToastW: barWindow.animToastWidth + 2 * padSide
@@ -2209,6 +2209,22 @@ Variants {
 
                         opacity: barWindow.isRightPillHidden ? 0.0 : (rightBox.showLayout ? 1 : 0)
                         visible: opacity > 0.01
+
+                        transform: Translate {
+                            x: barWindow.isRightPillHidden ? barWindow.s(100) : 0
+                            y: barWindow.isRightPillHidden ? barWindow.s(-20) : 0
+                            Behavior on x {
+                                NumberAnimation { duration: 400; easing.type: Easing.OutExpo }
+                            }
+                            Behavior on y {
+                                SpringAnimation {
+                                    spring: 3.8
+                                    damping: 0.32
+                                    epsilon: 0.25
+                                }
+                            }
+                        }
+                        Behavior on opacity { NumberAnimation { duration: 250; easing.type: Easing.OutCubic } }
 
 
                         // High Resource Usage Alert Pill (CPU, RAM, Disk I/O)
