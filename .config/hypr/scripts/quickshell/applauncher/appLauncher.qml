@@ -165,6 +165,10 @@ Item {
             if (window.visible) {
                 focusTimer.restart();
                 introPhaseAnim.restart();
+            } else {
+                if (searchInput.text !== "") {
+                    searchInput.text = "";
+                }
             }
         }
     }
