@@ -61,7 +61,7 @@ hl.config({
         kb_options = "{{KB_OPTIONS}}",
         numlock_by_default = true,
         follow_mouse = 1,
-        accel_profile = "flat",
+        accel_profile = "adaptive",
         touchpad = {
             natural_scroll = true
         }
